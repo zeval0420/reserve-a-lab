@@ -1,0 +1,14 @@
+{
+    "name": "vendor/autoload.php",
+    "autoload": {
+        "psr-4": {
+            "Vendor\\AutoloadPhp\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Gabriel James Valdez"
+        }
+    ],
+    "require": {}
+}

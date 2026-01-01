@@ -1,0 +1,22 @@
+{
+    "raleway": {
+        "100_italic": "C:\\xampp\\htdocs\\ReserveALab\\dompdf\\vendor\\dompdf\\dompdf\/lib\/fonts\/raleway_100_italic_74aaa92dd619713587f98d9088cab780",
+        "200_italic": "C:\\xampp\\htdocs\\ReserveALab\\dompdf\\vendor\\dompdf\\dompdf\/lib\/fonts\/raleway_200_italic_b2b7c285bdfe7c3f5fd3908f69a5dedc",
+        "300_italic": "C:\\xampp\\htdocs\\ReserveALab\\dompdf\\vendor\\dompdf\\dompdf\/lib\/fonts\/raleway_300_italic_46985931d935dd04031453679ce4a3a7",
+        "italic": "C:\\xampp\\htdocs\\ReserveALab\\dompdf\\vendor\\dompdf\\dompdf\/lib\/fonts\/raleway_italic_c877ef39a85e604486b0b8c0299730be",
+        "500_italic": "C:\\xampp\\htdocs\\ReserveALab\\dompdf\\vendor\\dompdf\\dompdf\/lib\/fonts\/raleway_500_italic_32204702845d76b0dce193cb75665a4f",
+        "600_italic": "C:\\xampp\\htdocs\\ReserveALab\\dompdf\\vendor\\dompdf\\dompdf\/lib\/fonts\/raleway_600_italic_e80ce2205d6072d887607b182e83c2a6",
+        "bold_italic": "C:\\xampp\\htdocs\\ReserveALab\\dompdf\\vendor\\dompdf\\dompdf\/lib\/fonts\/raleway_bold_italic_de115699747f1dc423b3f7a08db39e46",
+        "800_italic": "C:\\xampp\\htdocs\\ReserveALab\\dompdf\\vendor\\dompdf\\dompdf\/lib\/fonts\/raleway_800_italic_74a31f323af1a883365c875adc2e4c75",
+        "900_italic": "C:\\xampp\\htdocs\\ReserveALab\\dompdf\\vendor\\dompdf\\dompdf\/lib\/fonts\/raleway_900_italic_e20e56574bb50684638b61627f7d8ed6",
+        "100": "C:\\xampp\\htdocs\\ReserveALab\\dompdf\\vendor\\dompdf\\dompdf\/lib\/fonts\/raleway_100_5dd53929801c5979e62ca18fe034c1dc",
+        "200": "C:\\xampp\\htdocs\\ReserveALab\\dompdf\\vendor\\dompdf\\dompdf\/lib\/fonts\/raleway_200_2614e0261183d79db9005efbb1069aed",
+        "300": "C:\\xampp\\htdocs\\ReserveALab\\dompdf\\vendor\\dompdf\\dompdf\/lib\/fonts\/raleway_300_ad9d3f8761ee766fd1da75743110796e",
+        "normal": "C:\\xampp\\htdocs\\ReserveALab\\dompdf\\vendor\\dompdf\\dompdf\/lib\/fonts\/raleway_normal_bc54d000e5dbd8710dedfacb3c55fbc6",
+        "500": "C:\\xampp\\htdocs\\ReserveALab\\dompdf\\vendor\\dompdf\\dompdf\/lib\/fonts\/raleway_500_4ce758b4be4147fef0e8474693332d58",
+        "600": "C:\\xampp\\htdocs\\ReserveALab\\dompdf\\vendor\\dompdf\\dompdf\/lib\/fonts\/raleway_600_1ee23db0df4b5ff88a0eeec9bd0fd06a",
+        "bold": "C:\\xampp\\htdocs\\ReserveALab\\dompdf\\vendor\\dompdf\\dompdf\/lib\/fonts\/raleway_bold_e1b2db3aec0c8685f707c0058f82d2d9",
+        "800": "C:\\xampp\\htdocs\\ReserveALab\\dompdf\\vendor\\dompdf\\dompdf\/lib\/fonts\/raleway_800_c7c45aa2f775d420dcb499e4883f6482",
+        "900": "raleway_900_df2f063cbfa59fd928806015236994f0"
+    }
+}
