@@ -17,9 +17,15 @@ if (isset($_POST['action']) && $_POST['action'] === 'get_calendar_events') {
     $events = [];
 
     $stmt = $conn->prepare("
-        SELECT scilabName, inclusiveDate, inclusiveTime 
-        FROM scilab_form_requests 
-        WHERE statusScilabPersonnel = 'Approved'
+        SELECT 
+            sfr.scilabName,
+            sfr.inclusiveDate,
+            sfr.inclusiveTime,
+            sa.color
+        FROM scilab_form_requests sfr
+        JOIN scilab_availability sa
+            ON sfr.scilabName = sa.scilabName
+        WHERE sfr.statusScilabPersonnel = 'Approved'
     ");
 
     $stmt->execute();
@@ -40,22 +46,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'get_calendar_events') {
         $endDateTime   = $date . "T" . $endTime;
 
         // Background color by lab
-        switch ($row['scilabName']) {
-            case "Science Laboratory 1":
-                $color = "#e74c3c"; // red
-                break;
-            case "Science Laboratory 2":
-                $color = "#3498db"; // blue
-                break;
-            case "Science Laboratory 3":
-                $color = "#f1c40f"; // yellow
-                break;
-            case "Science Laboratory 4":
-                $color = "#2ecc71"; // green
-                break;
-            default:
-                $color = "#7f8c8d"; // gray fallback
-        }
+        $color = $row['color'] ?? "#7f8c8d";
 
         $events[] = [
             "title" => $row['scilabName'],

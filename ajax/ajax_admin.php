@@ -49,57 +49,57 @@
         exit;
     }
 
-if (isset($_GET['action']) && $_GET['action'] === 'notification_feed') {
-    header('Content-Type: application/json');
+    if (isset($_GET['action']) && $_GET['action'] === 'notification_feed') {
+        header('Content-Type: application/json');
 
-    $syStmt = $conn->prepare("SELECT value FROM $db_table_sy ORDER BY id DESC LIMIT 1");
-    $syStmt->execute();
-    $syResult = $syStmt->get_result();
-    $currentSY = $syResult->num_rows ? ($syResult->fetch_assoc()['value'] ?? null) : null;
-    $syStmt->close();
+        $syStmt = $conn->prepare("SELECT value FROM $db_table_sy ORDER BY id DESC LIMIT 1");
+        $syStmt->execute();
+        $syResult = $syStmt->get_result();
+        $currentSY = $syResult->num_rows ? ($syResult->fetch_assoc()['value'] ?? null) : null;
+        $syStmt->close();
 
-    if (!$currentSY) {
-        echo json_encode(['items' => []]);
+        if (!$currentSY) {
+            echo json_encode(['items' => []]);
+            exit();
+        }
+
+        $query = "
+            SELECT fr.id, fr.scilabName, fr.gradeLevel, fr.`section/s` AS sections, fr.subject, fr.subjectTopic,
+                fr.inclusiveDate, fr.inclusiveTime, fr.dateRequested, fr.teacherInCharge,
+                CONCAT(a.firstname, ' ', a.lastname) AS requesterName
+            FROM scilab_form_requests fr
+            LEFT JOIN accounts a ON a.employeeID = fr.requesterEmployeeID
+            WHERE fr.statusScilabPersonnel = 'Pending' AND fr.sy = ?
+            ORDER BY fr.dateRequested DESC
+            LIMIT 15";
+
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("s", $currentSY);
+        $stmt->execute();
+        $res = $stmt->get_result();
+
+        $notifications = [];
+        while ($row = $res->fetch_assoc()) {
+            $notifications[] = [
+                'id' => (int)$row['id'],
+                'lab' => $row['scilabName'],
+                'grade' => $row['gradeLevel'],
+                'sections' => $row['sections'] ?: 'N/A',
+                'subject' => $row['subject'] ?? 'N/A',
+                'topic' => $row['subjectTopic'] ?? '',
+                'date' => date('M d, Y', strtotime($row['inclusiveDate'])),
+                'time' => $row['inclusiveTime'],
+                'submitted' => date('M d, Y g:i A', strtotime($row['dateRequested'])),
+                'requester' => $row['requesterName'] ? trim($row['requesterName']) : 'Unknown',
+                'teacher' => $row['teacherInCharge'] ?? ''
+            ];
+        }
+
+        echo json_encode([
+            'items' => $notifications
+        ]);
         exit();
     }
-
-    $query = "
-        SELECT fr.id, fr.scilabName, fr.gradeLevel, fr.`section/s` AS sections, fr.subject, fr.subjectTopic,
-               fr.inclusiveDate, fr.inclusiveTime, fr.dateRequested, fr.teacherInCharge,
-               CONCAT(a.firstname, ' ', a.lastname) AS requesterName
-        FROM scilab_form_requests fr
-        LEFT JOIN accounts a ON a.employeeID = fr.requesterEmployeeID
-        WHERE fr.statusScilabPersonnel = 'Pending' AND fr.sy = ?
-        ORDER BY fr.dateRequested DESC
-        LIMIT 15";
-
-    $stmt = $conn->prepare($query);
-    $stmt->bind_param("s", $currentSY);
-    $stmt->execute();
-    $res = $stmt->get_result();
-
-    $notifications = [];
-    while ($row = $res->fetch_assoc()) {
-        $notifications[] = [
-            'id' => (int)$row['id'],
-            'lab' => $row['scilabName'],
-            'grade' => $row['gradeLevel'],
-            'sections' => $row['sections'] ?: 'N/A',
-            'subject' => $row['subject'] ?? 'N/A',
-            'topic' => $row['subjectTopic'] ?? '',
-            'date' => date('M d, Y', strtotime($row['inclusiveDate'])),
-            'time' => $row['inclusiveTime'],
-            'submitted' => date('M d, Y g:i A', strtotime($row['dateRequested'])),
-            'requester' => $row['requesterName'] ? trim($row['requesterName']) : 'Unknown',
-            'teacher' => $row['teacherInCharge'] ?? ''
-        ];
-    }
-
-    echo json_encode([
-        'items' => $notifications
-    ]);
-    exit();
-}
 
     if (isset($_POST['scilabName']) && isset($_POST['availability'])) {
         $scilabName = $_POST['scilabName'];
@@ -377,6 +377,19 @@ if (isset($_GET['action']) && $_GET['action'] === 'notification_feed') {
     
         exit;
     }
-    
-        
+
+    if (isset($_POST['action']) && $_POST['action'] === 'update_scilab_color') {
+        $name = $_POST['scilabName'];
+        $color = $_POST['color'];
+
+        $stmt = $conn->prepare("
+            UPDATE scilab_availability
+            SET color = ?
+            WHERE scilabName = ?
+        ");
+        $stmt->bind_param("ss", $color, $name);
+
+        echo $stmt->execute() ? 'success' : 'error';
+        exit;
+    }
 ?>

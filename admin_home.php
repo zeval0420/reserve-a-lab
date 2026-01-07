@@ -42,7 +42,7 @@
                 text-align: center;
             }
             .lab-card {
-                height: 450px; padding: 20px 10px;
+                min-height: 515px; padding: 20px 10px;
                 justify-content: start; align-items: center;
             }
             .fixed-img, .lab-img {
@@ -170,6 +170,18 @@
                             <hr class="image-divider">
                             <p class="text-muted"><?= $pending ?> pending request(s)</p>
                             <p><small><i class="bi bi-geo-alt-fill"></i> <?= htmlspecialchars($lab['location']) ?></small></p>
+
+                            <div class="mt-2 text-center">
+                                <p1 style="font-weight:bold">Color Display in Calendar: </p1>
+                                <input type="color"
+                                    class="form-control form-control-color scilab-color-picker"
+                                    value="<?= htmlspecialchars($lab['color']) ?>"
+                                    data-old="<?= htmlspecialchars($lab['color']) ?>"
+                                    data-scilab="<?= htmlspecialchars($id) ?>"
+                                    style="width:30px; height:20px; display:inline-block; padding:0; border:none; cursor:pointer;">
+                            </div>
+
+                            <br>
 
                             <div class="d-flex justify-content-center gap-2 mb-2">
                                 <button class="btn btn-danger btn-sm" onclick="openRemoveModal('<?= $id ?>')">
@@ -502,5 +514,34 @@
                 $(`button[data-img="${img}"]`).parent().remove();
             });
         });
+
+        // ===== Edit SciLab Color =====
+        $(document).on('change', '.scilab-color-picker', function () {
+            const picker = $(this)
+            const newColor = picker.val()
+            const oldColor = picker.data('old')
+            const scilab = picker.data('scilab')
+
+            if (!confirm('Are you sure you want to change this scilab color?')) {
+                picker.val(oldColor)
+                return
+            }
+
+            $.post('ajax/ajax_admin.php', {
+                action: 'update_scilab_color',
+                scilabName: scilab,
+                color: newColor
+            }, res => {
+                if (res.trim() !== 'success') {
+                    alert('Failed to update color')
+                    picker.val(oldColor)
+                } else {
+                    picker.data('old', newColor)
+                }
+            }).fail(() => {
+                alert('Server error')
+                picker.val(oldColor)
+            })
+        })
     </script>
 </html>
