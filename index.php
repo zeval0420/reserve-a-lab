@@ -1,5 +1,6 @@
 <?php
     // centralized db_connection and session_handler
+    //comment added test
     include('helperFiles/db_connection.php');
     include('helperFiles/session_handler.php');
 
