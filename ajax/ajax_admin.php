@@ -7,16 +7,6 @@
     // Get session data
     $email = $_SESSION['email'];
     $username   = $_SESSION['username'];
-
-    if(isset($_SESSION['role']) && $_SESSION['role'] != 'admin') {
-        header("Location: requester_home.php");
-        exit();
-    }
-
-    if (!isset($_SESSION['role'])) {
-        header("Location: index.php");
-        exit();
-    }
 ?>
 
 <?php

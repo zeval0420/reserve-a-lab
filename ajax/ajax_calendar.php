@@ -5,11 +5,6 @@ include('../helperFiles/session_handler.php');
 $email = $_SESSION['email'] ?? null;
 $username = $_SESSION['username'] ?? null;
 
-if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
-    header("Location: admin_home.php");
-    exit();
-}
-
 if (!isset($_SESSION['role'])) {
     header("Location: index.php");
     exit();

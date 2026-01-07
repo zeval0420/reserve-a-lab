@@ -35,16 +35,6 @@ function parseTimeRangeMinutes($range) {
 $email = $_SESSION['email'] ?? null;
 $username = $_SESSION['username'] ?? null;
 
-if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
-    header("Location: admin_home.php");
-    exit();
-}
-
-if (!isset($_SESSION['role'])) {
-    header("Location: index.php");
-    exit();
-}
-
 // Snapshot of all labs for a date (schedules, pending counts, conflicts)
 if (isset($_POST['action']) && $_POST['action'] === 'get_day_snapshot') {
     header('Content-Type: application/json');
