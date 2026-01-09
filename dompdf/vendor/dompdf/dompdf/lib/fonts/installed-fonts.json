@@ -18,5 +18,9 @@
         "bold": "C:\\xampp\\htdocs\\ReserveALab\\dompdf\\vendor\\dompdf\\dompdf\/lib\/fonts\/raleway_bold_e1b2db3aec0c8685f707c0058f82d2d9",
         "800": "C:\\xampp\\htdocs\\ReserveALab\\dompdf\\vendor\\dompdf\\dompdf\/lib\/fonts\/raleway_800_c7c45aa2f775d420dcb499e4883f6482",
         "900": "raleway_900_df2f063cbfa59fd928806015236994f0"
+    },
+    "poppins": {
+        "normal": "C:\\xampp\\htdocs\\reserve-a-lab\\dompdf\\vendor\\dompdf\\dompdf\/lib\/fonts\/poppins_normal_41eae6f88194706e4cb26de3ac737d8a",
+        "600": "poppins_600_154dcc58b1e77916e556017f33cbcd2e"
     }
 }
