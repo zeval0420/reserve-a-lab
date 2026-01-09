@@ -119,6 +119,8 @@
                     <h2>Inventory Management</h2>
                     <div>
                         <button id="scanBarcodeBtn" class="btn-scan">Scan Barcode</button>
+                        <button id="bulkImportBtn" class="btn-scan" style="background-color: #17a2b8;">Bulk Import</button>
+                        <button id="editModeBtn" class="btn-scan" style="background-color: #ffc107; color: #212529;">Edit Mode</button>
                         <button id="addItemBtn" class="btn-add">Add Product</button>
                     </div>
                 </div>
@@ -292,6 +294,33 @@
             </div>
         </div>
 
+        <!-- Bulk Import Modal -->
+        <div class="modal fade" id="bulkImportModal" tabindex="-1" role="dialog">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Bulk Import / Update</h5>
+                        <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Upload a CSV file with headers: <code>classification, item, productID, description, quantity, unit, status</code></p>
+                        <p class="text-muted small">Matches on <b>productID</b>. Existing items are updated; new items are added.</p>
+                        <input type="file" id="csvFile" accept=".csv" class="form-control-file mb-3">
+                        <div id="importProgress" style="display:none;">
+                            <div class="progress mb-2">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%">0%</div>
+                            </div>
+                            <small id="importStatusText" class="text-muted">Processing...</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" id="processImportBtn">Start Import</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Confirm Remove Modal -->
         <div class="modal fade" id="confirmRemoveModal" tabindex="-1" role="dialog">
             <div class="modal-dialog" role="document">
@@ -448,6 +477,164 @@
                 });
             });
 
+            // ================= BULK IMPORT LOGIC ==================
+            $('#bulkImportBtn').click(() => {
+                $('#bulkImportModal').modal('show');
+                $('#importProgress').hide();
+                $('#csvFile').val('');
+                $('.progress-bar').css('width', '0%').text('0%');
+                $('#processImportBtn').prop('disabled', false);
+            });
+
+            $('#processImportBtn').click(function () {
+                const fileInput = document.getElementById('csvFile');
+                if (!fileInput.files.length) {
+                    alert('Please select a CSV file.');
+                    return;
+                }
+
+                const file = fileInput.files[0];
+                const reader = new FileReader();
+
+                reader.onload = function (e) {
+                    const text = e.target.result;
+                    const rows = parseCSV(text);
+                    if (rows.length === 0) {
+                        alert('No valid data found or empty file.');
+                        return;
+                    }
+                    processBulkData(rows);
+                };
+                reader.readAsText(file);
+            });
+
+            function parseCSV(text) {
+                const lines = text.split(/\r\n|\n/).filter(l => l.trim());
+                if (lines.length < 2) return [];
+                const headers = lines[0].split(',').map(h => h.trim());
+                return lines.slice(1).map(line => {
+                    const values = [];
+                    let inQuote = false, val = '';
+                    for (let c of line) {
+                        if (c === '"') inQuote = !inQuote;
+                        else if (c === ',' && !inQuote) { values.push(val.trim()); val = ''; }
+                        else val += c;
+                    }
+                    values.push(val.trim());
+                    const obj = {};
+                    headers.forEach((h, i) => obj[h] = values[i] || '');
+                    return obj;
+                });
+            }
+
+            async function processBulkData(rows) {
+                $('#importProgress').show();
+                $('#processImportBtn').prop('disabled', true);
+                const flatInventory = Object.values(allInventory).flat();
+                let success = 0, failed = 0;
+
+                for (let i = 0; i < rows.length; i++) {
+                    const row = rows[i];
+                    if (!row.productID) continue;
+
+                    const existing = flatInventory.find(item => item.productID == row.productID);
+                    const action = existing ? 'update_inventory' : 'add_inventory';
+                    const payload = { ...row, action: action };
+                    if (existing) payload.id = existing.id;
+
+                    try {
+                        await new Promise(resolve => $.post('ajax/ajax_inventory.php', payload, res => {
+                            if (res.trim() === 'success') success++; else failed++;
+                            resolve();
+                        }));
+                    } catch (e) { failed++; }
+
+                    const pct = Math.round(((i + 1) / rows.length) * 100);
+                    $('.progress-bar').css('width', pct + '%').text(pct + '%');
+                }
+
+                alert(`Import Complete.\nSuccess: ${success}\nFailed: ${failed}`);
+                location.reload();
+            }
+
+            // ================= EDIT MODE LOGIC ==================
+            let isEditMode = false;
+
+            $('#editModeBtn').click(function() {
+                if (!isEditMode) {
+                    enterEditMode();
+                } else {
+                    saveBulkChanges();
+                }
+            });
+
+            function enterEditMode() {
+                isEditMode = true;
+                $('#editModeBtn').text('Save Changes').removeClass('btn-scan').addClass('btn-success').css({'background-color': '', 'color': ''});
+                
+                // Disable DataTable controls to prevent state loss during edit
+                $('.dataTables_length, .dataTables_filter, .dataTables_paginate, .dataTables_info').hide();
+
+                $('#inventory-table tbody tr').each(function() {
+                    const row = $(this);
+                    if(row.find('.dataTables_empty').length) return;
+
+                    const cells = row.find('td');
+                    
+                    // Helper to create input safely
+                    const mkInput = (val, name, type='text') => {
+                        const safeVal = val.replace(/"/g, '&quot;');
+                        return `<input type="${type}" class="form-control form-control-sm" name="${name}" value="${safeVal}" style="min-width: 80px;">`;
+                    };
+                    
+                    cells.eq(0).html(mkInput(cells.eq(0).text(), 'item'));
+                    cells.eq(1).html(mkInput(cells.eq(1).text(), 'productID'));
+                    cells.eq(2).html(mkInput(cells.eq(2).text(), 'description'));
+                    cells.eq(3).html(mkInput(cells.eq(3).text(), 'quantity', 'number'));
+                    
+                    const unitVal = cells.eq(4).text();
+                    const units = ['pieces', 'mL', 'grams', 'boxes'];
+                    let unitOpts = units.map(u => `<option value="${u}" ${u === unitVal ? 'selected' : ''}>${u}</option>`).join('');
+                    cells.eq(4).html(`<select class="form-control form-control-sm" name="unit">${unitOpts}</select>`);
+
+                    const statusVal = cells.eq(5).text();
+                    const statuses = ['Available', 'Out of Stock'];
+                    let statusOpts = statuses.map(s => `<option value="${s}" ${s === statusVal ? 'selected' : ''}>${s}</option>`).join('');
+                    cells.eq(5).html(`<select class="form-control form-control-sm" name="status">${statusOpts}</select>`);
+
+                    // Hide action buttons
+                    cells.eq(6).find('button').hide();
+                });
+            }
+
+            async function saveBulkChanges() {
+                const updates = [];
+                $('#inventory-table tbody tr').each(function() {
+                    const row = $(this);
+                    if(row.find('.dataTables_empty').length) return;
+
+                    updates.push({
+                        id: row.data('id'),
+                        classification: currentType,
+                        item: row.find('[name="item"]').val(),
+                        productID: row.find('[name="productID"]').val(),
+                        description: row.find('[name="description"]').val(),
+                        quantity: row.find('[name="quantity"]').val(),
+                        unit: row.find('[name="unit"]').val(),
+                        status: row.find('[name="status"]').val(),
+                        action: 'update_inventory'
+                    });
+                });
+
+                $('#editModeBtn').text('Saving...').prop('disabled', true);
+                
+                // Process updates sequentially or in parallel. Parallel is faster.
+                await Promise.all(updates.map(data => $.post('ajax/ajax_inventory.php', data)));
+                
+                alert('Changes saved.');
+                location.reload();
+            }
+
             // ================= BARCODE SCANNER LOGIC ==================
             let scannerActive = false;
             let quaggaInitialized = false;
@@ -570,6 +757,85 @@
                 try {
                     if (quaggaInitialized) {
                         // Quagga.stop() will stop the camera stream; Quagga.pause() can be used to resume
+                        Quagga.stop();
+                    }
+                } catch (e) {
+                    console.warn("Error stopping Quagga:", e);
+                }
+
+                // Explicitly stop any remaining camera tracks attached to video element(s)
+                try {
+                    const videos = document.querySelectorAll('#scanner-container video');
+                    videos.forEach(video => {
+                        const stream = video.srcObject;
+                        if (stream && stream.getTracks) {
+                            stream.getTracks().forEach(track => {
+                                try { track.stop(); } catch (e) { /* ignore */ }
+                            });
+                        }
+                        // also revoke srcObject
+                        try { video.srcObject = null; } catch (e) {}
+                    });
+                } catch (e) {
+                    console.warn('Error stopping video tracks:', e);
+                }
+
+                // Clear container for next use
+                $('#scanner-container').empty();
+                // keep quaggaInitialized true so restart can call Quagga.start() without reinit
+            }
+
+            // ===== Handle Scanned Barcode =====
+            function handleScannedBarcode(code) {
+                if (!code) return;
+
+                $('#result').text(code);
+
+                // flatten inventory for easier lookup
+                const foundItem = Object.values(allInventory).flat()
+                    .find(item => (item.productID || '').toString().trim() === code);
+
+                if (foundItem) {
+                    // Product exists — highlight in table
+                    $('#barcodeScannerModal').modal('hide');
+                    alert("Item found: " + foundItem.item);
+
+                    // Switch tab if necessary
+                    if (foundItem.classification !== currentType) {
+                        $(`.tab[data-type="${foundItem.classification}"]`).click();
+                    }
+
+                    // Highlight after small delay to allow tab switch and DataTable redraw
+                    setTimeout(() => {
+                        const row = $(`tr[data-id="${foundItem.id}"]`);
+                        if (row.length > 0) {
+                            $('html, body').animate({ scrollTop: row.offset().top - 100 }, 600);
+                            row.css('background-color', '#fff3cd'); // yellow highlight
+                            setTimeout(() => row.css('background-color', ''), 2000);
+                        } else {
+                            $('#inventory-table').DataTable().rows().every(function () {
+                                const d = this.data();
+                                if (d && d[1] && d[1].toString().trim() === code) {
+                                    const node = this.node();
+                                    $(node).css('background-color', '#fff3cd');
+                                    $('html, body').animate({ scrollTop: $(node).offset().top - 100 }, 600);
+                                    setTimeout(() => $(node).css('background-color', ''), 2000);
+                                }
+                            });
+                        }
+                    }, 400);
+                } else {
+                    // Product not found — open Add Product modal with prefilled productID
+                    $('#barcodeScannerModal').modal('hide');
+                    setTimeout(() => {
+                        $('#addProductModal').modal('show');
+                        $('#addProductForm [name="productID"]').val(code);
+                    }, 400);
+                }
+            }
+        });
+    </script>
+</html>
                         Quagga.stop();
                     }
                 } catch (e) {
