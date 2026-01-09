@@ -62,6 +62,7 @@
             .slot-pill.approved { background:#e0f7e9; color:#0f6b3b; border-color:#b8e5c8; }
             .slot-pill.requested { background:#fff4e0; color:#b06a00; border-color:#ffd199; }
             .empty-slot-hint { margin:10px 0 0; font-size:13px; color:#6c757d; }
+            .scilab-name { width: 80%; padding: 10px 12px; border-radius: 8px; font-weight: bold; color: #ffffff; margin: auto; margin-top: 15px; }
         </style>
     </head>
 
@@ -85,7 +86,11 @@
                 <div class="row equal-height-row">
                     <?php
                         $labs = [];
-                        $result = $conn->query("SELECT sa.scilabName, sa.mainImagePath, sa.location FROM scilab_availability sa WHERE sa.availability='Available' AND sa.status='active'");
+                        $result = $conn->query("
+                            SELECT sa.scilabName, sa.mainImagePath, sa.location, sa.color
+                            FROM scilab_availability sa
+                            WHERE sa.availability='Available' AND sa.status='active'
+                        ");
                         while($row = $result->fetch_assoc()) $labs[] = $row;
 
                         if(count($labs) > 0):
@@ -94,7 +99,9 @@
                         <div class="col-md-4 col-sm-12">
                             <div class="card" data-lab="<?= htmlspecialchars($lab['scilabName']) ?>">
                                 <img src="<?= htmlspecialchars($lab['mainImagePath']) ?>" alt="<?= htmlspecialchars($lab['scilabName']) ?>" class="fixed-img gallery-launch" data-lab="<?= htmlspecialchars($lab['scilabName']) ?>">
-                                <h4 class="mt-2" style="font-weight:bold; color:#0e0054; margin-bottom:0px;"><?= htmlspecialchars($lab['scilabName']) ?></h4>
+                                <h4 class="scilab-name mt-2" style="background-color: <?= htmlspecialchars($lab['color']) ?>;">
+                                    <?= htmlspecialchars($lab['scilabName']) ?>
+                                </h4>
                                 <hr class="image-divider">
                                 <p class="text-muted pending-count">0 pending request(s)</p>
                                 <p><small><i class="bi bi-geo-alt"></i> <?= htmlspecialchars($lab['location']) ?></small></p>
@@ -103,7 +110,7 @@
                                     <div class="slot-pill-list" data-lab-schedule></div>
                                     <p class="empty-slot-hint mb-0">No requests for this date yet.</p>
                                 </div>
-                                <a href="forms.php?scilabname=<?= htmlspecialchars($lab['scilabName']) ?>" class="btn btn-primary lab-btn mt-auto">REQUEST</a>
+                                <a href="forms.php?scilabname=<?= htmlspecialchars($lab['scilabName']) ?>" class="btn btn-primary lab-btn mt-auto" style="margin-bottom: 5px">REQUEST</a>
                             </div>
                         </div>
                     <?php endforeach; else: ?>
