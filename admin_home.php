@@ -44,6 +44,8 @@
             .lab-card {
                 min-height: 515px; padding: 20px 10px;
                 justify-content: start; align-items: center;
+                min-height: 600px; padding: 25px 15px;
+                justify-content: space-between; align-items: center;
             }
             .fixed-img, .lab-img {
                 width: 100%; object-fit: cover; border-radius: 10px;
@@ -133,6 +135,25 @@
             }
             .pending-link { color: inherit; text-decoration: none; }
             .pending-link:hover { text-decoration: underline; color: #2b55c4; }
+            .scilab-color-picker {
+                -webkit-appearance: none;
+                -moz-appearance: none;
+                appearance: none;
+                width: 25px;
+                height: 25px;
+                background-color: transparent;
+                border: none;
+                cursor: pointer;
+                border-radius: 50%;
+                padding: 0;
+                display: inline-block;
+                vertical-align: middle;
+            }
+            .scilab-color-picker::-webkit-color-swatch {
+                border-radius: 50%;
+                border: 1px solid #ddd;
+            }
+            .scilab-color-picker::-moz-color-swatch { border-radius: 50%; border: 1px solid #ddd; }
         </style>
     </head>
 
@@ -163,33 +184,34 @@
                     ?>
                     <div class="col-md-4 mb-4">
                         <div class="card fixed-card lab-card text-center" data-scilab="<?= htmlspecialchars($id) ?>">
+                            <div style="width: 100%;">
                             <img id="<?= $imgId ?>" src="<?= htmlspecialchars($lab['mainImagePath']) ?>?v=<?= $imgVersion ?>"
                                 alt="Lab <?= htmlspecialchars($id) ?>" class="fixed-img gallery-launch"
                                 data-lab="<?= htmlspecialchars($id) ?>"
                                 style="cursor:pointer; height:200px; object-fit:cover;">
 
-                            <h4 class="mt-2 fw-bold text-primary"><?= htmlspecialchars($id) ?></h4>
+                            <h4 class="mt-3 fw-bold text-primary"><?= htmlspecialchars($id) ?></h4>
                             <hr class="image-divider">
-                            <p class="text-muted">
+                            <p class="text-muted mb-1">
                                 <a href="admin_approve.php?status=Pending&search=<?= urlencode($id) ?>" class="pending-link">
                                     <?= $pending ?> pending request(s)
                                 </a>
                             </p>
-                            <p><small><i class="bi bi-geo-alt-fill"></i> <?= htmlspecialchars($lab['location']) ?></small></p>
+                            <p class="mb-3"><small><i class="bi bi-geo-alt-fill"></i> <?= htmlspecialchars($lab['location']) ?></small></p>
+                            </div>
 
-                            <div class="mt-2 text-center">
-                                <p1 style="font-weight:bold">Color Display in Calendar: </p1>
+                            <div class="mb-3 text-center">
+                                <span style="font-weight:bold; vertical-align: middle;">Color Display in Calendar: </span>
                                 <input type="color"
                                     class="form-control form-control-color scilab-color-picker"
                                     value="<?= htmlspecialchars($lab['color']) ?>"
                                     data-old="<?= htmlspecialchars($lab['color']) ?>"
-                                    data-scilab="<?= htmlspecialchars($id) ?>"
-                                    style="width:30px; height:20px; display:inline-block; padding:0; border:none; cursor:pointer;">
+                                    data-scilab="<?= htmlspecialchars($id) ?>">
                             </div>
 
                             <br>
 
-                            <div class="d-flex justify-content-center gap-2 mb-2">
+                            <div class="d-flex justify-content-center gap-2 mb-3">
                                 <button class="btn btn-danger btn-sm" onclick="openRemoveModal('<?= $id ?>')">
                                     <i class="bi bi-trash"></i> Remove
                                 </button>
@@ -197,10 +219,9 @@
                                     <i class="bi bi-pencil"></i> Edit
                                 </button>
                             </div>
-
                             <br>
-                            
-                            <div class="d-flex justify-content-center align-items-center gap-2 mt-2">
+
+                            <div class="d-flex justify-content-center align-items-center gap-2">
                                 <label class="switch m-0">
                                     <input type="checkbox" onchange="toggleLab(this)">
                                     <span class="slider round"></span>
@@ -214,6 +235,7 @@
                     <div class="col-md-4 mb-4">
                         <div class="card add-scilab-card d-flex align-items-center justify-content-center text-center"
                             style="height:420px; cursor:pointer;" onclick="$('#addLabModal').modal('show')">
+                            style="height:600px; cursor:pointer;" onclick="$('#addLabModal').modal('show')">
                             <h4 class="m-auto">Add Science Laboratory</h4>
                         </div>
                     </div>
