@@ -56,13 +56,17 @@
     // Inventory items with unit, grouped by classification
     $itemOptions = [
         'Equipment' => [],
+        'Semi Expendable' => [],
         'Consumable' => [],
-        'Reagent' => []
+        'Reagent' => [],
+        'Glassware' => [],
+        'Lab Material' => [],
+        'Food Lab' => []
     ];
 
     $result = $conn->query("SELECT classification, item, description, unit 
                             FROM scilab_inventory 
-                            WHERE classification IN ('Equipment', 'Consumable', 'Reagent')
+                            WHERE classification IN ('Equipment', 'Semi Expendable', 'Consumable', 'Reagent', 'Glassware', 'Lab Material', 'Food Lab')
                             AND (status IS NULL OR status != 'Removed')
                             ORDER BY classification, item ASC");
 
@@ -237,85 +241,9 @@
                             <input type="time" class="form-control" name="end_time" required>
                         </div>
                     </div>
-                             
-                    <!-- Equipment Table -->
-                    <h5><strong>Equipment Needed:</strong></h5>
-                    <div id="equipment-table-container">
-                        <table class="table table-bordered material-table" id="equipment-table">
-                            <colgroup>
-                                <col style="width: 20%;">
-                                <col style="width: 35%;">
-                                <col style="width: 40%;">
-                                <col style="width: 5%;">
-                            </colgroup>
-                            <thead>
-                                <tr>
-                                    <th>Quantity</th>
-                                    <th>Item</th>
-                                    <th>Description</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="equipment-table-body"></tbody>
-                        </table>
-                        <button type="button" class="btn btn-success add-row-btn" data-target="#equipment-table-body">
-                            <span class="glyphicon glyphicon-plus"></span> Add Row
-                        </button>
-                    </div>
-
-                    <br>
-                    
-                    <!-- Consumables Table -->
-                    <h5><strong>Consumables Needed:</strong></h5>
-                    <div id="consumables-table-container">
-                        <table class="table table-bordered material-table" id="consumables-table">
-                            <colgroup>
-                                <col style="width: 20%;">
-                                <col style="width: 35%;">
-                                <col style="width: 40%;">
-                                <col style="width: 5%;">
-                            </colgroup>
-                            <thead>
-                                <tr>
-                                    <th>Quantity</th>
-                                    <th>Item</th>
-                                    <th>Description</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="consumables-table-body"></tbody>
-                        </table>
-                        <button type="button" class="btn btn-success add-row-btn" data-target="#consumables-table-body">
-                            <span class="glyphicon glyphicon-plus"></span> Add Row
-                        </button>
-                    </div>
-
-                    <br>
-
-                    <!-- Reagents Table -->
-                    <h5><strong>Reagents Needed:</strong></h5>
-                    <div id="reagents-table-container">
-                        <table class="table table-bordered material-table" id="reagents-table">
-                            <colgroup>
-                                <col style="width: 20%;">
-                                <col style="width: 35%;">
-                                <col style="width: 40%;">
-                                <col style="width: 5%;">
-                            </colgroup>
-                            <thead>
-                                <tr>
-                                    <th>Quantity</th>
-                                    <th>Item</th>
-                                    <th>Description</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="reagents-table-body"></tbody>
-                        </table>
-                        <button type="button" class="btn btn-success add-row-btn" data-target="#reagents-table-body">
-                            <span class="glyphicon glyphicon-plus"></span> Add Row
-                        </button>
-                    </div>
+                        
+                    <!-- Inventory Tables -->
+                    <div id="materials-container"></div>
 
                     <br>
 
@@ -372,13 +300,57 @@
     </body>
 
     <!-- JavaScript -->
-    <script>
+    <script> 
+        const CLASSIFICATIONS = [
+            'Equipment',
+            'Semi Expendable',
+            'Consumable',
+            'Reagent',
+            'Glassware',
+            'Lab Material',
+            'Food Lab'
+        ];
+
+        const $container = $('#materials-container');
+        CLASSIFICATIONS.forEach(classification => {
+            const slug = slugify(classification);
+
+            $container.append(`
+                <h5><strong>${classification} Needed:</strong></h5>
+                <div id="${slug}-table-container">
+                    <table class="table table-bordered material-table">
+                        <colgroup>
+                            <col style="width:20%">
+                            <col style="width:35%">
+                            <col style="width:40%">
+                            <col style="width:5%">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>Quantity</th>
+                                <th>Item</th>
+                                <th>Description</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="${slug}-table-body" data-classification="${classification}"></tbody>
+                    </table>
+                    <button type="button"
+                        class="btn btn-success add-row-btn"
+                        data-target="#${slug}-table-body">
+                        Add Row
+                    </button>
+                </div>
+                <br>
+            `);
+        });
+
         const itemDescriptions = <?= json_encode($itemOptions) ?>; // supports { item: ['desc1','desc2'] } or { item: { descriptions: [...], unit: 'pcs' } }
 
-        // Split items by classification
-        const equipmentItems = itemDescriptions['Equipment'] || {};
-        const consumableItems = itemDescriptions['Consumable'] || {};
-        const reagentItems = itemDescriptions['Reagent'] || {};
+        // Get items by classification
+        function getItemsByClassification(classification) {
+            return itemDescriptions[classification] || {};
+        }
 
         // Helper to build options based on classification
         function buildItemOptions(itemsObj) {
@@ -421,11 +393,7 @@
             const $unitInput = $row.find('.unit-input');
 
             // Determine classification based on which table this row is in
-            let classType = '';
-            const $tbody = $itemSelect.closest('tbody');
-            if ($tbody.is('#equipment-table-body')) classType = 'Equipment';
-            else if ($tbody.is('#consumables-table-body')) classType = 'Consumable';
-            else if ($tbody.is('#reagents-table-body')) classType = 'Reagent';
+            const classType = $itemSelect.closest('tbody').data('classification');
 
             if (selectedItem) {
                 $qty.prop('disabled', false);
@@ -518,7 +486,7 @@
         }
 
         // function to populate each table
-        function populateTableBody($tbody, itemsObj, rowCount = 3) {
+        function populateTableBody($tbody, itemsObj, rowCount = 1) {
             const isReagent = $tbody.is('#reagents-table-body');
             for (let i = 0; i < rowCount; i++) {
                 const row = $(createRowHtml(itemsObj, isReagent));
@@ -527,19 +495,37 @@
             }
         }
 
-        function defaultRows() {
-            // Default 5 rows per table
-            populateTableBody($('#equipment-table-body'), equipmentItems);
-            populateTableBody($('#consumables-table-body'), consumableItems);
-            populateTableBody($('#reagents-table-body'), reagentItems);
+        // function to help table format table label display (removes spaces in between classification names)
+        function slugify(name) {
+            return name.toLowerCase().replace(/\s+/g, '');
+        }
 
-            // default 1 student row
+        function defaultRows() {
+            // Default 1 row per classification table
+            CLASSIFICATIONS.forEach(classification => {
+                const slug = classification.toLowerCase().replace(/\s+/g, '');
+                const $tbody = $(`#${slug}-table-body`);
+                const itemsObj = getItemsByClassification(classification);
+
+                populateTableBody($tbody, itemsObj);
+            });
+
+            // Default 1 student row
             const allStudentList = Object.values(allStudents).flat();
             const studentOpts = allStudentList.map(s => `<option value="${s}">${s}</option>`).join('');
             $('#student-list-table tbody').append(`
                 <tr>
-                    <td><select class="form-control student-select" name="students[]"><option value="">Select Student</option>${studentOpts}</select></td>
-                    <td style="text-align:center;"><button type="button" class="btn btn-danger remove-student-btn"><span class="glyphicon glyphicon-minus"></span></button></td>
+                    <td>
+                        <select class="form-control student-select" name="students[]">
+                            <option value="">Select Student</option>
+                            ${studentOpts}
+                        </select>
+                    </td>
+                    <td style="text-align:center;">
+                        <button type="button" class="btn btn-danger remove-student-btn">
+                            <span class="glyphicon glyphicon-minus"></span>
+                        </button>
+                    </td>
                 </tr>
             `);
         }
@@ -556,19 +542,19 @@
         $(function() {
             // initialize existing rows
             defaultRows()
-            $('#equipment-table tbody tr').each(function() { initRowDefaults($(this)); });
+            $('tbody[data-classification]').each(function () {
+                $(this).find('tr').each(function () {
+                    initRowDefaults($(this));
+                });
+            });
 
             $('.add-row-btn').click(function() {
-                const targetBody = $($(this).data('target'));
-                let itemsObj = {};
+                const $tbody = $($(this).data('target'));
+                const classification = $tbody.data('classification');
+                const itemsObj = getItemsByClassification(classification);
 
-                if (targetBody.is('#equipment-table-body')) itemsObj = equipmentItems;
-                else if (targetBody.is('#consumables-table-body')) itemsObj = consumableItems;
-                else if (targetBody.is('#reagents-table-body')) itemsObj = reagentItems;
-
-                const isReagent = targetBody.is('#reagents-table-body');
-                const row = $(createRowHtml(itemsObj, isReagent));
-                targetBody.append(row);
+                const row = $(createRowHtml(itemsObj, classification));
+                $tbody.append(row);
                 initRowDefaults(row);
             });
 
@@ -611,11 +597,13 @@
                 `;
 
                 // Build categorized materials summary with merging of duplicates
-                const categories = [
-                    { name: 'Equipment', selector: '#equipment-table-body' },
-                    { name: 'Consumables', selector: '#consumables-table-body' },
-                    { name: 'Reagents', selector: '#reagents-table-body' }
-                ];
+                const categories = CLASSIFICATIONS.map(c => {
+                    const slug = c.toLowerCase().replace(/\s+/g, '');
+                    return {
+                        name: c,
+                        selector: `#${slug}-table-body`
+                    };
+                });
 
                 categories.forEach((cat, index) => {
                     let catItems = {};
@@ -643,7 +631,14 @@
                     // Display items or "No items selected"
                     if (Object.keys(catItems).length > 0) {
                         for (const key in catItems) {
-                            const { qty, unit, itemLabel, desc } = catItems[key];
+                            let { qty, unit, itemLabel, desc } = catItems[key];
+
+                            // Remove any "(unit)" in itemLabel
+                            if (unit) {
+                                const regex = new RegExp(`\\(${unit}\\)`, 'gi');
+                                itemLabel = itemLabel.replace(regex, '').trim();
+                            }
+
                             const unitPart = unit ? ` ${unit}` : '';
                             summary += `• ${qty}${unitPart} of ${itemLabel} (${desc})<br>`;
                         }
@@ -680,7 +675,11 @@
 
                 // Collect and merge duplicate materials
                 const itemsMap = {};
-                $('#equipment-table-body tr, #consumables-table-body tr, #reagents-table-body tr').each(function() {
+                const bodySelectors = CLASSIFICATIONS
+                    .map(c => `#${c.toLowerCase().replace(/\s+/g, '')}-table-body tr`)
+                    .join(', ');
+
+                $(bodySelectors).each(function() {
                     const $r = $(this);
                     const itemVal = $r.find('select[name="item[]"]').val();
                     const itemLabel = $r.find('select[name="item[]"] option:selected').text();
