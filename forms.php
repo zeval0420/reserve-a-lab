@@ -447,11 +447,11 @@
             $unit.prop('disabled', true);
         }
 
-        function createRowHtml(itemsObj, isReagent) {
+        function createRowHtml(itemsObj, classification) {
             const itemOpts = buildItemOptions(itemsObj);
             
             let descriptionField = '';
-            if (isReagent) {
+            if (classification === 'Reagent') {
                 descriptionField = `<input type="text" class="form-control description-input" name="description[]" placeholder="Description (Optional)" disabled>`;
             } else {
                 descriptionField = `
@@ -486,10 +486,9 @@
         }
 
         // function to populate each table
-        function populateTableBody($tbody, itemsObj, rowCount = 1) {
-            const isReagent = $tbody.is('#reagents-table-body');
+        function populateTableBody($tbody, itemsObj, classification, rowCount = 1) {
             for (let i = 0; i < rowCount; i++) {
-                const row = $(createRowHtml(itemsObj, isReagent));
+                const row = $(createRowHtml(itemsObj, classification));
                 $tbody.append(row);
                 initRowDefaults(row);
             }
@@ -503,11 +502,11 @@
         function defaultRows() {
             // Default 1 row per classification table
             CLASSIFICATIONS.forEach(classification => {
-                const slug = classification.toLowerCase().replace(/\s+/g, '');
+                const slug = slugify(classification);
                 const $tbody = $(`#${slug}-table-body`);
                 const itemsObj = getItemsByClassification(classification);
 
-                populateTableBody($tbody, itemsObj);
+                populateTableBody($tbody, itemsObj, classification);
             });
 
             // Default 1 student row
@@ -598,7 +597,7 @@
 
                 // Build categorized materials summary with merging of duplicates
                 const categories = CLASSIFICATIONS.map(c => {
-                    const slug = c.toLowerCase().replace(/\s+/g, '');
+                    const slug = slugify(c);
                     return {
                         name: c,
                         selector: `#${slug}-table-body`
@@ -676,7 +675,7 @@
                 // Collect and merge duplicate materials
                 const itemsMap = {};
                 const bodySelectors = CLASSIFICATIONS
-                    .map(c => `#${c.toLowerCase().replace(/\s+/g, '')}-table-body tr`)
+                    .map(c => `#${slugify(c)}-table-body tr`)
                     .join(', ');
 
                 $(bodySelectors).each(function() {
