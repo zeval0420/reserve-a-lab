@@ -128,14 +128,15 @@
             exit();
         }elseif ($_POST['action'] === 'approve') {
             $controlNumber = isset($_POST['controlNumber']) ? (int) $_POST['controlNumber'] : 0;
+            $remarks = $_POST['remarks'] ?? '';
 
             if ($controlNumber <= 0) {
                 echo "Invalid control number.";
                 exit();
             }
 
-            $stmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Approved', controlNumber = ? WHERE id = ?");
-            $stmt->bind_param("ii", $controlNumber, $id);
+            $stmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Approved', controlNumber = ?, feedback = ? WHERE id = ?");
+            $stmt->bind_param("isi", $controlNumber, $remarks, $id);
             $stmt->execute();
 
             if ($stmt->affected_rows > 0) {

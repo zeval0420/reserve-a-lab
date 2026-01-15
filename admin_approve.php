@@ -121,6 +121,7 @@
                                 <th>Date of Use</th>
                                 <th>Materials</th>
                                 <th>Teacher-in-Charge</th>
+                                <?php if ($statusFilter === 'Approved'): ?><th>Remarks</th><?php endif; ?>
                                 <?php if ($statusFilter === 'Rejected'): ?><th>Feedback</th><?php endif; ?>
                                 <?php if ($statusFilter !== 'Rejected'): ?><th>Action</th><?php endif; ?>
                             </tr>
@@ -151,6 +152,10 @@
                                         <td><?= htmlspecialchars($row['inclusiveDate']).' ('.htmlspecialchars($row['inclusiveTime']).')' ?></td>
                                         <td><?= htmlspecialchars($materialText) ?></td>
                                         <td><?= $teacherInCharge ?></td>
+
+                                        <?php if ($statusFilter === 'Approved'): ?>
+                                            <td><?= htmlspecialchars($row['feedback'] ?? '—') ?></td>
+                                        <?php endif; ?>
 
                                         <?php if ($statusFilter === 'Rejected'): ?>
                                             <td><?= htmlspecialchars($row['feedback'] ?? 'No reason provided') ?></td>
@@ -187,11 +192,19 @@
                                 <h5 class="modal-title">Approve Request</h5>
                                 <button type="button" class="close" data-dismiss="modal">&times;</button>
                             </div>
-                            <div class="modal-body" id="approveDetails"></div>
+                            <div class="modal-body">
+                                <div id="approveDetails"></div>
+                                <div class="form-group mt-3">
+                                    <label for="controlNumber">Control Number:</label>
+                                    <input type="text" class="form-control" name="controlNumber" id="controlNumber" placeholder="Enter Control Number" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="approveRemarks">Remarks:</label>
+                                    <textarea class="form-control" name="approveRemarks" id="approveRemarks" placeholder="Enter remarks (optional)"></textarea>
+                                </div>
+                            </div>
                             <div class="modal-footer">
                                 <input type="hidden" name="approveId" id="approveId">
-                                <input type="text" class="form-control" name="controlNumber" id="controlNumber" placeholder="Enter Control Number" required>
-                                <br>
                                 <button type="submit" class="btn btn-success">Confirm</button>
                                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
                             </div>
@@ -282,6 +295,8 @@
             $('.approve-btn').click(function () {
                 const data = $(this).data('request');
                 $('#approveId').val(data.id);
+                $('#controlNumber').val('');
+                $('#approveRemarks').val('');
                 $('#approveDetails').html(`
                     <p><strong>Requester:</strong> ${data.requesterEmployeeID}</p>
                     <p><strong>Subject:</strong> ${data.subject}</p>
@@ -298,13 +313,14 @@
                 e.preventDefault();
                 const id = $('#approveId').val();
                 const control = $('#controlNumber').val().trim();
+                const remarks = $('#approveRemarks').val().trim();
 
                 if (control === '') {
                     alert('Control Number required.');
                     return;
                 }
 
-                $.post('ajax/ajax_admin_action.php', { action: 'approve', id: id, controlNumber: control }, function (response) {
+                $.post('ajax/ajax_admin_action.php', { action: 'approve', id: id, controlNumber: control, remarks: remarks }, function (response) {
                     alert(response);
                     location.reload();
                 });
