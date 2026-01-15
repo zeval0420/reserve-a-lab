@@ -18,24 +18,36 @@
     // Fetch only items not marked as Removed
     $inventoryQuery = $conn->query("SELECT id, classification, item, productID, description, quantity, unit, status 
                                     FROM scilab_inventory 
-                                    WHERE classification IN ('Equipment', 'Consumable', 'Reagent') 
+                                    WHERE classification IN ('Equipment', 'Semi Expendable', 'Consumable', 'Reagent', 'Glassware', 'Lab Material', 'Food Lab') 
                                     AND (status IS NULL OR status != 'Removed')
                                     ORDER BY classification, item");
 
     $inventory = [
         'Equipment' => [],
+        'Semi Expendable' => [],
         'Consumable' => [],
-        'Reagent' => []
+        'Reagent' => [],
+        'Glassware' => [],
+        'Lab Material' => [],
+        'Food Lab' => []
     ];
 
     if ($inventoryQuery && $inventoryQuery->num_rows > 0) {
         while ($row = $inventoryQuery->fetch_assoc()) {
             if ($row['classification'] === 'Equipment') {
                 $inventory['Equipment'][] = $row;
+            } elseif ($row['classification'] === 'Semi Expendable') {
+                $inventory['Semi Expendable'][] = $row;
             } elseif ($row['classification'] === 'Consumable') {
                 $inventory['Consumable'][] = $row;
             } elseif ($row['classification'] === 'Reagent') {
                 $inventory['Reagent'][] = $row;
+            } elseif ($row['classification'] === 'Glassware') {
+                $inventory['Glassware'][] = $row;
+            } elseif ($row['classification'] === 'Lab Material') {
+                $inventory['Lab Material'][] = $row;
+            } elseif ($row['classification'] === 'Food Lab') {
+                $inventory['Food Lab'][] = $row;
             }
         }
     }
@@ -124,11 +136,14 @@
                         <button id="addItemBtn" class="btn-add">Add Product</button>
                     </div>
                 </div>
-
                 <div class="tabs">
                     <div class="tab active" data-type="Equipment">Equipment</div>
+                    <div class="tab" data-type="Semi Expendable">Semi Expendable</div>
                     <div class="tab" data-type="Consumable">Consumable</div>
                     <div class="tab" data-type="Reagent">Reagent</div>
+                    <div class="tab" data-type="Glassware">Glassware</div>
+                    <div class="tab" data-type="Lab Material">Lab Material</div>
+                    <div class="tab" data-type="Food Lab">Food Lab</div>
                 </div>
 
                 <table id="inventory-table" class="table table-striped table-bordered" style="width:100%">
@@ -163,8 +178,12 @@
                                 <select class="form-control" name="classification" required>
                                     <option value="">Select Classification</option>
                                     <option value="Equipment">Equipment</option>
+                                    <option value="Semi Expendable">Semi Expendable</option>
                                     <option value="Consumable">Consumable</option>
                                     <option value="Reagent">Reagent</option>
+                                    <option value="Glassware">Glassware</option>
+                                    <option value="Lab Material">Lab Material</option>
+                                    <option value="Food Lab">Food Lab</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -226,8 +245,12 @@
                                 <label>Classification</label>
                                 <select class="form-control" name="classification" required>
                                     <option value="Equipment">Equipment</option>
+                                    <option value="Semi Expendable">Semi Expendable</option>
                                     <option value="Consumable">Consumable</option>
                                     <option value="Reagent">Reagent</option>
+                                    <option value="Glassware">Glassware</option>
+                                    <option value="Lab Material">Lab Material</option>
+                                    <option value="Food Lab">Food Lab</option>
                                 </select>
                             </div>
                             <div class="form-group">
