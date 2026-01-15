@@ -280,7 +280,7 @@
 
     <script>
         $(document).ready(function () {
-            $('#admin-approval-table').DataTable({
+            var table = $('#admin-approval-table').DataTable({
                 language: {
                     emptyTable: "No requests found."
                 },
@@ -291,6 +291,14 @@
                 ordering: true,
                 info: true
             });
+
+            // Check for search parameter in URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const searchParam = urlParams.get('search');
+            if (searchParam) {
+                table.search(searchParam).draw();
+            }
+
             // APPROVE BUTTON
             $('.approve-btn').click(function () {
                 const data = $(this).data('request');

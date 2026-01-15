@@ -131,6 +131,8 @@
                 position: absolute; top: -10px; right: -10px;
                 padding: 6px 8px; font-size: 12px; z-index: 5;
             }
+            .pending-link { color: inherit; text-decoration: none; }
+            .pending-link:hover { text-decoration: underline; color: #2b55c4; }
         </style>
     </head>
 
@@ -168,7 +170,11 @@
 
                             <h4 class="mt-2 fw-bold text-primary"><?= htmlspecialchars($id) ?></h4>
                             <hr class="image-divider">
-                            <p class="text-muted"><?= $pending ?> pending request(s)</p>
+                            <p class="text-muted">
+                                <a href="admin_approve.php?status=Pending&search=<?= urlencode($id) ?>" class="pending-link">
+                                    <?= $pending ?> pending request(s)
+                                </a>
+                            </p>
                             <p><small><i class="bi bi-geo-alt-fill"></i> <?= htmlspecialchars($lab['location']) ?></small></p>
 
                             <div class="mt-2 text-center">
