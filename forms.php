@@ -72,7 +72,7 @@
 
     // Creates a placeholder string for SQL IN clause
     $inClause = "'" . implode("','", $CLASSIFICATIONS) . "'";
-    
+
     $result = $conn->query("SELECT classification, item, description, unit 
                             FROM scilab_inventory 
                             WHERE classification IN ($inClause) AND (status IS NULL OR status != 'Removed')
@@ -533,10 +533,18 @@
         function resetForm() {
             const form = $('form')[0];
             form.reset();
-            $('#sections-checkboxes').empty().multiselect('rebuild');
-            $('#equipment-table tbody, #consumables-table tbody, #reagents-table tbody, #student-list-table tbody').empty();
 
-            defaultRows()
+            // Reset sections multiselect
+            $('#sections-checkboxes').empty().multiselect('rebuild');
+
+            // Clear material tables dynamically
+            CLASSIFICATIONS.forEach(classification => {
+                const slug = slugify(classification);
+                $(`#${slug}-table-body`).empty();
+            });
+
+            // Clear student list table
+            $('#student-list-table tbody').empty();
         }
 
         $(function() {
