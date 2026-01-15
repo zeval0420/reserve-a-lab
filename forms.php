@@ -224,6 +224,12 @@
                     <h5><strong>Equipment Needed:</strong></h5>
                     <div id="equipment-table-container">
                         <table class="table table-bordered material-table" id="equipment-table">
+                            <colgroup>
+                                <col style="width: 20%;">
+                                <col style="width: 35%;">
+                                <col style="width: 40%;">
+                                <col style="width: 5%;">
+                            </colgroup>
                             <thead>
                                 <tr>
                                     <th>Quantity</th>
@@ -245,6 +251,12 @@
                     <h5><strong>Consumables Needed:</strong></h5>
                     <div id="consumables-table-container">
                         <table class="table table-bordered material-table" id="consumables-table">
+                            <colgroup>
+                                <col style="width: 20%;">
+                                <col style="width: 35%;">
+                                <col style="width: 40%;">
+                                <col style="width: 5%;">
+                            </colgroup>
                             <thead>
                                 <tr>
                                     <th>Quantity</th>
@@ -266,6 +278,12 @@
                     <h5><strong>Reagents Needed:</strong></h5>
                     <div id="reagents-table-container">
                         <table class="table table-bordered material-table" id="reagents-table">
+                            <colgroup>
+                                <col style="width: 20%;">
+                                <col style="width: 35%;">
+                                <col style="width: 40%;">
+                                <col style="width: 5%;">
+                            </colgroup>
                             <thead>
                                 <tr>
                                     <th>Quantity</th>
@@ -380,6 +398,7 @@
             const selectedItem = $itemSelect.val();
             const $row = $itemSelect.closest('tr');
             const $descSelect = $row.find('.description-select');
+            const $descInput = $row.find('.description-input');
             const $qty = $row.find('.quantity-input');
             const $unitInput = $row.find('.unit-input');
 
@@ -390,19 +409,34 @@
             else if ($tbody.is('#consumables-table-body')) classType = 'Consumable';
             else if ($tbody.is('#reagents-table-body')) classType = 'Reagent';
 
-            // populate description dropdown (or disable)
-            $descSelect.empty().append('<option value="">Select Description</option>');
-            const descs = getDescriptionsForItem(selectedItem, classType);
-            if (selectedItem && descs.length) {
-                descs.forEach(d => $descSelect.append(`<option value="${d}">${d}</option>`));
-                $descSelect.prop('disabled', false);
-            } else {
-                $descSelect.prop('disabled', true).val('');
-            }
+            if (selectedItem) {
+                $qty.prop('disabled', false);
+                $unitInput.prop('disabled', false);
+                if ($descInput.length > 0) $descInput.prop('disabled', false);
 
-            // set the hidden unit input
-            const unit = $itemSelect.find('option:selected').data('unit') || '';
-            $unitInput.val(unit);
+                // populate description dropdown (or disable) if it exists
+                if ($descSelect.length > 0) {
+                    $descSelect.empty().append('<option value="">Select Description</option>');
+                    const descs = getDescriptionsForItem(selectedItem, classType);
+                    if (selectedItem && descs.length) {
+                        descs.forEach(d => $descSelect.append(`<option value="${d}">${d}</option>`));
+                        $descSelect.prop('disabled', false);
+                    } else {
+                        $descSelect.prop('disabled', true).val('');
+                    }
+                }
+
+                // set the unit input
+                const unit = $itemSelect.find('option:selected').data('unit') || '';
+                $unitInput.val(unit);
+            } else {
+                $qty.prop('disabled', true);
+                $unitInput.prop('disabled', true).val('');
+                if ($descInput.length > 0) $descInput.prop('disabled', true).val('');
+                if ($descSelect.length > 0) {
+                    $descSelect.prop('disabled', true).empty().append('<option value="">Select Description</option>');
+                }
+            }
 
             // ensure quantity has default
             if (!$qty.val() || isNaN($qty.val()) || parseInt($qty.val()) < 1) $qty.val(1);
@@ -412,39 +446,64 @@
         function initRowDefaults($row) {
             const $qty = $row.find('.quantity-input');
             if (!$qty.val()) $qty.val(1);
+            $qty.prop('disabled', true);
 
             const $desc = $row.find('.description-select');
-            $desc.prop('disabled', true).empty().append('<option value="">Select Description</option>');
+            if ($desc.length > 0) {
+                $desc.prop('disabled', true).empty().append('<option value="">Select Description</option>');
+            }
+            
+            const $descInput = $row.find('.description-input');
+            if ($descInput.length > 0) $descInput.prop('disabled', true);
 
             const $unit = $row.find('.unit-input');
             if ($unit.length && !$unit.val()) $unit.val('');
+            $unit.prop('disabled', true);
+        }
+
+        function createRowHtml(itemsObj, isReagent) {
+            const itemOpts = buildItemOptions(itemsObj);
+            
+            let descriptionField = '';
+            if (isReagent) {
+                descriptionField = `<input type="text" class="form-control description-input" name="description[]" placeholder="Description (Optional)" disabled>`;
+            } else {
+                descriptionField = `
+                    <select class="form-control description-select" name="description[]" disabled>
+                        <option value="">Select Description</option>
+                    </select>`;
+            }
+
+            return `
+                <tr>
+                    <td>
+                        <div style="display: flex; align-items: center;">
+                            <input type="number" class="form-control quantity-input" name="quantity[]" min="1" value="1" style="width: 60%;" disabled>
+                            <input type="text" class="form-control unit-input" name="unit[]" style="width: 40%; margin-left: 5px;" placeholder="Unit" disabled>
+                        </div>
+                    </td>
+                    <td>
+                        <select class="form-control item-select" name="item[]">
+                            <option value="">Select Item</option>${itemOpts}
+                        </select>
+                    </td>
+                    <td>
+                        ${descriptionField}
+                    </td>
+                    <td style="text-align:center;">
+                        <button type="button" class="btn btn-danger remove-row-btn">
+                            <span class="glyphicon glyphicon-minus"></span>
+                        </button>
+                    </td>
+                </tr>
+            `;
         }
 
         // function to populate each table
         function populateTableBody($tbody, itemsObj, rowCount = 3) {
-            const itemOpts = buildItemOptions(itemsObj);
+            const isReagent = $tbody.is('#reagents-table-body');
             for (let i = 0; i < rowCount; i++) {
-                const row = $(`
-                    <tr>
-                        <td><input type="number" class="form-control quantity-input" name="quantity[]" min="1" value="1"></td>
-                        <td>
-                            <select class="form-control item-select" name="item[]">
-                                <option value="">Select Item</option>${itemOpts}
-                            </select>
-                            <input type="hidden" name="unit[]" class="unit-input" value="">
-                        </td>
-                        <td>
-                            <select class="form-control description-select" name="description[]" disabled>
-                                <option value="">Select Description</option>
-                            </select>
-                        </td>
-                        <td style="text-align:center;">
-                            <button type="button" class="btn btn-danger remove-row-btn">
-                                <span class="glyphicon glyphicon-minus"></span>
-                            </button>
-                        </td>
-                    </tr>
-                `);
+                const row = $(createRowHtml(itemsObj, isReagent));
                 $tbody.append(row);
                 initRowDefaults(row);
             }
@@ -489,28 +548,8 @@
                 else if (targetBody.is('#consumables-table-body')) itemsObj = consumableItems;
                 else if (targetBody.is('#reagents-table-body')) itemsObj = reagentItems;
 
-                const itemOpts = buildItemOptions(itemsObj);
-                const row = $(`
-                    <tr>
-                        <td><input type="number" class="form-control quantity-input" name="quantity[]" min="1" value="1"></td>
-                        <td>
-                            <select class="form-control item-select" name="item[]">
-                                <option value="">Select Item</option>${itemOpts}
-                            </select>
-                            <input type="hidden" name="unit[]" class="unit-input" value="">
-                        </td>
-                        <td>
-                            <select class="form-control description-select" name="description[]" disabled>
-                                <option value="">Select Description</option>
-                            </select>
-                        </td>
-                        <td style="text-align:center;">
-                            <button type="button" class="btn btn-danger remove-row-btn">
-                                <span class="glyphicon glyphicon-minus"></span>
-                            </button>
-                        </td>
-                    </tr>
-                `);
+                const isReagent = targetBody.is('#reagents-table-body');
+                const row = $(createRowHtml(itemsObj, isReagent));
                 targetBody.append(row);
                 initRowDefaults(row);
             });
@@ -522,9 +561,7 @@
 
             // Automatically fill unit when item is selected
             $(document).on('change', '.item-select', function() {
-                const selectedOption = $(this).find('option:selected');
-                const unit = selectedOption.data('unit') || '';
-                $(this).closest('tr').find('.unit-input').val(unit);
+                // Logic handled in the main item-select change handler
             });
 
             // Form submit with summary modal
@@ -536,22 +573,6 @@
                 if (!selectedSections || selectedSections.length === 0) {
                     alert("Please select at least one section.");
                     $('#sections-checkboxes').focus();
-                    return false;
-                }
-
-                // Check that all enabled description fields are filled
-                let allDescriptionsValid = true;
-                $('#equipment-table-body tr, #consumables-table-body tr, #reagents-table-body tr').each(function() {
-                    const $descSelect = $(this).find('.description-select');
-                    const $itemSelect = $(this).find('.item-select');
-                    if (!$descSelect.prop('disabled') && $itemSelect.val() && !$descSelect.val()) {
-                        allDescriptionsValid = false;
-                        $descSelect.focus();
-                        return false; // break loop
-                    }
-                });
-                if (!allDescriptionsValid) {
-                    alert("Please select a description for all chosen items.");
                     return false;
                 }
 
@@ -585,7 +606,7 @@
                         const $r = $(this);
                         const itemVal = $r.find('select[name="item[]"]').val();
                         const itemLabel = $r.find('select[name="item[]"] option:selected').text();
-                        const desc = $r.find('select[name="description[]"]').val() || 'N/A';
+                        const desc = $r.find('select[name="description[]"], input[name="description[]"]').val() || 'N/A';
                         const qty = parseInt($r.find('input[name="quantity[]"]').val()) || 1;
                         const unit = $r.find('.unit-input').val() || '';
 
@@ -645,7 +666,7 @@
                     const $r = $(this);
                     const itemVal = $r.find('select[name="item[]"]').val();
                     const itemLabel = $r.find('select[name="item[]"] option:selected').text();
-                    const desc = $r.find('select[name="description[]"]').val() || 'N/A';
+                    const desc = $r.find('select[name="description[]"], input[name="description[]"]').val() || 'N/A';
                     const qty = parseInt($r.find('input[name="quantity[]"]').val()) || 1;
                     const unit = $r.find('.unit-input').val() || '';
 
