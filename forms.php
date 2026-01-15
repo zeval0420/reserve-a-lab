@@ -30,7 +30,7 @@
     $subjectOptions = [];
     if (isset($_GET['grade']) && is_numeric($_GET['grade'])) {
         $selectedGrade = intval($_GET['grade']);
-        $stmt = $conn->prepare("SELECT DISTINCT subjectCode, subjectAcademicUnit FROM subject WHERE status='active' AND subjectGradeLevel=? ORDER BY subjectDescription ASC");
+        $stmt = $conn->prepare("SELECT DISTINCT subjectCode, subjectAcademicUnit FROM subject WHERE status='active' AND subjectGradeLevel=? ORDER BY subjectCode ASC");
         $stmt->bind_param("i", $selectedGrade);
         $stmt->execute();
         $subjectOptions = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
