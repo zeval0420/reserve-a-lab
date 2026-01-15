@@ -1,264 +1,396 @@
-<?php
-require '../dompdf/vendor/autoload.php';
-require '../helperFiles/db_connection.php';
-
-use Dompdf\Dompdf;
-use Dompdf\Options;
-
-// Get form ID
-$id = isset($_GET['id']) ? intval($_GET['id']) : 0;
-
-// Fetch form data
-$stmt = $conn->prepare("SELECT sfr.*, a.firstname, a.middlename, a.lastname 
-    FROM scilab_form_requests sfr
-    LEFT JOIN accounts a ON sfr.requesterEmployeeID = a.employeeID
-    WHERE sfr.id = ?");
-$stmt->bind_param("i", $id);
-$stmt->execute();
-$result = $stmt->get_result();
-$form = $result->fetch_assoc();
-
-if (!$form) {
-    die("Form not found.");
-}
-
-// Fetch materials
-$materials = [];
-$materialQuery = $conn->prepare("SELECT * FROM scilab_material_requests WHERE formID = ?");
-$materialQuery->bind_param("i", $id);
-$materialQuery->execute();
-$materialResult = $materialQuery->get_result();
-while ($row = $materialResult->fetch_assoc()) {
-    $materials[] = $row;
-}
-
-// Fetch students
-$students = [];
-$studentQuery = $conn->prepare("SELECT * FROM scilab_students_involved WHERE formID = ?");
-$studentQuery->bind_param("i", $id);
-$studentQuery->execute();
-$studentResult = $studentQuery->get_result();
-while ($row = $studentResult->fetch_assoc()) {
-    $students[] = $row['student_name'];
-}
-
-// HTML
-ob_start();
-?>
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Science Lab Request System</title>
-<link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;600&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-<style>
-  body {
-    margin: 0;
-    padding: 40px;
-    font-family: 'Poppins', 'SF Pro Display', sans-serif;
-    background: linear-gradient(135deg, #eaeaea, #f5f5f5, #fdfdfd);
-    color: #111;
-  }
-
-  .container {
-    background: rgba(255, 255, 255, 0.15);
-    border-radius: 28px;
-    backdrop-filter: blur(25px) saturate(180%);
-    -webkit-backdrop-filter: blur(25px) saturate(180%);
-    border: 2px solid rgba(255, 255, 255, 0.55);
-    box-shadow:
-      0 25px 60px rgba(0, 0, 0, 0.25),
-      inset 0 1px 1px rgba(255, 255, 255, 0.6),
-      inset 0 0 30px rgba(255, 255, 255, 0.25);
-    max-width: 720px;
-    margin: auto;
-    padding: 40px 50px;
-  }
-
-  h1 {
-    text-align: center;
-    font-size: 22px;
-    font-weight: 600;
-    letter-spacing: 0.3px;
-    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.6);
-    margin-bottom: 25px;
-  }
-
-  .section {
-    margin-bottom: 25px;
-    background: rgba(255, 255, 255, 0.25);
-    border-radius: 20px;
-    padding: 20px 25px;
-    border: 1px solid rgba(255, 255, 255, 0.55);
-    box-shadow:
-      0 6px 20px rgba(0, 0, 0, 0.05),
-      inset 0 0 20px rgba(255, 255, 255, 0.3);
-  }
-
-  .section h3 {
-    font-weight: 600;
-    margin-bottom: 10px;
-  }
-
-  .section p {
-    margin: 8px 0;
-    font-size: 14px;
-    color: #222;
-  }
-
-  ul {
-    margin-left: 18px;
-    padding: 0;
-  }
-
-  ul li {
-    font-size: 14px;
-    color: #333;
-    margin: 5px 0;
-  }
-
-  /* ====== Apple glass button ====== */
-  .button-wrapper {
-    text-align: center;
-    margin-top: 35px;
-  }
-
-  .button-wrapper a {
-    display: inline-block;
-    padding: 14px 38px;
-    border-radius: 35px;
-    background: linear-gradient(145deg, rgba(30,30,30,0.85), rgba(10,10,10,0.9));
-    border: 2px solid rgba(255, 255, 255, 0.6);
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 15px;
-    color: #f1f1f1;
-    box-shadow:
-      0 12px 28px rgba(0, 0, 0, 0.4),
-      inset 0 0 10px rgba(255, 255, 255, 0.3);
-    transition: all 0.35s ease;
-    backdrop-filter: blur(20px);
-    position: relative;
-    overflow: hidden;
-  }
-
-  .button-wrapper a::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: -80%;
-    width: 50%;
-    height: 100%;
-    background: linear-gradient(120deg, rgba(255,255,255,0.6), rgba(255,255,255,0));
-    transform: skewX(-25deg);
-    transition: 0.7s;
-    opacity: 0;
-  }
-
-  .button-wrapper a:hover::before {
-    left: 130%;
-    opacity: 1;
-  }
-
-  .button-wrapper a:hover {
-    background: linear-gradient(145deg, rgba(50,50,50,1), rgba(15,15,15,1));
-    transform: scale(1.07);
-    border-color: rgba(255, 255, 255, 0.9);
-    box-shadow:
-      0 16px 40px rgba(0, 0, 0, 0.5),
-      inset 0 0 15px rgba(255, 255, 255, 0.5);
-    color: #fff;
-  }
-
-  .button-wrapper a:active {
-    transform: scale(0.98);
-    box-shadow:
-      0 6px 15px rgba(0, 0, 0, 0.35),
-      inset 0 0 8px rgba(255, 255, 255, 0.4);
-  }
-
-  .footer {
-    text-align: center;
-    font-size: 12px;
-    color: #666;
-    padding: 20px;
-    margin-top: 30px;
-    border-top: 1px solid rgba(255, 255, 255, 0.5);
-    background: rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(12px);
-    box-shadow: inset 0 1px 6px rgba(255, 255, 255, 0.15);
-  }
-</style>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <title>Laboratory Request and Equipment Accountability Form</title>
+    <style>
+        @page {
+            margin: 15mm 20mm;
+            size: A4 portrait;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'DejaVu Sans', Arial, sans-serif;
+            font-size: 11pt;
+            line-height: 1.3;
+            color: #000;
+        }
+        
+        .header {
+            text-align: left;
+            margin-bottom: 12pt;
+        }
+        
+        .header h3 {
+            font-size: 11pt;
+            font-weight: bold;
+            margin-bottom: 4pt;
+        }
+        
+        .campus-line {
+            display: block;
+            margin-bottom: 8pt;
+        }
+        
+        .campus-line span {
+            border-bottom: 1px solid #000;
+            display: inline-block;
+            min-width: 180pt;
+            padding-left: 4pt;
+        }
+        
+        .form-title {
+            text-align: center;
+            font-size: 11pt;
+            font-weight: bold;
+            margin: 8pt 0 12pt 0;
+        }
+        
+        .form-row {
+            width: 100%;
+            margin-bottom: 6pt;
+            display: table;
+        }
+        
+        .form-field {
+            display: table-cell;
+            vertical-align: top;
+        }
+        
+        .form-field label {
+            font-weight: normal;
+            white-space: nowrap;
+        }
+        
+        .form-field .value {
+            border-bottom: 1px solid #000;
+            display: inline-block;
+            min-width: 80pt;
+            padding: 0 4pt;
+            min-height: 14pt;
+        }
+        
+        .w-50 {
+            width: 50%;
+        }
+        
+        .w-60 {
+            width: 60%;
+        }
+        
+        .w-40 {
+            width: 40%;
+        }
+        
+        .w-100 {
+            width: 100%;
+        }
+        
+        .control-row {
+            display: table;
+            width: 100%;
+            margin-bottom: 8pt;
+        }
+        
+        .control-left {
+            display: table-cell;
+            width: 50%;
+        }
+        
+        .control-right {
+            display: table-cell;
+            width: 50%;
+            text-align: right;
+        }
+        
+        .control-field {
+            display: inline-block;
+            margin-left: 8pt;
+        }
+        
+        .material-section {
+            margin: 12pt 0;
+        }
+        
+        .material-section p {
+            margin-bottom: 4pt;
+            font-weight: bold;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8pt 0;
+        }
+        
+        table, th, td {
+            border: 1px solid #000;
+        }
+        
+        th {
+            text-align: center;
+            font-weight: bold;
+            padding: 3pt;
+            font-size: 10pt;
+            background-color: #f0f0f0;
+        }
+        
+        td {
+            padding: 3pt;
+            min-height: 16pt;
+            font-size: 10pt;
+        }
+        
+        .notes {
+            margin: 12pt 0;
+            font-size: 10pt;
+        }
+        
+        .notes ul {
+            list-style-type: disc;
+            margin-left: 16pt;
+        }
+        
+        .notes li {
+            margin-bottom: 2pt;
+        }
+        
+        .signature-section {
+            margin-top: 8pt;
+        }
+        
+        .signature-label {
+            display: block;
+            text-align: center;
+            font-size: 9pt;
+            font-style: italic;
+            margin-top: -4pt;
+        }
+        
+        .student-list {
+            margin: 8pt 0;
+        }
+        
+        .student-list p {
+            margin-bottom: 4pt;
+        }
+        
+        .student-list ol {
+            list-style-position: inside;
+            padding-left: 0;
+        }
+        
+        .student-list li {
+            border-bottom: 1px solid #000;
+            min-height: 18pt;
+            margin-bottom: 2pt;
+            padding: 2pt 0;
+        }
+        
+        .footer-text {
+            font-size: 9pt;
+            margin-top: 16pt;
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Science Lab Request System</h1>
-
-    <div class="section">
-      <h3>Requester Information</h3>
-      <p><strong>Name:</strong> <?= htmlspecialchars($form['firstname'] . ' ' . $form['middlename'] . ' ' . $form['lastname']) ?></p>
-      <p><strong>Grade & Section:</strong> <?= htmlspecialchars($form['gradeSection']) ?></p>
-      <p><strong>Subject:</strong> <?= htmlspecialchars($form['subject']) ?></p>
-      <p><strong>Concurrent Topic:</strong> <?= htmlspecialchars($form['concurrentTopic']) ?></p>
+    <div class="header">
+        <h3>PHILIPPINE SCIENCE HIGH SCHOOL SYSTEM</h3>
+        <div class="campus-line">
+            <label>CAMPUS:</label>
+            <span>ILOCOS REGION</span>
+        </div>
     </div>
-
-    <div class="section">
-      <h3>Request Details</h3>
-      <p><strong>Control Number:</strong> <?= htmlspecialchars($form['controlNumber']) ?></p>
-      <p><strong>Facility:</strong> <?= htmlspecialchars($form['facility']) ?></p>
-      <p><strong>Schedule:</strong> <?= htmlspecialchars($form['schedule']) ?></p>
-      <p><strong>Status:</strong> <?= htmlspecialchars($form['status']) ?></p>
+    
+    <div class="form-title">
+        LABORATORY REQUEST AND EQUIPMENT ACCOUNTABILITY FORM
     </div>
-
-    <div class="section">
-      <h3>Requested Materials</h3>
-      <?php if (count($materials) > 0): ?>
+    
+    <div class="control-row">
+        <div class="control-left"></div>
+        <div class="control-right">
+            <div class="control-field">
+                <label>Control No:</label>
+                <span class="value" style="min-width: 60pt;">001</span>
+            </div>
+            <div class="control-field">
+                <label>SY:</label>
+                <span class="value" style="min-width: 50pt;">2024-2025</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="form-row">
+        <div class="form-field w-60">
+            <label>Grade Level and Section:</label>
+            <span class="value" style="min-width: 150pt;">Grade 10 - Section A</span>
+        </div>
+        <div class="form-field w-40">
+            <label>Number of Students:</label>
+            <span class="value" style="min-width: 60pt;">25</span>
+        </div>
+    </div>
+    
+    <div class="form-row">
+        <div class="form-field w-60">
+            <label>Subject:</label>
+            <span class="value" style="min-width: 150pt;">Chemistry</span>
+        </div>
+        <div class="form-field w-40">
+            <label>Concurrent Topic:</label>
+            <span class="value" style="min-width: 90pt;">Acids and Bases</span>
+        </div>
+    </div>
+    
+    <div class="form-row">
+        <div class="form-field w-60">
+            <label>Unit:</label>
+            <span class="value" style="min-width: 150pt;">Chemical Reactions</span>
+        </div>
+        <div class="form-field w-40">
+            <label>Teacher In-Charge:</label>
+            <span class="value" style="min-width: 90pt;">Juan Dela Cruz</span>
+        </div>
+    </div>
+    
+    <div class="form-row">
+        <div class="form-field w-100">
+            <label>Venue of the Experiment:</label>
+            <span class="value" style="min-width: 250pt;">Chemistry Laboratory 1</span>
+        </div>
+    </div>
+    
+    <div class="form-row">
+        <div class="form-field w-50">
+            <label>Date/Inclusive Date:</label>
+            <span class="value" style="min-width: 120pt;">January 20, 2026</span>
+        </div>
+        <div class="form-field w-50">
+            <label>Inclusive Time of Use:</label>
+            <span class="value" style="min-width: 120pt;">1:00 PM - 3:00 PM</span>
+        </div>
+    </div>
+    
+    <div class="material-section">
+        <p>Materials/Equipment Needed:</p>
+        <table>
+            <thead>
+                <tr>
+                    <th rowspan="2" style="width: 8%;">Quantity</th>
+                    <th rowspan="2" style="width: 22%;">Item</th>
+                    <th rowspan="2" style="width: 25%;">Description</th>
+                    <th colspan="1" style="width: 20%;">Issued</th>
+                    <th colspan="1" style="width: 25%;">Returned</th>
+                </tr>
+                <tr>
+                    <th>Condition</th>
+                    <th>Condition/Remarks</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>10</td>
+                    <td>Beaker</td>
+                    <td>250ml glass beaker</td>
+                    <td>Good</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>Test Tube</td>
+                    <td>15ml borosilicate</td>
+                    <td>Good</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>pH Meter</td>
+                    <td>Digital pH meter</td>
+                    <td>Good</td>
+                    <td></td>
+                </tr>
+                <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+                <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+                <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+                <tr>
+                    <td colspan="3"></td>
+                    <td><strong>Received by:</strong></td>
+                    <td><strong>Received and Inspected by:</strong></td>
+                </tr>
+                <tr>
+                    <td colspan="3"></td>
+                    <td><strong>Date:</strong></td>
+                    <td><strong>Date:</strong></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="notes">
         <ul>
-          <?php foreach ($materials as $m): ?>
-            <li><?= htmlspecialchars($m['materialName']) ?> — <?= htmlspecialchars($m['quantity']) ?> <?= htmlspecialchars($m['unit']) ?></li>
-          <?php endforeach; ?>
+            <li>Fill out this form completely and legibly; transact with the Unit SRA concerned during office hours.</li>
+            <li>Requests not in accordance with existing Unit regulations and considerations may not be granted.</li>
         </ul>
-      <?php else: ?>
-        <p>No materials listed.</p>
-      <?php endif; ?>
     </div>
-
-    <div class="section">
-      <h3>Students Involved</h3>
-      <?php if (count($students) > 0): ?>
-        <ul>
-          <?php foreach ($students as $s): ?>
-            <li><?= htmlspecialchars($s) ?></li>
-          <?php endforeach; ?>
-        </ul>
-      <?php else: ?>
-        <p>No students recorded.</p>
-      <?php endif; ?>
+    
+    <div class="signature-section">
+        <div class="form-row">
+            <div class="form-field w-50">
+                <label>Requested:</label>
+                <span class="value" style="min-width: 140pt;">Maria Santos Garcia</span>
+            </div>
+            <div class="form-field w-50">
+                <label>Date Requested:</label>
+                <span class="value" style="min-width: 120pt;">January 15, 2026</span>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-field w-50">
+                <span class="signature-label">Teacher/Student</span>
+            </div>
+        </div>
     </div>
-
-    <div class="button-wrapper">
-      <a href="http://localhost/index.php">Go to Login Page</a>
+    
+    <div class="student-list">
+        <p>If user of the lab is a group, list down the names of the students:</p>
+        <ol>
+            <li>Student Name 1</li>
+            <li>Student Name 2</li>
+            <li>Student Name 3</li>
+            <li>Student Name 4</li>
+            <li>Student Name 5</li>
+        </ol>
     </div>
-
-    <div class="footer">
-      This is an auto-generated document. Please do not reply.
+    
+    <div class="signature-section">
+        <div class="form-row">
+            <div class="form-field w-50">
+                <label>Endorsed by:</label>
+                <span class="value" style="min-width: 140pt;"></span>
+            </div>
+            <div class="form-field w-50">
+                <label>Approved by:</label>
+                <span class="value" style="min-width: 140pt;"></span>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-field w-50">
+                <span class="signature-label">Subject Teacher/Unit Head</span>
+            </div>
+            <div class="form-field w-50">
+                <span class="signature-label">SRS/SRA</span>
+            </div>
+        </div>
     </div>
-  </div>
+    
+    <div class="footer-text">
+        <p>PSHS-00-F-CIID-20-Ver02-Rev1-10/18/20</p>
+    </div>
 </body>
 </html>
-<?php
-$html = ob_get_clean();
-
-// PDF Setup
-$options = new Options();
-$options->set('isHtml5ParserEnabled', true);
-$options->set('isRemoteEnabled', true);
-
-$dompdf = new Dompdf($options);
-$dompdf->loadHtml($html);
-$dompdf->setPaper('A4', 'portrait');
-$dompdf->render();
-
-$dompdf->stream("scilab_request_{$id}.pdf", ["Attachment" => false]);
-exit;
-?>
