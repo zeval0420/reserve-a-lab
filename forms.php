@@ -118,6 +118,24 @@
                 font-weight: normal; cursor: pointer; user-select: none;
             }
             .image-divider { border-top: 1px solid #dcdcdc; margin: 15px auto; width: 95%; }
+
+            /* Multiselect consistency */
+            .form-group .multiselect-native-select .btn-group, 
+            .form-group .btn-group { width: 100%; }
+            button.multiselect {
+                width: 100%; text-align: left; background-color: #fff; border: 1px solid #ced4da;
+                color: #495057; display: flex; align-items: center; justify-content: space-between;
+                height: 38px; border-radius: 4px; box-shadow: none; background-image: none;
+            }
+            button.multiselect:focus, button.multiselect.active {
+                box-shadow: none; border-color: #80bdff; outline: 0; background-color: #fff;
+            }
+            button.multiselect .caret { margin-left: auto; }
+            .multiselect-container { width: 100%; border: 1px solid #ced4da; border-radius: 4px; box-shadow: none; margin-top: 2px; padding: 5px 0; }
+            .multiselect-container > li { margin-bottom: 2px; }
+            .multiselect-container > li > a > label {
+                padding: 10px 15px; width: 100%; cursor: pointer; font-weight: normal; margin: 0;
+            }
         </style>
     </head>
 
@@ -158,7 +176,7 @@
                             </select>
                         </div>
                         <div class="form-group col-md-6">
-                            <label>Section:</label><br>
+                            <label>Section:</label>
                             <select id="sections-checkboxes" name="sections[]" multiple="multiple">
                                 <option value="php">Select Grade Level First</option>
                             </select>
