@@ -16,38 +16,36 @@
     }
 
     // Fetch only items not marked as Removed
-    $inventoryQuery = $conn->query("SELECT id, classification, item, productID, description, quantity, unit, status 
-                                    FROM scilab_inventory 
-                                    WHERE classification IN ('Equipment', 'Semi Expendable', 'Consumable', 'Reagent', 'Glassware', 'Lab Material', 'Food Lab') 
-                                    AND (status IS NULL OR status != 'Removed')
-                                    ORDER BY classification, item");
-
-    $inventory = [
-        'Equipment' => [],
-        'Semi Expendable' => [],
-        'Consumable' => [],
-        'Reagent' => [],
-        'Glassware' => [],
-        'Lab Material' => [],
-        'Food Lab' => []
+    $CLASSIFICATIONS = [
+        'Equipment',
+        'Semi Expendable',
+        'Consumable',
+        'Reagent',
+        'Glassware',
+        'Lab Material',
+        'Food Lab'
     ];
 
+    // Creates a placeholder string for SQL IN clause
+    $inClause = "'" . implode("','", $CLASSIFICATIONS) . "'";
+
+    $inventoryQuery = $conn->query("SELECT id, classification, item, productID, description, quantity, unit, status 
+                                    FROM scilab_inventory 
+                                    WHERE classification IN ($inClause) AND (status IS NULL OR status != 'Removed')
+                                    ORDER BY classification, item");
+
+    // Initialize empty array for each classification
+    $inventory = [];
+    foreach ($CLASSIFICATIONS as $class) {
+        $inventory[$class] = [];
+    }
+
+    // Populate inventory dynamically
     if ($inventoryQuery && $inventoryQuery->num_rows > 0) {
         while ($row = $inventoryQuery->fetch_assoc()) {
-            if ($row['classification'] === 'Equipment') {
-                $inventory['Equipment'][] = $row;
-            } elseif ($row['classification'] === 'Semi Expendable') {
-                $inventory['Semi Expendable'][] = $row;
-            } elseif ($row['classification'] === 'Consumable') {
-                $inventory['Consumable'][] = $row;
-            } elseif ($row['classification'] === 'Reagent') {
-                $inventory['Reagent'][] = $row;
-            } elseif ($row['classification'] === 'Glassware') {
-                $inventory['Glassware'][] = $row;
-            } elseif ($row['classification'] === 'Lab Material') {
-                $inventory['Lab Material'][] = $row;
-            } elseif ($row['classification'] === 'Food Lab') {
-                $inventory['Food Lab'][] = $row;
+            $class = $row['classification'];
+            if (isset($inventory[$class])) {
+                $inventory[$class][] = $row;
             }
         }
     }
@@ -136,15 +134,9 @@
                         <button id="addItemBtn" class="btn-add">Add Product</button>
                     </div>
                 </div>
-                <div class="tabs">
-                    <div class="tab active" data-type="Equipment">Equipment</div>
-                    <div class="tab" data-type="Semi Expendable">Semi Expendable</div>
-                    <div class="tab" data-type="Consumable">Consumable</div>
-                    <div class="tab" data-type="Reagent">Reagent</div>
-                    <div class="tab" data-type="Glassware">Glassware</div>
-                    <div class="tab" data-type="Lab Material">Lab Material</div>
-                    <div class="tab" data-type="Food Lab">Food Lab</div>
-                </div>
+
+                <!-- CLassification Tabs Section -->
+                <div class="tabs" id="tabsContainer"></div>
 
                 <table id="inventory-table" class="table table-striped table-bordered" style="width:100%">
                     <thead>
@@ -175,16 +167,7 @@
                         <form id="addProductForm">
                             <div class="form-group">
                                 <label>Classification</label>
-                                <select class="form-control" name="classification" required>
-                                    <option value="">Select Classification</option>
-                                    <option value="Equipment">Equipment</option>
-                                    <option value="Semi Expendable">Semi Expendable</option>
-                                    <option value="Consumable">Consumable</option>
-                                    <option value="Reagent">Reagent</option>
-                                    <option value="Glassware">Glassware</option>
-                                    <option value="Lab Material">Lab Material</option>
-                                    <option value="Food Lab">Food Lab</option>
-                                </select>
+                                <select class="form-control" name="classification" required></select>
                             </div>
                             <div class="form-group">
                                 <label>Product Name</label>
@@ -243,15 +226,7 @@
                             <input type="hidden" name="id">
                             <div class="form-group">
                                 <label>Classification</label>
-                                <select class="form-control" name="classification" required>
-                                    <option value="Equipment">Equipment</option>
-                                    <option value="Semi Expendable">Semi Expendable</option>
-                                    <option value="Consumable">Consumable</option>
-                                    <option value="Reagent">Reagent</option>
-                                    <option value="Glassware">Glassware</option>
-                                    <option value="Lab Material">Lab Material</option>
-                                    <option value="Food Lab">Food Lab</option>
-                                </select>
+                                <select class="form-control" name="classification" required></select>
                             </div>
                             <div class="form-group">
                                 <label>Product Name</label>
@@ -362,7 +337,36 @@
     </body>
 
     <script>
+        const CLASSIFICATIONS = <?php echo json_encode($CLASSIFICATIONS); ?>;
+        
+        function addClassificationTabs() {
+            const $tabsContainer = $('#tabsContainer');
+            $tabsContainer.empty(); // for re-render
+
+            CLASSIFICATIONS.forEach((classification, index) => {
+                const isActive = index === 0 ? 'active' : '';
+                $tabsContainer.append(`
+                    <div class="tab ${isActive}" data-type="${classification}">
+                        ${classification}
+                    </div>
+                `);
+            });
+        }
+
+        function populateClassificationDropdowns() {
+            const $dropdowns = $('select[name="classification"]');
+            $dropdowns.empty().append('<option value="">Select Classification</option>');
+
+            CLASSIFICATIONS.forEach(c => {
+                $dropdowns.append(`<option value="${c}">${c}</option>`);
+            });
+        }
+
+
         $(document).ready(function () {
+            addClassificationTabs();
+            populateClassificationDropdowns();
+
             const allInventory = <?php echo json_encode($inventory); ?>;
             let currentType = 'Equipment';
             let dataTable = null;

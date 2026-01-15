@@ -54,22 +54,31 @@
     }
 
     // Inventory items with unit, grouped by classification
-    $itemOptions = [
-        'Equipment' => [],
-        'Semi Expendable' => [],
-        'Consumable' => [],
-        'Reagent' => [],
-        'Glassware' => [],
-        'Lab Material' => [],
-        'Food Lab' => []
+    $CLASSIFICATIONS = [
+        'Equipment',
+        'Semi Expendable',
+        'Consumable',
+        'Reagent',
+        'Glassware',
+        'Lab Material',
+        'Food Lab'
     ];
 
+    // Initialize empty array for each classification
+    $itemOptions = [];
+    foreach ($CLASSIFICATIONS as $class) {
+        $itemOptions[$class] = [];
+    }
+
+    // Creates a placeholder string for SQL IN clause
+    $inClause = "'" . implode("','", $CLASSIFICATIONS) . "'";
+    
     $result = $conn->query("SELECT classification, item, description, unit 
                             FROM scilab_inventory 
-                            WHERE classification IN ('Equipment', 'Semi Expendable', 'Consumable', 'Reagent', 'Glassware', 'Lab Material', 'Food Lab')
-                            AND (status IS NULL OR status != 'Removed')
+                            WHERE classification IN ($inClause) AND (status IS NULL OR status != 'Removed')
                             ORDER BY classification, item ASC");
 
+    // Populate itemOptions
     if ($result && $result->num_rows > 0) {
         while ($row = $result->fetch_assoc()) {
             $class = $row['classification'];
@@ -301,15 +310,7 @@
 
     <!-- JavaScript -->
     <script> 
-        const CLASSIFICATIONS = [
-            'Equipment',
-            'Semi Expendable',
-            'Consumable',
-            'Reagent',
-            'Glassware',
-            'Lab Material',
-            'Food Lab'
-        ];
+        const CLASSIFICATIONS = <?= json_encode($CLASSIFICATIONS) ?>;
 
         const $container = $('#materials-container');
         CLASSIFICATIONS.forEach(classification => {
