@@ -1,238 +1,397 @@
-<?php
-  include('../helperFiles/db_connection.php');
-
-  $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
-
-  $stmt = $conn->prepare("SELECT r.*, a.firstname, a.middlename, a.lastname 
-                          FROM scilab_form_requests r
-                          JOIN accounts a ON r.requesterEmployeeID = a.employeeID
-                          WHERE r.id = ?");
-  $stmt->bind_param("i", $id);
-  $stmt->execute();
-  $result = $stmt->get_result();
-
-  if (!$result || $result->num_rows === 0) {
-      die("Invalid request.");
-  }
-
-  $row = $result->fetch_assoc();
-
-  // Fetch materials
-  $materials = [];
-  $matResult = $conn->query("SELECT item, quantity, description FROM scilab_material_requests WHERE formID = $id");
-  while ($mat = $matResult->fetch_assoc()) {
-      $desc = $mat['description'] ?: 'N/A';
-      $materials[] = "{$mat['quantity']} x {$mat['item']} ({$desc})";
-  }
-
-  $requesterName = "{$row['firstname']} {$row['middlename']} {$row['lastname']}";
-  $logo = 'data:image/png;base64,' . base64_encode(file_get_contents('../img/pshsLogo.png'));
-  $venue = $row['scilabName'];
-  $grade = $row['gradeLevel'];
-  $section = $row['section/s'];
-  $subject = $row['subject'];
-  $topic = $row['subjectTopic'];
-  $unit = $row['unit'] ?? 'N/A';
-  $teacher = $row['teacher'] ?? 'N/A';
-  $startDate = $row['inclusiveDate'];
-  $time = $row['inclusiveTime'];
-  $students = $row['students'] ?? 'None';
-
-  $materialsList = !empty($materials) ? implode("; ", $materials) : "None";
-  ?>
-  <!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html>
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Laboratory Request and Equipment Accountability Form</title>
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-    }
-
-    .a4-page {
-      background: white;
-      width: 210mm;
-      height: 297mm;
-      padding: 20mm;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-      font-size: 12px;
-    }
-
-    .header, .section-title {
-      text-align: center;
-      font-weight: bold;
-    }
-
-    .form-group {
-      margin: 5px 0;
-    }
-
-    .form-line {
-      display: flex;
-      justify-content: space-between;
-    }
-
-    .form-line div {
-      flex: 1;
-      margin-right: 10px;
-    }
-
-    .form-line div:last-child {
-      margin-right: 0;
-    }
-
-    .table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
-
-    .table, .table th, .table td {
-      border: 1px solid black;
-    }
-
-    .table th, .table td {
-      height: 20px;
-      text-align: left;
-      padding: 2px 4px;
-    }
-
-    .signature-section {
-      margin-top: 20px;
-    }
-
-    .signature-section div {
-      margin-bottom: 5px;
-    }
-
-    .footer {
-      font-size: 10px;
-      margin-top: 10px;
-    }
-
-    .student-list {
-      margin-top: 10px;
-    }
-
-    .student-list div {
-      margin-bottom: 3px;
-    }
-
-    @media print {
-      .a4-page {
-        box-shadow: none;
-        margin: 0;
-      }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Laboratory Request and Equipment Accountability Form</title>
+    <style>
+        @page {
+            margin: 0.5in 1in;
+            size: A4;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.3;
+        }
+        
+        .header {
+            text-align: left;
+            margin-bottom: 15px;
+        }
+        
+        .header h3 {
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .campus-line {
+            display: block;
+            margin-bottom: 10px;
+        }
+        
+        .campus-line span {
+            border-bottom: 1px solid #000;
+            display: inline-block;
+            min-width: 200px;
+            padding-left: 5px;
+        }
+        
+        .form-title {
+            text-align: center;
+            font-size: 12px;
+            font-weight: bold;
+            margin: 10px 0 15px 0;
+        }
+        
+        .form-row {
+            width: 100%;
+            margin-bottom: 8px;
+            display: table;
+        }
+        
+        .form-field {
+            display: table-cell;
+            vertical-align: top;
+        }
+        
+        .form-field label {
+            font-weight: normal;
+            white-space: nowrap;
+        }
+        
+        .form-field .value {
+            border-bottom: 1px solid #000;
+            display: inline-block;
+            min-width: 100px;
+            padding: 0 5px;
+            min-height: 16px;
+        }
+        
+        .w-50 {
+            width: 50%;
+        }
+        
+        .w-60 {
+            width: 60%;
+        }
+        
+        .w-40 {
+            width: 40%;
+        }
+        
+        .w-100 {
+            width: 100%;
+        }
+        
+        .text-right {
+            text-align: right;
+        }
+        
+        .material-section {
+            margin: 15px 0;
+        }
+        
+        .material-section p {
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        
+        table, th, td {
+            border: 1px solid #000;
+        }
+        
+        th {
+            text-align: center;
+            font-weight: bold;
+            padding: 4px;
+            font-size: 11px;
+        }
+        
+        td {
+            padding: 4px;
+            min-height: 18px;
+            font-size: 11px;
+        }
+        
+        .notes {
+            margin: 15px 0;
+            font-size: 11px;
+        }
+        
+        .notes ul {
+            list-style-type: disc;
+            margin-left: 20px;
+        }
+        
+        .notes li {
+            margin-bottom: 3px;
+        }
+        
+        .signature-section {
+            margin-top: 10px;
+        }
+        
+        .signature-label {
+            display: block;
+            text-align: center;
+            font-size: 10px;
+            font-style: italic;
+            margin-top: -5px;
+        }
+        
+        .student-list {
+            margin: 10px 0;
+        }
+        
+        .student-list p {
+            margin-bottom: 5px;
+        }
+        
+        .student-list ol {
+            list-style-position: inside;
+            padding-left: 0;
+        }
+        
+        .student-list li {
+            border-bottom: 1px solid #000;
+            min-height: 20px;
+            margin-bottom: 3px;
+            padding: 2px 0;
+        }
+        
+        .footer-text {
+            font-size: 10px;
+            margin-top: 20px;
+        }
+        
+        .control-row {
+            display: table;
+            width: 100%;
+        }
+        
+        .control-left {
+            display: table-cell;
+            width: 50%;
+        }
+        
+        .control-right {
+            display: table-cell;
+            width: 50%;
+            text-align: right;
+        }
+        
+        .control-field {
+            display: inline-block;
+            margin-left: 10px;
+        }
+    </style>
 </head>
 <body>
-  <div class="a4-page">
     <div class="header">
-      PHILIPPINE SCIENCE HIGH SCHOOL SYSTEM<br>
-      CAMPUS: ______________________<br><br>
-      <div class="section-title">LABORATORY REQUEST AND EQUIPMENT ACCOUNTABILITY FORM</div>
+        <h3>PHILIPPINE SCIENCE HIGH SCHOOL SYSTEM</h3>
+        <div class="campus-line">
+            <label>CAMPUS:</label>
+            <span>ILOCOS REGION</span>
+        </div>
     </div>
-
-    <br>
-    <div class="form-line">
-      <div>Grade Level and Section: <?= htmlspecialchars($grade) ?> - <?= htmlspecialchars($section) ?></div>
-      <div>Control No: __________</div>
-      <div>SY: __________</div>
+    
+    <div class="form-title">
+        LABORATORY REQUEST AND EQUIPMENT ACCOUNTABILITY FORM
     </div>
-
-    <div class="form-line">
-      <div>Number of Students: ____________</div>
-      <div>Subject: <?= htmlspecialchars($subject) ?></div>
-      <div>Concurrent Topic: <?= htmlspecialchars($topic) ?></div>
+    
+    <div class="control-row">
+        <div class="control-left"></div>
+        <div class="control-right">
+            <div class="control-field">
+                <label>Control No:</label>
+                <span class="value" style="min-width: 80px;">001</span>
+            </div>
+            <div class="control-field">
+                <label>SY:</label>
+                <span class="value" style="min-width: 60px;">2024-2025</span>
+            </div>
+        </div>
     </div>
-
-    <div class="form-line">
-      <div>Unit: <?= htmlspecialchars($unit) ?></div>
-      <div>Teacher In-Charge: <?= htmlspecialchars($teacher) ?></div>
+    
+    <div class="form-row">
+        <div class="form-field w-60">
+            <label>Grade Level and Section:</label>
+            <span class="value" style="min-width: 200px;">Grade 10 - Section A</span>
+        </div>
+        <div class="form-field w-40">
+            <label>Number of Students:</label>
+            <span class="value" style="min-width: 80px;">25</span>
+        </div>
     </div>
-
-    <div class="form-line">
-      <div>Venue of the Experiment: <?= htmlspecialchars($venue) ?></div>
+    
+    <div class="form-row">
+        <div class="form-field w-60">
+            <label>Subject:</label>
+            <span class="value" style="min-width: 200px;">Chemistry</span>
+        </div>
+        <div class="form-field w-40">
+            <label>Concurrent Topic:</label>
+            <span class="value" style="min-width: 120px;">Acids and Bases</span>
+        </div>
     </div>
-
-    <div class="form-line">
-      <div>Date/Inclusive Date: <?= htmlspecialchars($startDate) ?></div>
-      <div>Inclusive Time of Use: <?= htmlspecialchars($time) ?></div>
+    
+    <div class="form-row">
+        <div class="form-field w-60">
+            <label>Unit:</label>
+            <span class="value" style="min-width: 200px;">Chemical Reactions</span>
+        </div>
+        <div class="form-field w-40">
+            <label>Teacher In-Charge:</label>
+            <span class="value" style="min-width: 120px;">Juan Dela Cruz</span>
+        </div>
     </div>
-
-    <br><b>Materials/ Equipment Needed:</b>
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Quantity</th>
-          <th>Item</th>
-          <th>Description</th>
-          <th colspan="2">Issued</th>
-          <th colspan="2">Returned</th>
-        </tr>
-        <tr>
-          <th></th><th></th><th></th>
-          <th>Condition</th><th></th>
-          <th>Condition</th><th>Remarks</th>
-        </tr>
-      </thead>
-      <tbody>
-        <?php for ($i = 0; $i < 10; $i++): ?>
-        <tr>
-          <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
-        </tr>
-        <?php endfor; ?>
-      </tbody>
-    </table>
-
-    <div class="form-line" style="margin-top: 10px;">
-      <div>Received by:<br><br>________________________</div>
-      <div>Date: __________</div>
-      <div>Received and Inspected by:<br><br>________________________</div>
-      <div>Date: __________</div>
+    
+    <div class="form-row">
+        <div class="form-field w-100">
+            <label>Venue of the Experiment:</label>
+            <span class="value" style="min-width: 300px;">Chemistry Laboratory 1</span>
+        </div>
     </div>
-
-    <div class="footer">
-      <p>* Fill out this form completely and legibly; transact with the Unit SRA concerned during office hours.</p>
-      <p>* Requests not in accordance with existing Unit regulations and considerations may not be granted.</p>
+    
+    <div class="form-row">
+        <div class="form-field w-50">
+            <label>Date/Inclusive Date:</label>
+            <span class="value" style="min-width: 150px;">January 20, 2026</span>
+        </div>
+        <div class="form-field w-50">
+            <label>Inclusive Time of Use:</label>
+            <span class="value" style="min-width: 150px;">1:00 PM - 3:00 PM</span>
+        </div>
     </div>
-
-    <br>
-    <div class="form-line">
-      <div>Requested by: <?= htmlspecialchars($requesterName) ?></div>
-      <div>Date Requested: <?= date("Y-m-d") ?></div>
+    
+    <div class="material-section">
+        <p>Materials/Equipment Needed:</p>
+        <table>
+            <thead>
+                <tr>
+                    <th rowspan="2" style="width: 8%;">Quantity</th>
+                    <th rowspan="2" style="width: 22%;">Item</th>
+                    <th rowspan="2" style="width: 25%;">Description</th>
+                    <th colspan="1" style="width: 20%;">Issued</th>
+                    <th colspan="1" style="width: 25%;">Returned</th>
+                </tr>
+                <tr>
+                    <th>Condition</th>
+                    <th>Condition/Remarks</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>10</td>
+                    <td>Beaker</td>
+                    <td>250ml glass beaker</td>
+                    <td>Good</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>Test Tube</td>
+                    <td>15ml borosilicate</td>
+                    <td>Good</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>pH Meter</td>
+                    <td>Digital pH meter</td>
+                    <td>Good</td>
+                    <td></td>
+                </tr>
+                <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+                <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+                <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+                <tr>
+                    <td colspan="3"></td>
+                    <td><strong>Received by:</strong></td>
+                    <td><strong>Received and Inspected by:</strong></td>
+                </tr>
+                <tr>
+                    <td colspan="3"></td>
+                    <td><strong>Date:</strong></td>
+                    <td><strong>Date:</strong></td>
+                </tr>
+            </tbody>
+        </table>
     </div>
-
-    <div class="form-group student-list">
-      <b>Teacher/Student</b><br>
-      <p>If user of the lab is a group, list down the names of students.</p>
-      <?php 
-        $studentList = array_map('trim', explode(",", $students));
-        for ($i = 0; $i < 5; $i++): 
-      ?>
-        <div><?= ($i + 1) ?>. <?= htmlspecialchars($studentList[$i] ?? '') ?></div>
-      <?php endfor; ?>
+    
+    <div class="notes">
+        <ul>
+            <li>Fill out this form completely and legibly; transact with the Unit SRA concerned during office hours.</li>
+            <li>Requests not in accordance with existing Unit regulations and considerations may not be granted.</li>
+        </ul>
     </div>
-
-    <br>
-    <div class="form-line">
-      <div>Endorsed by: _________________________<br>Subject Teacher/Unit Head</div>
-      <div>Approved by: _________________________<br>SRS / SRA</div>
+    
+    <div class="signature-section">
+        <div class="form-row">
+            <div class="form-field w-50">
+                <label>Requested:</label>
+                <span class="value" style="min-width: 180px;">Maria Santos Garcia</span>
+            </div>
+            <div class="form-field w-50">
+                <label>Date Requested:</label>
+                <span class="value" style="min-width: 150px;">January 15, 2026</span>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-field w-50">
+                <span class="signature-label">Teacher/Student</span>
+            </div>
+        </div>
     </div>
-
-    <div class="footer" style="margin-top: 30px;">
-      PSHS-00-F-CIID-20-Ver02-Rev1-10/18/20
+    
+    <div class="student-list">
+        <p>If user of the lab is a group, list down the names of the students:</p>
+        <ol>
+            <li>Student Name 1</li>
+            <li>Student Name 2</li>
+            <li>Student Name 3</li>
+            <li>Student Name 4</li>
+            <li>Student Name 5</li>
+        </ol>
     </div>
-  </div>
+    
+    <div class="signature-section">
+        <div class="form-row">
+            <div class="form-field w-50">
+                <label>Endorsed by:</label>
+                <span class="value" style="min-width: 180px;"></span>
+            </div>
+            <div class="form-field w-50">
+                <label>Approved by:</label>
+                <span class="value" style="min-width: 180px;"></span>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-field w-50">
+                <span class="signature-label">Subject Teacher/Unit Head</span>
+            </div>
+            <div class="form-field w-50">
+                <span class="signature-label">SRS/SRA</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="footer-text">
+        <p>PSHS-00-F-CIID-20-Ver02-Rev1-10/18/20</p>
+    </div>
 </body>
 </html>
