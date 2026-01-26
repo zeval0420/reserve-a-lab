@@ -6,6 +6,7 @@
     <style>
         @page {
             margin: 15mm 20mm;
+            size: A4 portrait;
         }
         
         * {
@@ -15,8 +16,9 @@
         }
         
         body {
+            padding: 50px;
             font-family: 'DejaVu Sans', Arial, sans-serif;
-            font-size: 11pt;
+            font-size: 8pt;
             line-height: 1.3;
             color: #000;
         }
@@ -27,7 +29,7 @@
         }
         
         .header h3 {
-            font-size: 11pt;
+            font-size: 9pt;
             font-weight: bold;
             margin-bottom: 4pt;
         }
@@ -45,7 +47,7 @@
         }
         
         .form-title {
-            text-align: center;
+            text-align: left;
             font-size: 11pt;
             font-weight: bold;
             margin: 8pt 0 12pt 0;
@@ -136,19 +138,19 @@
             text-align: center;
             font-weight: bold;
             padding: 3pt;
-            font-size: 10pt;
+            font-size: 9pt;
             background-color: #f0f0f0;
         }
         
         td {
             padding: 3pt;
             min-height: 16pt;
-            font-size: 10pt;
+            font-size: 8pt;
         }
         
         .notes {
             margin: 12pt 0;
-            font-size: 10pt;
+            font-size: 8pt;
         }
         
         .notes ul {
@@ -166,10 +168,11 @@
         
         .signature-label {
             display: block;
-            text-align: center;
-            font-size: 9pt;
+            text-align: left;
+            font-size: 8pt;
             font-style: italic;
-            margin-top: -4pt;
+            margin-top: -10pt;
+            margin-left: 85pt;
         }
         
         .student-list {
