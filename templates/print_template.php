@@ -1,12 +1,11 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <title>Laboratory Request and Equipment Accountability Form</title>
     <style>
         @page {
-            margin: 0.5in 1in;
-            size: A4;
+            margin: 15mm 20mm;
         }
         
         * {
@@ -16,44 +15,45 @@
         }
         
         body {
-            font-family: Arial, sans-serif;
-            font-size: 12px;
+            font-family: 'DejaVu Sans', Arial, sans-serif;
+            font-size: 11pt;
             line-height: 1.3;
+            color: #000;
         }
         
         .header {
             text-align: left;
-            margin-bottom: 15px;
+            margin-bottom: 12pt;
         }
         
         .header h3 {
-            font-size: 12px;
+            font-size: 11pt;
             font-weight: bold;
-            margin-bottom: 5px;
+            margin-bottom: 4pt;
         }
         
         .campus-line {
             display: block;
-            margin-bottom: 10px;
+            margin-bottom: 8pt;
         }
         
         .campus-line span {
             border-bottom: 1px solid #000;
             display: inline-block;
-            min-width: 200px;
-            padding-left: 5px;
+            min-width: 180pt;
+            padding-left: 4pt;
         }
         
         .form-title {
             text-align: center;
-            font-size: 12px;
+            font-size: 11pt;
             font-weight: bold;
-            margin: 10px 0 15px 0;
+            margin: 8pt 0 12pt 0;
         }
         
         .form-row {
             width: 100%;
-            margin-bottom: 8px;
+            margin-bottom: 6pt;
             display: table;
         }
         
@@ -70,9 +70,9 @@
         .form-field .value {
             border-bottom: 1px solid #000;
             display: inline-block;
-            min-width: 100px;
-            padding: 0 5px;
-            min-height: 16px;
+            min-width: 80pt;
+            padding: 0 4pt;
+            min-height: 14pt;
         }
         
         .w-50 {
@@ -91,96 +91,10 @@
             width: 100%;
         }
         
-        .text-right {
-            text-align: right;
-        }
-        
-        .material-section {
-            margin: 15px 0;
-        }
-        
-        .material-section p {
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 10px 0;
-        }
-        
-        table, th, td {
-            border: 1px solid #000;
-        }
-        
-        th {
-            text-align: center;
-            font-weight: bold;
-            padding: 4px;
-            font-size: 11px;
-        }
-        
-        td {
-            padding: 4px;
-            min-height: 18px;
-            font-size: 11px;
-        }
-        
-        .notes {
-            margin: 15px 0;
-            font-size: 11px;
-        }
-        
-        .notes ul {
-            list-style-type: disc;
-            margin-left: 20px;
-        }
-        
-        .notes li {
-            margin-bottom: 3px;
-        }
-        
-        .signature-section {
-            margin-top: 10px;
-        }
-        
-        .signature-label {
-            display: block;
-            text-align: center;
-            font-size: 10px;
-            font-style: italic;
-            margin-top: -5px;
-        }
-        
-        .student-list {
-            margin: 10px 0;
-        }
-        
-        .student-list p {
-            margin-bottom: 5px;
-        }
-        
-        .student-list ol {
-            list-style-position: inside;
-            padding-left: 0;
-        }
-        
-        .student-list li {
-            border-bottom: 1px solid #000;
-            min-height: 20px;
-            margin-bottom: 3px;
-            padding: 2px 0;
-        }
-        
-        .footer-text {
-            font-size: 10px;
-            margin-top: 20px;
-        }
-        
         .control-row {
             display: table;
             width: 100%;
+            margin-bottom: 8pt;
         }
         
         .control-left {
@@ -196,7 +110,91 @@
         
         .control-field {
             display: inline-block;
-            margin-left: 10px;
+            margin-left: 8pt;
+        }
+        
+        .material-section {
+            margin: 12pt 0;
+        }
+        
+        .material-section p {
+            margin-bottom: 4pt;
+            font-weight: bold;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8pt 0;
+        }
+        
+        table, th, td {
+            border: 1px solid #000;
+        }
+        
+        th {
+            text-align: center;
+            font-weight: bold;
+            padding: 3pt;
+            font-size: 10pt;
+            background-color: #f0f0f0;
+        }
+        
+        td {
+            padding: 3pt;
+            min-height: 16pt;
+            font-size: 10pt;
+        }
+        
+        .notes {
+            margin: 12pt 0;
+            font-size: 10pt;
+        }
+        
+        .notes ul {
+            list-style-type: disc;
+            margin-left: 16pt;
+        }
+        
+        .notes li {
+            margin-bottom: 2pt;
+        }
+        
+        .signature-section {
+            margin-top: 8pt;
+        }
+        
+        .signature-label {
+            display: block;
+            text-align: center;
+            font-size: 9pt;
+            font-style: italic;
+            margin-top: -4pt;
+        }
+        
+        .student-list {
+            margin: 8pt 0;
+        }
+        
+        .student-list p {
+            margin-bottom: 4pt;
+        }
+        
+        .student-list ol {
+            list-style-position: inside;
+            padding-left: 0;
+        }
+        
+        .student-list li {
+            border-bottom: 1px solid #000;
+            min-height: 18pt;
+            margin-bottom: 2pt;
+            padding: 2pt 0;
+        }
+        
+        .footer-text {
+            font-size: 9pt;
+            margin-top: 16pt;
         }
     </style>
 </head>
@@ -218,11 +216,11 @@
         <div class="control-right">
             <div class="control-field">
                 <label>Control No:</label>
-                <span class="value" style="min-width: 80px;">001</span>
+                <span class="value" style="min-width: 60pt;">001</span>
             </div>
             <div class="control-field">
                 <label>SY:</label>
-                <span class="value" style="min-width: 60px;">2024-2025</span>
+                <span class="value" style="min-width: 50pt;">2024-2025</span>
             </div>
         </div>
     </div>
@@ -230,51 +228,51 @@
     <div class="form-row">
         <div class="form-field w-60">
             <label>Grade Level and Section:</label>
-            <span class="value" style="min-width: 200px;">Grade 10 - Section A</span>
+            <span class="value" style="min-width: 150pt;">Grade 10 - Section A</span>
         </div>
         <div class="form-field w-40">
             <label>Number of Students:</label>
-            <span class="value" style="min-width: 80px;">25</span>
+            <span class="value" style="min-width: 60pt;">25</span>
         </div>
     </div>
     
     <div class="form-row">
         <div class="form-field w-60">
             <label>Subject:</label>
-            <span class="value" style="min-width: 200px;">Chemistry</span>
+            <span class="value" style="min-width: 150pt;">Chemistry</span>
         </div>
         <div class="form-field w-40">
             <label>Concurrent Topic:</label>
-            <span class="value" style="min-width: 120px;">Acids and Bases</span>
+            <span class="value" style="min-width: 90pt;">Acids and Bases</span>
         </div>
     </div>
     
     <div class="form-row">
         <div class="form-field w-60">
             <label>Unit:</label>
-            <span class="value" style="min-width: 200px;">Chemical Reactions</span>
+            <span class="value" style="min-width: 150pt;">Chemical Reactions</span>
         </div>
         <div class="form-field w-40">
             <label>Teacher In-Charge:</label>
-            <span class="value" style="min-width: 120px;">Juan Dela Cruz</span>
+            <span class="value" style="min-width: 90pt;">Juan Dela Cruz</span>
         </div>
     </div>
     
     <div class="form-row">
         <div class="form-field w-100">
             <label>Venue of the Experiment:</label>
-            <span class="value" style="min-width: 300px;">Chemistry Laboratory 1</span>
+            <span class="value" style="min-width: 250pt;">Chemistry Laboratory 1</span>
         </div>
     </div>
     
     <div class="form-row">
         <div class="form-field w-50">
             <label>Date/Inclusive Date:</label>
-            <span class="value" style="min-width: 150px;">January 20, 2026</span>
+            <span class="value" style="min-width: 120pt;">January 20, 2026</span>
         </div>
         <div class="form-field w-50">
             <label>Inclusive Time of Use:</label>
-            <span class="value" style="min-width: 150px;">1:00 PM - 3:00 PM</span>
+            <span class="value" style="min-width: 120pt;">1:00 PM - 3:00 PM</span>
         </div>
     </div>
     
@@ -344,11 +342,11 @@
         <div class="form-row">
             <div class="form-field w-50">
                 <label>Requested:</label>
-                <span class="value" style="min-width: 180px;">Maria Santos Garcia</span>
+                <span class="value" style="min-width: 140pt;">Maria Santos Garcia</span>
             </div>
             <div class="form-field w-50">
                 <label>Date Requested:</label>
-                <span class="value" style="min-width: 150px;">January 15, 2026</span>
+                <span class="value" style="min-width: 120pt;">January 15, 2026</span>
             </div>
         </div>
         <div class="form-row">
@@ -373,11 +371,11 @@
         <div class="form-row">
             <div class="form-field w-50">
                 <label>Endorsed by:</label>
-                <span class="value" style="min-width: 180px;"></span>
+                <span class="value" style="min-width: 140pt;"></span>
             </div>
             <div class="form-field w-50">
                 <label>Approved by:</label>
-                <span class="value" style="min-width: 180px;"></span>
+                <span class="value" style="min-width: 140pt;"></span>
             </div>
         </div>
         <div class="form-row">
