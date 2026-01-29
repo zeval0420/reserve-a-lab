@@ -200,6 +200,80 @@
             }
 
             /* ========================================
+               SECTION DIVIDER / TRANSITION
+            ======================================== */
+            .section-divider {
+                position: relative;
+                height: 120px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                overflow: hidden;
+            }
+
+            .section-divider::before {
+                content: '';
+                position: absolute;
+                top: 50%;
+                left: 0;
+                right: 0;
+                height: 2px;
+                background: linear-gradient(90deg, transparent, var(--gray-300), transparent);
+                transform: translateY(-50%);
+            }
+
+            .divider-icon {
+                position: relative;
+                width: 60px;
+                height: 60px;
+                background: var(--white);
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.5rem;
+                color: var(--primary-blue);
+                box-shadow: var(--shadow-md);
+                z-index: 2;
+            }
+
+            /* ========================================
+               TEAM SECTION - SHARED STYLES
+            ======================================== */
+            .team-section-wrapper {
+                position: relative;
+            }
+
+            /* Current Team Accent */
+            .current-team {
+                background: linear-gradient(to bottom, var(--white) 0%, var(--gray-50) 100%);
+            }
+
+            /* Original Team Accent */
+            .original-team {
+                background: linear-gradient(to bottom, var(--gray-50) 0%, var(--light-blue) 100%);
+            }
+
+            /* Badge for Section Labels */
+            .section-badge {
+                display: inline-block;
+                padding: 0.5rem 1.5rem;
+                background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+                color: white;
+                border-radius: 50px;
+                font-size: 0.85rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.1em;
+                margin-bottom: 1rem;
+                box-shadow: var(--shadow-md);
+            }
+
+            .section-badge.original {
+                background: linear-gradient(135deg, #764ba2, #667eea);
+            }
+
+            /* ========================================
                MISSION & VISION SECTION
             ======================================== */
             .mission-vision {
@@ -273,16 +347,16 @@
             }
 
             /* ========================================
-               TEAM LEADER SECTION
+               TEAM LEADER CARD - SHARED STYLE
             ======================================== */
             .team-leader-section {
                 text-align: center;
-                max-width: 700px;
+                max-width: 750px;
                 margin: 0 auto 5rem;
             }
 
             .leader-card {
-                background: linear-gradient(135deg, var(--white) 0%, var(--light-blue) 100%);
+                background: var(--white);
                 border-radius: var(--radius-xl);
                 padding: 3rem;
                 box-shadow: var(--shadow-xl);
@@ -306,7 +380,7 @@
                 right: -50%;
                 width: 200%;
                 height: 200%;
-                background: radial-gradient(circle, rgba(37, 99, 235, 0.1) 0%, transparent 70%);
+                background: radial-gradient(circle, rgba(37, 99, 235, 0.08) 0%, transparent 70%);
                 pointer-events: none;
             }
 
@@ -319,16 +393,16 @@
             .leader-image-wrapper::before {
                 content: '';
                 position: absolute;
-                inset: -8px;
+                inset: -10px;
                 background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
                 border-radius: var(--radius-lg);
                 z-index: 0;
-                opacity: 0.3;
+                opacity: 0.25;
             }
 
             .leader-card img {
-                width: 220px;
-                height: 270px;
+                width: 240px;
+                height: 300px;
                 object-fit: cover;
                 border-radius: var(--radius-lg);
                 box-shadow: var(--shadow-lg);
@@ -338,21 +412,23 @@
             }
 
             .leader-card:hover img {
-                transform: scale(1.05) rotate(-2deg);
+                transform: scale(1.05) rotate(-1deg);
             }
 
             .leader-card h3 {
-                font-size: 2rem;
+                font-size: 2.2rem;
                 font-weight: 700;
                 color: var(--primary-blue);
                 margin-bottom: 0.5rem;
             }
 
             .leader-role {
-                font-size: 1rem;
+                font-size: 1.1rem;
                 color: var(--text-light);
-                font-weight: 500;
-                margin-bottom: 1rem;
+                font-weight: 600;
+                margin-bottom: 1.5rem;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
             }
 
             .leader-card p {
@@ -362,11 +438,11 @@
             }
 
             /* ========================================
-               TEAM GRID
+               TEAM GRID - SHARED STYLE
             ======================================== */
             .team-grid {
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
                 gap: 2.5rem;
                 margin-top: 3rem;
             }
@@ -430,8 +506,8 @@
             }
 
             .team-member img {
-                width: 180px;
-                height: 220px;
+                width: 200px;
+                height: 240px;
                 object-fit: cover;
                 border-radius: var(--radius-md);
                 border: 3px solid var(--gray-100);
@@ -445,14 +521,14 @@
             }
 
             .team-member h3 {
-                font-size: 1.4rem;
+                font-size: 1.5rem;
                 font-weight: 600;
                 color: var(--text-dark);
                 margin-bottom: 0.5rem;
             }
 
             .team-member .role {
-                font-size: 0.9rem;
+                font-size: 0.95rem;
                 color: var(--primary-blue);
                 font-weight: 600;
                 margin-bottom: 1rem;
@@ -467,10 +543,10 @@
             }
 
             /* ========================================
-               VISUAL DIVIDER / BREAK
+               VISUAL BREAK
             ======================================== */
             .visual-break {
-                height: 400px;
+                height: 450px;
                 background: linear-gradient(rgba(37, 99, 235, 0.9), rgba(30, 64, 175, 0.9)), 
                             url('img/about photos/bg.jpeg') no-repeat center center fixed;
                 background-size: cover;
@@ -481,18 +557,27 @@
                 overflow: hidden;
             }
 
+            .visual-break::before {
+                content: '';
+                position: absolute;
+                inset: 0;
+                background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.3) 100%);
+            }
+
             .visual-break-content {
                 text-align: center;
                 color: white;
                 z-index: 2;
-                max-width: 800px;
+                max-width: 900px;
                 padding: 2rem;
+                position: relative;
             }
 
             .visual-break h2 {
-                font-size: clamp(2rem, 4vw, 3rem);
+                font-size: clamp(2rem, 4vw, 3.5rem);
                 font-weight: 700;
-                margin-bottom: 1rem;
+                margin-bottom: 1.5rem;
+                line-height: 1.2;
             }
 
             .visual-break p {
@@ -501,63 +586,81 @@
                 line-height: 1.8;
             }
 
+            /* Animated decorative elements */
+            .visual-break::after {
+                content: '';
+                position: absolute;
+                width: 300px;
+                height: 300px;
+                border: 2px solid rgba(255,255,255,0.1);
+                border-radius: 50%;
+                top: -150px;
+                right: -150px;
+                animation: float 6s ease-in-out infinite;
+            }
+
             /* ========================================
-               MASONRY GALLERY
+               PROJECT FEATURES
             ======================================== */
-            .gallery-masonry {
-                column-count: 3;
-                column-gap: 1.5rem;
+            .features-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 2rem;
                 margin-top: 3rem;
             }
 
-            .gallery-item {
-                break-inside: avoid;
-                margin-bottom: 1.5rem;
-                position: relative;
-                overflow: hidden;
-                border-radius: var(--radius-md);
-                cursor: pointer;
+            .feature-card {
+                background: var(--white);
+                padding: 2.5rem;
+                border-radius: var(--radius-lg);
+                box-shadow: var(--shadow-sm);
+                border: 1px solid var(--gray-200);
+                transition: all var(--transition-normal);
                 opacity: 0;
-                transform: scale(0.95);
+                transform: translateY(20px);
+            }
+
+            .feature-card.reveal {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+            .feature-card:hover {
+                box-shadow: var(--shadow-lg);
+                border-color: var(--primary-blue);
+                transform: translateY(-8px);
+            }
+
+            .feature-icon {
+                width: 56px;
+                height: 56px;
+                background: var(--light-blue);
+                color: var(--primary-blue);
+                border-radius: var(--radius-md);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.75rem;
+                margin-bottom: 1.5rem;
                 transition: all var(--transition-normal);
             }
 
-            .gallery-item.reveal {
-                opacity: 1;
-                transform: scale(1);
-            }
-
-            .gallery-item img {
-                width: 100%;
-                height: auto;
-                display: block;
-                border-radius: var(--radius-md);
-                transition: transform var(--transition-slow);
-            }
-
-            .gallery-item:hover img {
-                transform: scale(1.08);
-            }
-
-            .gallery-overlay {
-                position: absolute;
-                inset: 0;
-                background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%);
-                opacity: 0;
-                transition: opacity var(--transition-normal);
-                display: flex;
-                align-items: flex-end;
-                padding: 1.5rem;
-            }
-
-            .gallery-item:hover .gallery-overlay {
-                opacity: 1;
-            }
-
-            .gallery-caption {
+            .feature-card:hover .feature-icon {
+                background: var(--primary-blue);
                 color: white;
-                font-size: 1rem;
-                font-weight: 500;
+                transform: scale(1.1) rotate(5deg);
+            }
+
+            .feature-card h4 {
+                font-size: 1.4rem;
+                font-weight: 600;
+                color: var(--text-dark);
+                margin-bottom: 1rem;
+            }
+
+            .feature-card p {
+                color: var(--text-light);
+                line-height: 1.7;
             }
 
             /* ========================================
@@ -666,67 +769,62 @@
             }
 
             /* ========================================
-               FEATURE CARDS
+               MASONRY GALLERY
             ======================================== */
-            .features-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-                gap: 2rem;
+            .gallery-masonry {
+                column-count: 3;
+                column-gap: 1.5rem;
                 margin-top: 3rem;
             }
 
-            .feature-card {
-                background: var(--white);
-                padding: 2.5rem;
-                border-radius: var(--radius-lg);
-                box-shadow: var(--shadow-sm);
-                border: 1px solid var(--gray-200);
-                transition: all var(--transition-normal);
-                opacity: 0;
-                transform: translateY(20px);
-            }
-
-            .feature-card.reveal {
-                opacity: 1;
-                transform: translateY(0);
-            }
-
-            .feature-card:hover {
-                box-shadow: var(--shadow-lg);
-                border-color: var(--primary-blue);
-                transform: translateY(-8px);
-            }
-
-            .feature-icon {
-                width: 56px;
-                height: 56px;
-                background: var(--light-blue);
-                color: var(--primary-blue);
-                border-radius: var(--radius-md);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 1.75rem;
+            .gallery-item {
+                break-inside: avoid;
                 margin-bottom: 1.5rem;
+                position: relative;
+                overflow: hidden;
+                border-radius: var(--radius-md);
+                cursor: pointer;
+                opacity: 0;
+                transform: scale(0.95);
                 transition: all var(--transition-normal);
             }
 
-            .feature-card:hover .feature-icon {
-                background: var(--primary-blue);
+            .gallery-item.reveal {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            .gallery-item img {
+                width: 100%;
+                height: auto;
+                display: block;
+                border-radius: var(--radius-md);
+                transition: transform var(--transition-slow);
+            }
+
+            .gallery-item:hover img {
+                transform: scale(1.08);
+            }
+
+            .gallery-overlay {
+                position: absolute;
+                inset: 0;
+                background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%);
+                opacity: 0;
+                transition: opacity var(--transition-normal);
+                display: flex;
+                align-items: flex-end;
+                padding: 1.5rem;
+            }
+
+            .gallery-item:hover .gallery-overlay {
+                opacity: 1;
+            }
+
+            .gallery-caption {
                 color: white;
-                transform: scale(1.1) rotate(5deg);
-            }
-
-            .feature-card h4 {
-                font-size: 1.4rem;
-                font-weight: 600;
-                color: var(--text-dark);
-                margin-bottom: 1rem;
-            }
-
-            .feature-card p {
-                color: var(--text-light);
-                line-height: 1.7;
+                font-size: 1rem;
+                font-weight: 500;
             }
 
             /* ========================================
@@ -771,6 +869,39 @@
             }
 
             /* ========================================
+               SCROLL TO TOP BUTTON
+            ======================================== */
+            .scroll-to-top {
+                position: fixed;
+                bottom: 2rem;
+                right: 2rem;
+                width: 50px;
+                height: 50px;
+                background: var(--primary-blue);
+                color: white;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                opacity: 0;
+                visibility: hidden;
+                transition: all var(--transition-normal);
+                box-shadow: var(--shadow-lg);
+                z-index: 1000;
+            }
+
+            .scroll-to-top.visible {
+                opacity: 1;
+                visibility: visible;
+            }
+
+            .scroll-to-top:hover {
+                background: var(--primary-blue-dark);
+                transform: translateY(-4px);
+            }
+
+            /* ========================================
                ANIMATIONS
             ======================================== */
             @keyframes fadeInUp {
@@ -789,15 +920,16 @@
                     transform: translateY(0);
                 }
                 50% {
-                    transform: translateY(-10px);
+                    transform: translateY(-20px);
                 }
             }
 
-            /* Staggered animation delays for team members */
+            /* Staggered animation delays */
             .team-member:nth-child(1) { transition-delay: 0.1s; }
             .team-member:nth-child(2) { transition-delay: 0.2s; }
             .team-member:nth-child(3) { transition-delay: 0.3s; }
             .team-member:nth-child(4) { transition-delay: 0.4s; }
+            .team-member:nth-child(5) { transition-delay: 0.5s; }
 
             .gallery-item:nth-child(1) { transition-delay: 0.05s; }
             .gallery-item:nth-child(2) { transition-delay: 0.1s; }
@@ -805,10 +937,17 @@
             .gallery-item:nth-child(4) { transition-delay: 0.2s; }
             .gallery-item:nth-child(5) { transition-delay: 0.25s; }
             .gallery-item:nth-child(6) { transition-delay: 0.3s; }
+            .gallery-item:nth-child(7) { transition-delay: 0.35s; }
+            .gallery-item:nth-child(8) { transition-delay: 0.4s; }
+            .gallery-item:nth-child(9) { transition-delay: 0.45s; }
+            .gallery-item:nth-child(10) { transition-delay: 0.5s; }
 
             .feature-card:nth-child(1) { transition-delay: 0.1s; }
             .feature-card:nth-child(2) { transition-delay: 0.2s; }
             .feature-card:nth-child(3) { transition-delay: 0.3s; }
+            .feature-card:nth-child(4) { transition-delay: 0.4s; }
+            .feature-card:nth-child(5) { transition-delay: 0.5s; }
+            .feature-card:nth-child(6) { transition-delay: 0.6s; }
 
             /* ========================================
                RESPONSIVE DESIGN
@@ -834,6 +973,10 @@
                 .timeline-content,
                 .timeline-image {
                     margin: 0 0 1rem 60px;
+                }
+
+                .team-grid {
+                    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
                 }
             }
 
@@ -866,6 +1009,10 @@
                 .features-grid {
                     grid-template-columns: 1fr;
                 }
+
+                .visual-break {
+                    height: 350px;
+                }
             }
 
             @media (max-width: 480px) {
@@ -878,47 +1025,18 @@
                 }
 
                 .leader-card img {
-                    width: 180px;
-                    height: 230px;
+                    width: 200px;
+                    height: 260px;
                 }
 
                 .team-member img {
-                    width: 150px;
-                    height: 190px;
+                    width: 170px;
+                    height: 210px;
                 }
-            }
 
-            /* ========================================
-               SCROLL TO TOP BUTTON
-            ======================================== */
-            .scroll-to-top {
-                position: fixed;
-                bottom: 2rem;
-                right: 2rem;
-                width: 50px;
-                height: 50px;
-                background: var(--primary-blue);
-                color: white;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                cursor: pointer;
-                opacity: 0;
-                visibility: hidden;
-                transition: all var(--transition-normal);
-                box-shadow: var(--shadow-lg);
-                z-index: 1000;
-            }
-
-            .scroll-to-top.visible {
-                opacity: 1;
-                visibility: visible;
-            }
-
-            .scroll-to-top:hover {
-                background: var(--primary-blue-dark);
-                transform: translateY(-4px);
+                .section-divider {
+                    height: 80px;
+                }
             }
         </style>
     </head>
@@ -934,17 +1052,17 @@
             <div class="hero-content">
                 <h1>Building the Future of Laboratory Management</h1>
                 <p class="subtitle">
-                    We are Grade 10 innovators from PSHS-IRC, creating seamless solutions 
-                    to streamline laboratory equipment management through technology and teamwork.
+                    From concept to reality—witness the evolution of innovation through two generations 
+                    of passionate developers united by a singular vision.
                 </p>
                 <div class="hero-stats">
                     <div class="stat-item">
                         <span class="stat-number">5</span>
-                        <span class="stat-label">Team Members</span>
+                        <span class="stat-label">Brilliant Minds</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-number">1</span>
-                        <span class="stat-label">Unified Vision</span>
+                        <span class="stat-number">3</span>
+                        <span class="stat-label">Development Cycles</span>
                     </div>
                     <div class="stat-item">
                         <span class="stat-number">∞</span>
@@ -991,29 +1109,32 @@
         </section>
 
         <!-- ========================================
-             TEAM SECTION
+             SECTION 1: CURRENT DEVELOPMENT TEAM
         ======================================== -->
-        <section class="section section-alt">
+        <section class="section section-alt current-team team-section-wrapper">
             <div class="container">
                 <div class="section-header">
-                    <span class="section-overline">The Minds Behind It</span>
-                    <h2 class="section-title">Meet Our Team</h2>
+                    <span class="section-badge">Current Development Team</span>
+                    <span class="section-overline">Leading the Evolution</span>
+                    <h2 class="section-title">The Minds Shaping Today</h2>
                     <p class="section-description">
-                        A diverse group of passionate students united by a common goal
+                        Our current development team is refining and advancing the system with fresh perspectives, 
+                        cutting-edge techniques, and unwavering dedication to excellence.
                     </p>
                 </div>
 
-                <!-- Team Leader -->
+                <!-- Team Leader: Gabriel James Valdez -->
                 <div class="team-leader-section">
                     <div class="leader-card">
                         <div class="leader-image-wrapper">
                             <img src="img/about photos/gab.jpeg" alt="Gabriel James Valdez">
                         </div>
                         <h3>Gabriel James Valdez</h3>
-                        <p class="leader-role">Team Lead & UI/UX Designer</p>
+                        <p class="leader-role">Head of Development & UI/UX Lead</p>
                         <p>
-                            Obsessed with human-centered design and creating intuitive user experiences. 
-                            Gabriel leads the team with vision and ensures every pixel serves a purpose.
+                            A visionary designer obsessed with human-centered design and creating intuitive experiences. 
+                            Gabriel leads the current team with strategic thinking, ensuring every interface element serves 
+                            both form and function. His leadership transforms complex systems into elegant solutions.
                         </p>
                     </div>
                 </div>
@@ -1025,17 +1146,11 @@
                             <img src="img/about photos/zyx.jpeg" alt="Zyx Leiabe A. Barangan">
                         </div>
                         <h3>Zyx Leiabe A. Barangan</h3>
-                        <p class="role">Founder & Lead Developer</p>
-                        <p>Passionate about clean code and creative problem solving. Transforms complex challenges into elegant solutions.</p>
-                    </div>
-
-                    <div class="team-member">
-                        <div class="member-image-wrapper">
-                            <img src="img/about photos/ben.jpeg" alt="Christian Benedict U. Soy">
-                        </div>
-                        <h3>Christian Benedict U. Soy</h3>
-                        <p class="role">Content Strategist</p>
-                        <p>Makes ideas come to life with words and clarity. Crafts compelling narratives that resonate with users.</p>
+                        <p class="role">Lead Developer & Architect</p>
+                        <p>
+                            A master of clean code and elegant solutions. Zyx brings technical excellence and innovative 
+                            problem-solving to every challenge, transforming complex requirements into seamless functionality.
+                        </p>
                     </div>
 
                     <div class="team-member">
@@ -1043,8 +1158,108 @@
                             <img src="img/about photos/rojan.jpeg" alt="Rojan Joefel C. Dumlao">
                         </div>
                         <h3>Rojan Joefel C. Dumlao</h3>
-                        <p class="role">Backend Engineer</p>
-                        <p>Keeps the engines running with logic and power. Builds robust systems that scale and perform flawlessly.</p>
+                        <p class="role">Backend Engineer & Systems Specialist</p>
+                        <p>
+                            The powerhouse behind the scenes. Rojan builds robust, scalable backend systems that handle 
+                            complex data operations with efficiency and reliability, ensuring the platform runs flawlessly.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================
+             VISUAL DIVIDER / TRANSITION
+        ======================================== -->
+        <div class="section-divider">
+            <div class="divider-icon">
+                ⚡
+            </div>
+        </div>
+
+        <!-- ========================================
+             VISUAL BREAK - TRANSITION MESSAGE
+        ======================================== -->
+        <section class="visual-break">
+            <div class="visual-break-content">
+                <h2>From Vision to Evolution</h2>
+                <p>
+                    Every great innovation begins with a bold idea. Before the current team refined the system, 
+                    a group of pioneering students laid the foundation. Here's where it all started—the original 
+                    concept that sparked a revolution in laboratory management.
+                </p>
+            </div>
+        </section>
+
+        <!-- ========================================
+             SECTION 2: ORIGINAL AI-GENERATED TEAM
+        ======================================== -->
+        <section class="section original-team team-section-wrapper">
+            <div class="container">
+                <div class="section-header">
+                    <span class="section-badge original">Original Concept Team</span>
+                    <span class="section-overline">Where It All Began</span>
+                    <h2 class="section-title">The Pioneers Who Started It All</h2>
+                    <p class="section-description">
+                        The original team that conceived and developed the first iteration of our laboratory 
+                        management system. Their innovative vision and collaborative spirit set the foundation 
+                        for everything that followed.
+                    </p>
+                </div>
+
+                <!-- Original Team Leader -->
+                <div class="team-leader-section">
+                    <div class="leader-card">
+                        <div class="leader-image-wrapper">
+                            <img src="img/about photos/gab.jpeg" alt="Gabriel James Valdez">
+                        </div>
+                        <h3>Gabriel James Valdez</h3>
+                        <p class="leader-role">Original Team Lead & UI/UX Designer</p>
+                        <p>
+                            The original architect of user experience. Gabriel's initial designs established the 
+                            foundational principles of intuitive interaction that continue to guide the system today. 
+                            His vision for human-centered design became the cornerstone of the project.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Original Team Members Grid -->
+                <div class="team-grid">
+                    <div class="team-member">
+                        <div class="member-image-wrapper">
+                            <img src="img/about photos/zyx.jpeg" alt="Zyx Leiabe A. Barangan">
+                        </div>
+                        <h3>Zyx Leiabe A. Barangan</h3>
+                        <p class="role">Founder & Lead Developer</p>
+                        <p>
+                            The visionary who sparked the initial concept. Zyx's passion for solving real-world problems 
+                            through technology birthed the entire project, establishing coding standards that remain 
+                            influential to this day.
+                        </p>
+                    </div>
+
+                    <div class="team-member">
+                        <div class="member-image-wrapper">
+                            <img src="img/about photos/ben.jpeg" alt="Christian Benedict U. Soy">
+                        </div>
+                        <h3>Christian Benedict U. Soy</h3>
+                        <p class="role">Content Strategist & Documentation Lead</p>
+                        <p>
+                            The storyteller who gave the project its voice. Christian crafted compelling narratives 
+                            and comprehensive documentation that made complex technical concepts accessible to all users.
+                        </p>
+                    </div>
+
+                    <div class="team-member">
+                        <div class="member-image-wrapper">
+                            <img src="img/about photos/rojan.jpeg" alt="Rojan Joefel C. Dumlao">
+                        </div>
+                        <h3>Rojan Joefel C. Dumlao</h3>
+                        <p class="role">Backend Engineer & Database Architect</p>
+                        <p>
+                            The systems architect who built the foundational infrastructure. Rojan's robust backend 
+                            design established the scalable architecture that powers the platform's core functionality.
+                        </p>
                     </div>
 
                     <div class="team-member">
@@ -1052,22 +1267,26 @@
                             <img src="img/about photos/veca.jpg" alt="Riveca T. Pamerol">
                         </div>
                         <h3>Riveca T. Pamerol</h3>
-                        <p class="role">Design Contributor</p>
-                        <p>Public Health student who brings fresh perspectives. Chose FSWD to blend creativity with technology.</p>
+                        <p class="role">Design Contributor & UX Researcher</p>
+                        <p>
+                            A Public Health student who brought unique interdisciplinary insights. Riveca's fresh 
+                            perspectives on user needs and accessibility helped shape an inclusive, user-first design approach.
+                        </p>
                     </div>
                 </div>
             </div>
         </section>
 
         <!-- ========================================
-             VISUAL BREAK
+             VISUAL BREAK - INNOVATION MESSAGE
         ======================================== -->
         <section class="visual-break">
             <div class="visual-break-content">
                 <h2>Innovation Through Collaboration</h2>
                 <p>
-                    Every great project starts with a team that believes in the impossible. 
-                    We're turning ideas into reality, one line of code at a time.
+                    Two teams, one vision. From the pioneering spirit of the original developers to the 
+                    refinement and evolution led by today's team—every line of code tells a story of 
+                    dedication, creativity, and the relentless pursuit of excellence.
                 </p>
             </div>
         </section>
@@ -1075,13 +1294,13 @@
         <!-- ========================================
              PROJECT FEATURES
         ======================================== -->
-        <section class="section">
+        <section class="section section-alt">
             <div class="container">
                 <div class="section-header">
                     <span class="section-overline">What We Built</span>
-                    <h2 class="section-title">Project Features</h2>
+                    <h2 class="section-title">Core Features</h2>
                     <p class="section-description">
-                        A comprehensive system designed with users in mind
+                        A comprehensive system designed with users in mind, refined across two development cycles
                     </p>
                 </div>
 
@@ -1146,13 +1365,13 @@
         <!-- ========================================
              JOURNEY TIMELINE
         ======================================== -->
-        <section class="section section-alt">
+        <section class="section">
             <div class="container">
                 <div class="section-header">
                     <span class="section-overline">Our Story</span>
-                    <h2 class="section-title">The Journey</h2>
+                    <h2 class="section-title">The Development Journey</h2>
                     <p class="section-description">
-                        From concept to deployment—our development journey
+                        From initial concept to current iteration—a timeline of innovation
                     </p>
                 </div>
 
@@ -1160,11 +1379,12 @@
                     <div class="timeline-item">
                         <div class="timeline-marker"></div>
                         <div class="timeline-content">
-                            <h4>The Beginning</h4>
+                            <h4>The Genesis</h4>
                             <p class="timeline-date">August 2024</p>
                             <p>
-                                Started with a simple idea: make laboratory equipment management easier. 
-                                Brainstormed solutions and formed our passionate team.
+                                It all started with a simple observation: laboratory equipment management needed 
+                                a digital revolution. The original team assembled, brainstormed, and committed 
+                                to making a difference.
                             </p>
                         </div>
                         <div class="timeline-image">
@@ -1178,11 +1398,12 @@
                             <img src="img/about photos/2.jpg" alt="Coding Camp">
                         </div>
                         <div class="timeline-content">
-                            <h4>Coding Camp</h4>
+                            <h4>Intensive Learning</h4>
                             <p class="timeline-date">September 2024</p>
                             <p>
-                                Intensive learning sessions where we mastered full-stack development, 
-                                from front-end design to back-end architecture.
+                                The original team underwent rigorous training in full-stack development, 
+                                mastering technologies from React to Node.js, building the foundational 
+                                skills needed for the project.
                             </p>
                         </div>
                     </div>
@@ -1190,11 +1411,12 @@
                     <div class="timeline-item">
                         <div class="timeline-marker"></div>
                         <div class="timeline-content">
-                            <h4>Design & Development</h4>
+                            <h4>Design & Prototyping</h4>
                             <p class="timeline-date">October 2024</p>
                             <p>
-                                Created wireframes, prototypes, and began coding. Countless hours 
-                                of iteration to perfect the user experience.
+                                Wireframes evolved into interactive prototypes. The UI/UX team crafted 
+                                every screen, button, and workflow with meticulous attention to user 
+                                experience and accessibility.
                             </p>
                         </div>
                         <div class="timeline-image">
@@ -1208,11 +1430,11 @@
                             <img src="img/about photos/5.jpg" alt="Testing Phase">
                         </div>
                         <div class="timeline-content">
-                            <h4>Testing & Refinement</h4>
+                            <h4>Testing & Iteration</h4>
                             <p class="timeline-date">November 2024</p>
                             <p>
-                                Rigorous testing, user feedback integration, and bug fixes. 
-                                Ensured the system was rock-solid and user-friendly.
+                                Rigorous testing cycles began. User feedback was collected, bugs were 
+                                squashed, and features were refined. The system grew stronger with each iteration.
                             </p>
                         </div>
                     </div>
@@ -1220,15 +1442,47 @@
                     <div class="timeline-item">
                         <div class="timeline-marker"></div>
                         <div class="timeline-content">
-                            <h4>Launch</h4>
+                            <h4>First Launch</h4>
                             <p class="timeline-date">December 2024</p>
                             <p>
-                                Successfully deployed the system and presented to faculty and peers. 
-                                A proud moment for the entire team.
+                                The original version went live. Faculty and students experienced the system 
+                                for the first time, providing invaluable insights that would shape future development.
                             </p>
                         </div>
                         <div class="timeline-image">
                             <img src="img/about photos/3.jpg" alt="Project Launch">
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-image">
+                            <img src="img/about photos/10.jpg" alt="Evolution">
+                        </div>
+                        <div class="timeline-content">
+                            <h4>Evolution Begins</h4>
+                            <p class="timeline-date">January 2025</p>
+                            <p>
+                                The current development team took over, bringing fresh perspectives and 
+                                advanced techniques. They refined the codebase, enhanced performance, 
+                                and expanded functionality.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <h4>Continuous Innovation</h4>
+                            <p class="timeline-date">Ongoing</p>
+                            <p>
+                                Today, the system continues to evolve. New features are added, performance 
+                                is optimized, and user experience is constantly refined—always pushing 
+                                toward excellence.
+                            </p>
+                        </div>
+                        <div class="timeline-image">
+                            <img src="img/about photos/12.jpg" alt="Continuous Development">
                         </div>
                     </div>
                 </div>
@@ -1238,13 +1492,13 @@
         <!-- ========================================
              GALLERY SECTION
         ======================================== -->
-        <section class="section">
+        <section class="section section-alt">
             <div class="container">
                 <div class="section-header">
                     <span class="section-overline">Moments Captured</span>
-                    <h2 class="section-title">Our Gallery</h2>
+                    <h2 class="section-title">Behind the Scenes</h2>
                     <p class="section-description">
-                        Behind-the-scenes moments from our journey
+                        A visual journey through collaboration, creativity, and dedication
                     </p>
                 </div>
 
@@ -1319,6 +1573,21 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </section>
+
+        <!-- ========================================
+             FINAL VISUAL BREAK - CLOSING MESSAGE
+        ======================================== -->
+        <section class="visual-break">
+            <div class="visual-break-content">
+                <h2>The Journey Continues</h2>
+                <p>
+                    From the original visionaries who dared to dream, to the current innovators who 
+                    continue to push boundaries—this is more than a project. It's a testament to what 
+                    passionate students can achieve when they unite around a common goal. The future 
+                    of laboratory management is here, and it's just getting started.
+                </p>
             </div>
         </section>
 
