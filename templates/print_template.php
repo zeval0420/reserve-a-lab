@@ -1,7 +1,121 @@
+<?php
+require_once '../vendor/autoload.php';
+include('../helperFiles/db_connection.php');
+
+use Dompdf\Dompdf;
+use Dompdf\Options;
+
+// Get form ID from request
+$formID = $_GET['id'] ?? $_GET['formID'] ?? null;
+
+if (!$formID) {
+    die('Error: Form ID is required.');
+}
+
+// Fetch form data
+$stmt = $conn->prepare("
+    SELECT 
+        fr.controlNumber,
+        fr.sy,
+        fr.gradeLevel,
+        fr.`section/s`,
+        fr.scilabName,
+        fr.subject,
+        fr.subjectTopic,
+        fr.teacherInCharge,
+        fr.inclusiveDate,
+        fr.inclusiveTime,
+        fr.requesterEmployeeID,
+        fr.dateRequested
+    FROM scilab_form_requests fr
+    WHERE fr.id = ?
+");
+
+if ($stmt === false) {
+    die('Database query preparation failed.');
+}
+
+$stmt->bind_param('i', $formID);
+$stmt->execute();
+$result = $stmt->get_result();
+$formData = $result->fetch_assoc();
+
+if (!$formData) {
+    die('Error: Form not found.');
+}
+
+$stmt->close();
+
+// Fetch materials/equipment
+$stmt = $conn->prepare("
+    SELECT 
+        mr.quantity,
+        mr.item,
+        mr.unit,
+        mr.description,
+        mr.issuedCondition,
+        mr.returnedCondition,
+        mr.returnedItemInspector
+    FROM scilab_material_requests mr
+    WHERE mr.formID = ?
+    ORDER BY mr.id ASC
+");
+
+$stmt->bind_param('i', $formID);
+$stmt->execute();
+$materialsResult = $stmt->get_result();
+
+$materials = [];
+while ($row = $materialsResult->fetch_assoc()) {
+    $materials[] = $row;
+}
+
+$stmt->close();
+
+// Fetch student list (if applicable)
+$stmt = $conn->prepare("
+    SELECT student_name
+    FROM scilab_students_involved
+    WHERE formID = ?
+    ORDER BY id ASC
+");
+
+$stmt->bind_param('i', $formID);
+$stmt->execute();
+$studentsResult = $stmt->get_result();
+
+$students = [];
+while ($row = $studentsResult->fetch_assoc()) {
+    $students[] = $row['student_name'];
+}
+
+// Get requester information from accounts table
+$stmt = $conn->prepare("
+    SELECT CONCAT(firstname, ' ', middlename, ' ', lastname) as fullName
+    FROM accounts
+    WHERE employeeID = ?
+");
+
+$stmt->bind_param('s', $formData['requesterEmployeeID']);
+$stmt->execute();
+$requesterResult = $stmt->get_result();
+$requesterData = $requesterResult->fetch_assoc();
+$stmt->close();
+
+$requesterName = $requesterData['fullName'] ?? 'N/A';
+$dateRequested = date('F d, Y', strtotime($formData['dateRequested']));
+
+$conn->close();
+
+// Fix image path for Dompdf
+$logoPath = $_SERVER['DOCUMENT_ROOT'] . "/img/logo.png";
+
+// Build HTML
+$html = "
 <!DOCTYPE html>
 <html>
 <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <meta http-equiv='Content-Type' content='text/html'; charset='utf-8'/>
     <title>Laboratory Request and Equipment Accountability Form</title>
     <style>
         @page {
@@ -202,93 +316,95 @@
     </style>
 </head>
 <body>
-    <div class="header">
+
+    <div class='header'>
         <h3>PHILIPPINE SCIENCE HIGH SCHOOL SYSTEM</h3>
-        <div class="campus-line">
+        <div class='campus-line'>
             <label>CAMPUS:</label>
             <span>ILOCOS REGION</span>
         </div>
     </div>
-    
-    <div class="form-title">
+
+    <div class='form-title'>
         LABORATORY REQUEST AND EQUIPMENT ACCOUNTABILITY FORM
     </div>
     
-    <div class="control-row">
-        <div class="control-left"></div>
-        <div class="control-right">
-            <div class="control-field">
+    <div class='control-row'>
+        <div class='control-left'></div>
+        <div class='control-right'>
+            <div class='control-field'>
                 <label>Control No:</label>
-                <span class="value" style="min-width: 60pt;">001</span>
+                <span class='value' style='min-width: 60pt;'>" . htmlspecialchars($formData['controlNumber'] ?? '') . "</span>
             </div>
-            <div class="control-field">
+            <div class='control-field'>
                 <label>SY:</label>
-                <span class="value" style="min-width: 50pt;">2024-2025</span>
+                <span class='value' style='min-width: 50pt;'>" . htmlspecialchars($formData['sy'] ?? '') . "</span>
             </div>
         </div>
     </div>
-    
-    <div class="form-row">
-        <div class="form-field w-60">
+
+    <div class='form-row'>
+        <div class='form-field w-60'>
             <label>Grade Level and Section:</label>
-            <span class="value" style="min-width: 150pt;">Grade 10 - Section A</span>
+            <span class='value' style='min-width: 150pt;'>" . htmlspecialchars('Grade ' . $formData['gradeLevel'] . ' - ' . $formData['section/s']) . "</span>
         </div>
-        <div class="form-field w-40">
+        <div class='form-field w-40'>
             <label>Number of Students:</label>
-            <span class="value" style="min-width: 60pt;">25</span>
+            <span class='value' style='min-width: 60pt;'>25</span>
         </div>
     </div>
     
-    <div class="form-row">
-        <div class="form-field w-60">
+    <div class='form-row'>
+        <div class='form-field w-60'>
             <label>Subject:</label>
-            <span class="value" style="min-width: 150pt;">Chemistry</span>
+            <span class='value' style='min-width: 150pt;'>" . htmlspecialchars($formData['subject'] ?? '') . "</span>
         </div>
-        <div class="form-field w-40">
+        <div class='form-field w-40'>
             <label>Concurrent Topic:</label>
-            <span class="value" style="min-width: 90pt;">Acids and Bases</span>
+            <span class='value' style='min-width: 90pt;'>" . htmlspecialchars($formData['subjectTopic'] ?? '') . "</span>
         </div>
     </div>
-    
-    <div class="form-row">
-        <div class="form-field w-60">
+
+    <div class='form-row'>
+        <div class='form-field w-60'>
             <label>Unit:</label>
-            <span class="value" style="min-width: 150pt;">Chemical Reactions</span>
+            <span class='value' style='min-width: 150pt;'>Chemical Reactions</span>
         </div>
-        <div class="form-field w-40">
+        <div class='form-field w-40'>
             <label>Teacher In-Charge:</label>
-            <span class="value" style="min-width: 90pt;">Juan Dela Cruz</span>
+            <span class='value' style='min-width: 90pt;'>" . htmlspecialchars($formData['teacherInCharge'] ?? '') . "</span>
         </div>
     </div>
-    
-    <div class="form-row">
-        <div class="form-field w-100">
+
+    <div class='form-row'>
+        <div class='form-field w-100'>
             <label>Venue of the Experiment:</label>
-            <span class="value" style="min-width: 250pt;">Chemistry Laboratory 1</span>
+            <span class='value' style='min-width: 250pt;'>" . htmlspecialchars($formData['scilabName'] ?? '') . "</span>
         </div>
     </div>
-    
-    <div class="form-row">
-        <div class="form-field w-50">
+
+    <div class='form-row'>
+        <div class='form-field w-50'>
             <label>Date/Inclusive Date:</label>
-            <span class="value" style="min-width: 120pt;">January 20, 2026</span>
+            <span class='value' style='min-width: 120pt;'>". htmlspecialchars($formData['inclusiveDate'] ?? '') . "</span>
         </div>
-        <div class="form-field w-50">
+        <div class='form-field w-50'>
             <label>Inclusive Time of Use:</label>
-            <span class="value" style="min-width: 120pt;">1:00 PM - 3:00 PM</span>
+            <span class='value' style='min-width: 120pt;'>". htmlspecialchars($formData['inclusiveTime'] ?? '') . "</span>
         </div>
     </div>
-    
-    <div class="material-section">
+
+
+    <div class='material-section'>
         <p>Materials/Equipment Needed:</p>
         <table>
             <thead>
                 <tr>
-                    <th rowspan="2" style="width: 8%;">Quantity</th>
-                    <th rowspan="2" style="width: 22%;">Item</th>
-                    <th rowspan="2" style="width: 25%;">Description</th>
-                    <th colspan="1" style="width: 20%;">Issued</th>
-                    <th colspan="1" style="width: 25%;">Returned</th>
+                    <th rowspan='2' style='width: 8%;'>Quantity</th>
+                    <th rowspan='2' style='width: 22%;'>Item</th>
+                    <th rowspan='2' style='width: 25%;'>Description</th>
+                    <th colspan='1' style='width: 20%;'>Issued</th>
+                    <th colspan='1' style='width: 25%;'>Returned</th>
                 </tr>
                 <tr>
                     <th>Condition</th>
@@ -296,103 +412,145 @@
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>10</td>
-                    <td>Beaker</td>
-                    <td>250ml glass beaker</td>
-                    <td>Good</td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td>5</td>
-                    <td>Test Tube</td>
-                    <td>15ml borosilicate</td>
-                    <td>Good</td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td>2</td>
-                    <td>pH Meter</td>
-                    <td>Digital pH meter</td>
-                    <td>Good</td>
-                    <td></td>
-                </tr>
-                <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
-                <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
-                <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
-                <tr>
-                    <td colspan="3"></td>
-                    <td><strong>Received by:</strong></td>
-                    <td><strong>Received and Inspected by:</strong></td>
-                </tr>
-                <tr>
-                    <td colspan="3"></td>
-                    <td><strong>Date:</strong></td>
-                    <td><strong>Date:</strong></td>
-                </tr>
-            </tbody>
-        </table>
+";
+
+// Add materials rows
+if (!empty($materials)) {
+    foreach ($materials as $material) {
+        $itemName = htmlspecialchars($material['item']);
+        if (!empty($material['description'])) {
+            $itemDescription = htmlspecialchars($material['description']);
+        }else{
+            $itemDescription = 'N/A';
+        }
+        
+        $quantity = htmlspecialchars($material['quantity']);
+        if (!empty($material['unit'])) {
+            $quantity .= ' ' . htmlspecialchars($material['unit']);
+        }
+        
+        $html .= "
+        <tr>
+            <td style='text-align: center;'>" . $quantity . "</td>
+            <td>" . $itemName . "</td>
+            <td>" . $itemDescription . "</td>
+            <td style='text-align: center;'>" . htmlspecialchars($material['issuedCondition'] ?? '') . "</td>
+            <td style='text-align: center;'>" . htmlspecialchars($material['returnedCondition'] ?? '') . "</td>
+        </tr>
+        ";
+    }
+}
+
+// Add empty rows if needed (minimum 5 rows)
+$emptyRowsNeeded = max(0, 5 - count($materials));
+for ($i = 0; $i < $emptyRowsNeeded; $i++) {
+    $html .= "
+    <tr>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+    </tr>
+    ";
+}
+
+$html .= "
+    </table>
     </div>
     
-    <div class="notes">
+    <div class='notes'>
         <ul>
             <li>Fill out this form completely and legibly; transact with the Unit SRA concerned during office hours.</li>
             <li>Requests not in accordance with existing Unit regulations and considerations may not be granted.</li>
         </ul>
     </div>
-    
-    <div class="signature-section">
-        <div class="form-row">
-            <div class="form-field w-50">
+
+    <div class='signature-section'>
+        <div class='form-row'>
+            <div class='form-field w-50'>
                 <label>Requested:</label>
-                <span class="value" style="min-width: 140pt;">Maria Santos Garcia</span>
+                <span class='value' style='min-width: 140pt;'><?php echo htmlspecialchars($requesterName); ?></span>
             </div>
-            <div class="form-field w-50">
+            <div class='form-field w-50'>
                 <label>Date Requested:</label>
-                <span class="value" style="min-width: 120pt;">January 15, 2026</span>
+                <span class='value' style='min-width: 120pt;'><?php echo htmlspecialchars($dateRequested); ?></span>
             </div>
         </div>
-        <div class="form-row">
-            <div class="form-field w-50">
-                <span class="signature-label">Teacher/Student</span>
+        <div class='form-row'>
+            <div class='form-field w-50'>
+                <span class='signature-label'>Teacher/Student</span>
             </div>
         </div>
     </div>
-    
-    <div class="student-list">
+
+    <div class='student-list'>
         <p>If user of the lab is a group, list down the names of the students:</p>
         <ol>
-            <li>Student Name 1</li>
-            <li>Student Name 2</li>
-            <li>Student Name 3</li>
-            <li>Student Name 4</li>
-            <li>Student Name 5</li>
-        </ol>
+
+";
+
+// Add student names
+if (!empty($students)) {
+    foreach ($students as $index => $studentName) {
+        $html .= "
+        <li>" . htmlspecialchars($studentName) . "</li>
+        ";
+    }
+}
+
+// Add empty lines for remaining students (minimum 10 lines)
+$emptyLinesNeeded = max(0, 5 - count($students));
+for ($i = count($students); $i < count($students) + $emptyLinesNeeded; $i++) {
+    $html .= "
+    <li></li>
+    ";
+}
+
+$html .= "
+    </ol>
     </div>
-    
-    <div class="signature-section">
-        <div class="form-row">
-            <div class="form-field w-50">
+
+    <div class='signature-section'>
+        <div class='form-row'>
+            <div class='form-field w-50'>
                 <label>Endorsed by:</label>
-                <span class="value" style="min-width: 140pt;"></span>
+                <span class='value' style='min-width: 140pt;'></span>
             </div>
-            <div class="form-field w-50">
+            <div class='form-field w-50'>
                 <label>Approved by:</label>
-                <span class="value" style="min-width: 140pt;"></span>
+                <span class='value' style='min-width: 140pt;'></span>
             </div>
         </div>
-        <div class="form-row">
-            <div class="form-field w-50">
-                <span class="signature-label">Subject Teacher/Unit Head</span>
+        <div class='form-row'>
+            <div class='form-field w-50'>
+                <span class='signature-label'>Subject Teacher/Unit Head</span>
             </div>
-            <div class="form-field w-50">
-                <span class="signature-label">SRS/SRA</span>
+            <div class='form-field w-50'>
+                <span class='signature-label'>SRS/SRA</span>
             </div>
         </div>
     </div>
-    
-    <div class="footer-text">
+
+    <div class='footer-text'>
         <p>PSHS-00-F-CIID-20-Ver02-Rev1-10/18/20</p>
     </div>
+
+
 </body>
 </html>
+";
+
+// Generate PDF
+$options = new Options();
+$options->set('isHtml5ParserEnabled', true);
+$options->set('isRemoteEnabled', true);
+
+$dompdf = new Dompdf($options);
+$dompdf->loadHtml($html);
+$dompdf->setPaper('A4', 'portrait');
+$dompdf->render();
+
+$filename = "Lab_Request_Form_" . ($formData['controlNumber'] ?? $formID) . ".pdf";
+$dompdf->stream($filename, ["Attachment" => false]);
+?>
