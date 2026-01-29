@@ -250,9 +250,10 @@ $html = "
         
         th {
             text-align: center;
-            font-weight: bold;
-            padding: 3pt;
-            font-size: 9pt;
+            vertical-align: top;
+            font-weight: normal;
+            font-size: 8pt;
+            padding: 0 10pt;
             background-color: #f0f0f0;
         }
         
@@ -277,7 +278,7 @@ $html = "
         }
         
         .signature-section {
-            margin-top: 8pt;
+            margin-top: 8pt;    
         }
         
         .signature-label {
@@ -297,9 +298,9 @@ $html = "
             margin-bottom: 4pt;
         }
         
-        .student-list ol {
-            list-style-position: inside;
-            padding-left: 0;
+        .student-list ul {
+            padding: 0 150 0 50;
+            list-style-type: none;
         }
         
         .student-list li {
@@ -407,7 +408,7 @@ $html = "
                     <th colspan='1' style='width: 25%;'>Returned</th>
                 </tr>
                 <tr>
-                    <th>Condition</th>
+                    <th>Condition/Remarks</th>
                     <th>Condition/Remarks</th>
                 </tr>
             </thead>
@@ -469,7 +470,7 @@ $html .= "
     <div class='signature-section'>
         <div class='form-row'>
             <div class='form-field w-50'>
-                <label>Requested:</label>
+                <label>Requested by:</label>
                 <span class='value' style='min-width: 140pt;'><?php echo htmlspecialchars($requesterName); ?></span>
             </div>
             <div class='form-field w-50'>
@@ -486,7 +487,7 @@ $html .= "
 
     <div class='student-list'>
         <p>If user of the lab is a group, list down the names of the students:</p>
-        <ol>
+        <ul>
 
 ";
 
@@ -508,7 +509,7 @@ for ($i = count($students); $i < count($students) + $emptyLinesNeeded; $i++) {
 }
 
 $html .= "
-    </ol>
+        </ul>
     </div>
 
     <div class='signature-section'>

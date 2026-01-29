@@ -1,434 +1,398 @@
-<?php
-require_once '../vendor/autoload.php';
-include('../helperFiles/db_connection.php');
-
-use Dompdf\Dompdf;
-use Dompdf\Options;
-
-// Get form ID from request
-$formID = $_GET['id'] ?? $_GET['formID'] ?? null;
-
-if (!$formID) {
-    die('Error: Form ID is required.');
-}
-
-// Fetch form data
-$stmt = $conn->prepare("
-    SELECT 
-        fr.controlNumber,
-        fr.sy,
-        fr.gradeLevel,
-        fr.`section/s`,
-        fr.scilabName,
-        fr.subject,
-        fr.subjectTopic,
-        fr.teacherInCharge,
-        fr.inclusiveDate,
-        fr.inclusiveTime,
-        fr.requesterEmployeeID,
-        fr.dateRequested
-    FROM scilab_form_requests fr
-    WHERE fr.id = ?
-");
-
-if ($stmt === false) {
-    die('Database query preparation failed.');
-}
-
-$stmt->bind_param('i', $formID);
-$stmt->execute();
-$result = $stmt->get_result();
-$formData = $result->fetch_assoc();
-
-if (!$formData) {
-    die('Error: Form not found.');
-}
-
-$stmt->close();
-
-// Fetch materials/equipment
-$stmt = $conn->prepare("
-    SELECT 
-        mr.quantity,
-        mr.item,
-        mr.unit,
-        mr.description,
-        mr.issuedCondition,
-        mr.returnedCondition,
-        mr.returnedItemInspector
-    FROM scilab_material_requests mr
-    WHERE mr.formID = ?
-    ORDER BY mr.id ASC
-");
-
-$stmt->bind_param('i', $formID);
-$stmt->execute();
-$materialsResult = $stmt->get_result();
-
-$materials = [];
-while ($row = $materialsResult->fetch_assoc()) {
-    $materials[] = $row;
-}
-
-$stmt->close();
-
-// Fetch student list (if applicable)
-$stmt = $conn->prepare("
-    SELECT student_name
-    FROM scilab_students_involved
-    WHERE formID = ?
-    ORDER BY id ASC
-");
-
-$stmt->bind_param('i', $formID);
-$stmt->execute();
-$studentsResult = $stmt->get_result();
-
-$students = [];
-while ($row = $studentsResult->fetch_assoc()) {
-    $students[] = $row['student_name'];
-}
-
-// Get requester information from accounts table
-$stmt = $conn->prepare("
-    SELECT CONCAT(firstname, ' ', middlename, ' ', lastname) as fullName
-    FROM accounts
-    WHERE employeeID = ?
-");
-
-$stmt->bind_param('s', $formData['requesterEmployeeID']);
-$stmt->execute();
-$requesterResult = $stmt->get_result();
-$requesterData = $requesterResult->fetch_assoc();
-$stmt->close();
-
-$requesterName = $requesterData['fullName'] ?? 'N/A';
-$dateRequested = date('F d, Y', strtotime($formData['dateRequested']));
-
-$conn->close();
-
-// Fix image path for Dompdf
-$logoPath = $_SERVER['DOCUMENT_ROOT'] . "/img/logo.png";
-
-// Build HTML
-$html = "
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset='UTF-8'>
-    <title>Laboratory Request Form</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <title>Laboratory Request and Equipment Accountability Form</title>
     <style>
         @page {
-            margin: 0.5in;
+            margin: 15mm 20mm;
+            size: A4 portrait;
         }
         
-        body { 
-            font-family: Arial, sans-serif; 
-            font-size: 10pt; 
-            color: #000; 
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            padding: 50px;
+            font-family: 'DejaVu Sans', Arial, sans-serif;
+            font-size: 8pt;
             line-height: 1.3;
+            color: #000;
         }
-
+        
         .header {
-            text-align: center;
-            margin-bottom: 15px;
+            text-align: left;
+            margin-bottom: 12pt;
         }
-
-        .header h1 {
-            margin: 2px 0;
-            font-size: 12pt;
+        
+        .header h3 {
+            font-size: 9pt;
             font-weight: bold;
+            margin-bottom: 4pt;
         }
-
-        .header h2 {
-            margin: 2px 0;
+        
+        .campus-line {
+            display: block;
+            margin-bottom: 8pt;
+        }
+        
+        .campus-line span {
+            border-bottom: 1px solid #000;
+            display: inline-block;
+            min-width: 180pt;
+            padding-left: 4pt;
+        }
+        
+        .form-title {
+            text-align: left;
             font-size: 11pt;
             font-weight: bold;
+            margin: 8pt 0 12pt 0;
         }
-
-        .control-sy-row {
+        
+        .form-row {
+            width: 100%;
+            margin-bottom: 6pt;
+            display: table;
+        }
+        
+        .form-field {
+            display: table-cell;
+            vertical-align: top;
+        }
+        
+        .form-field label {
+            font-weight: normal;
+            white-space: nowrap;
+        }
+        
+        .form-field .value {
+            border-bottom: 1px solid #000;
+            display: inline-block;
+            min-width: 80pt;
+            padding: 0 4pt;
+            min-height: 14pt;
+        }
+        
+        .w-50 {
+            width: 50%;
+        }
+        
+        .w-60 {
+            width: 60%;
+        }
+        
+        .w-40 {
+            width: 40%;
+        }
+        
+        .w-100 {
+            width: 100%;
+        }
+        
+        .control-row {
             display: table;
             width: 100%;
-            margin-bottom: 10px;
+            margin-bottom: 8pt;
         }
-
-        .control-sy-cell {
+        
+        .control-left {
             display: table-cell;
             width: 50%;
-            border: 1px solid #000;
-            padding: 5px;
         }
-
+        
+        .control-right {
+            display: table-cell;
+            width: 50%;
+            text-align: right;
+        }
+        
+        .control-field {
+            display: inline-block;
+            margin-left: 8pt;
+        }
+        
+        .material-section {
+            margin: 12pt 0;
+        }
+        
+        .material-section p {
+            margin-bottom: 4pt;
+            font-weight: bold;
+        }
+        
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 10px;
+            margin: 8pt 0;
         }
-
-        .info-table td {
+        
+        table, th, td {
             border: 1px solid #000;
-            padding: 4px 8px;
         }
-
-        .info-table td:first-child {
-            width: 35%;
-            font-weight: normal;
-        }
-
-        .section-title {
-            font-weight: bold;
-            margin: 10px 0 5px 0;
-        }
-
-        .materials-table th {
-            background: #d9d9d9;
-            border: 1px solid #000;
-            padding: 5px;
-            font-weight: bold;
+        
+        th {
             text-align: center;
+            font-weight: bold;
+            padding: 3pt;
             font-size: 9pt;
+            background-color: #f0f0f0;
         }
-
-        .materials-table td {
-            border: 1px solid #000;
-            padding: 5px;
-            font-size: 9pt;
+        
+        td {
+            padding: 3pt;
+            min-height: 16pt;
+            font-size: 8pt;
         }
-
-        .signature-row {
-            display: table;
-            width: 100%;
-            margin: 15px 0;
+        
+        .notes {
+            margin: 12pt 0;
+            font-size: 8pt;
         }
-
-        .signature-cell {
-            display: table-cell;
-            width: 50%;
-            padding: 0 10px;
+        
+        .notes ul {
+            list-style-type: disc;
+            margin-left: 16pt;
         }
-
-        .signature-line {
-            margin-top: 30px;
-            border-bottom: 1px solid #000;
-            display: inline-block;
-            width: 200px;
+        
+        .notes li {
+            margin-bottom: 2pt;
         }
-
-        .instructions {
-            font-size: 9pt;
-            font-style: italic;
-            margin: 10px 0;
+        
+        .signature-section {
+            margin-top: 8pt;
         }
-
-        .student-list {
-            margin: 10px 0;
-        }
-
-        .student-list-item {
-            margin: 3px 0;
-        }
-
-        .form-code {
-            text-align: center;
+        
+        .signature-label {
+            display: block;
+            text-align: left;
             font-size: 8pt;
             font-style: italic;
-            margin-top: 20px;
+            margin-top: -10pt;
+            margin-left: 85pt;
         }
-
+        
+        .student-list {
+            margin: 8pt 0;
+        }
+        
+        .student-list p {
+            margin-bottom: 4pt;
+        }
+        
+        .student-list ol {
+            list-style-position: inside;
+            padding-left: 0;
+        }
+        
+        .student-list li {
+            border-bottom: 1px solid #000;
+            min-height: 18pt;
+            margin-bottom: 2pt;
+            padding: 2pt 0;
+        }
+        
+        .footer-text {
+            font-size: 9pt;
+            margin-top: 16pt;
+        }
     </style>
 </head>
 <body>
-
-    <div class='header'>
-        <h1>PHILIPPINE SCIENCE HIGH SCHOOL SYSTEM</h1>
-        <h1>CAMPUS: ILOCOS REGION</h1>
-        <h2>LABORATORY REQUEST AND EQUIPMENT ACCOUNTABILITY FORM</h2>
-    </div>
-
-    <div class='control-sy-row'>
-        <div class='control-sy-cell'>
-            <strong>Control No:</strong> " . htmlspecialchars($formData['controlNumber'] ?? '') . "
-        </div>
-        <div class='control-sy-cell'>
-            <strong>SY:</strong> " . htmlspecialchars($formData['sy'] ?? '') . "
+    <div class="header">
+        <h3>PHILIPPINE SCIENCE HIGH SCHOOL SYSTEM</h3>
+        <div class="campus-line">
+            <label>CAMPUS:</label>
+            <span>ILOCOS REGION</span>
         </div>
     </div>
-
-    <table class='info-table'>
-        <tr>
-            <td><strong>Grade Level and Section:</strong></td>
-            <td>" . htmlspecialchars('Grade ' . $formData['gradeLevel'] . ' - ' . $formData['section/s']) . "</td>
-        </tr>
-        <tr>
-            <td><strong>Subject:</strong></td>
-            <td>" . htmlspecialchars($formData['subject'] ?? '') . "</td>
-        </tr>
-        <tr>
-            <td><strong>Concurrent Topic:</strong></td>
-            <td>" . htmlspecialchars($formData['subjectTopic'] ?? '') . "</td>
-        </tr>
-        <tr>
-            <td><strong>Teacher In-Charge:</strong></td>
-            <td>" . htmlspecialchars($formData['teacherInCharge'] ?? '') . "</td>
-        </tr>
-        <tr>
-            <td><strong>Venue of the Experiment:</strong></td>
-            <td>" . htmlspecialchars($formData['scilabName'] ?? '') . "</td>
-        </tr>
-        <tr>
-            <td><strong>Date/Inclusive Date:</strong></td>
-            <td>" . htmlspecialchars($formData['inclusiveDate'] ?? '') . "</td>
-        </tr>
-        <tr>
-            <td><strong>Inclusive Time of Use:</strong></td>
-            <td>" . htmlspecialchars($formData['inclusiveTime'] ?? '') . "</td>
-        </tr>
-    </table>
-
-    <div class='section-title'>Materials/Equipment Needed:</div>
-
-    <table class='materials-table'>
-        <tr>
-            <th style='width: 10%;'>Quantity</th>
-            <th style='width: 35%;'>Item Description</th>
-            <th style='width: 10%;'>Issued</th>
-            <th style='width: 10%;'>Returned</th>
-            <th style='width: 10%;'>Condition</th>
-            <th style='width: 25%;'>Condition/Remarks</th>
-        </tr>
-";
-
-// Add materials rows
-if (!empty($materials)) {
-    foreach ($materials as $material) {
-        $itemDescription = htmlspecialchars($material['item']);
-        if (!empty($material['description'])) {
-            $itemDescription .= ' - ' . htmlspecialchars($material['description']);
-        }
-        
-        $quantity = htmlspecialchars($material['quantity']);
-        if (!empty($material['unit'])) {
-            $quantity .= ' ' . htmlspecialchars($material['unit']);
-        }
-        
-        $html .= "
-        <tr>
-            <td style='text-align: center;'>" . $quantity . "</td>
-            <td>" . $itemDescription . "</td>
-            <td style='text-align: center;'>" . htmlspecialchars($material['issuedCondition'] ?? '') . "</td>
-            <td style='text-align: center;'>" . htmlspecialchars($material['returnedCondition'] ?? '') . "</td>
-            <td style='text-align: center;'>" . htmlspecialchars($material['returnedCondition'] ?? '') . "</td>
-            <td>" . htmlspecialchars($material['returnedItemInspector'] ?? '') . "</td>
-        </tr>
-        ";
-    }
-}
-
-// Add empty rows if needed (minimum 5 rows)
-$emptyRowsNeeded = max(0, 5 - count($materials));
-for ($i = 0; $i < $emptyRowsNeeded; $i++) {
-    $html .= "
-    <tr>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-    </tr>
-    ";
-}
-
-$html .= "
-    </table>
-
-    <div class='signature-row'>
-        <div class='signature-cell'>
-            <strong>Received by:</strong> <span class='signature-line'></span>
-            <div style='margin-top: 5px;'><strong>Date:</strong> _______________</div>
-        </div>
-        <div class='signature-cell'>
-            <strong>Received and Inspected by:</strong> <span class='signature-line'></span>
-            <div style='margin-top: 5px;'><strong>Date:</strong> _______________</div>
+    
+    <div class="form-title">
+        LABORATORY REQUEST AND EQUIPMENT ACCOUNTABILITY FORM
+    </div>
+    
+    <div class="control-row">
+        <div class="control-left"></div>
+        <div class="control-right">
+            <div class="control-field">
+                <label>Control No:</label>
+                <span class="value" style="min-width: 60pt;">001</span>
+            </div>
+            <div class="control-field">
+                <label>SY:</label>
+                <span class="value" style="min-width: 50pt;">2024-2025</span>
+            </div>
         </div>
     </div>
-
-    <div class='instructions'>
-        * Fill out this form completely and legibly; transact with the Unit SRA concerned during office hours.<br>
-        * Requests not in accordance with existing Unit regulations and considerations may not be granted.
-    </div>
-
-    <table class='info-table'>
-        <tr>
-            <td><strong>Requested:</strong></td>
-            <td>" . htmlspecialchars($requesterName) . "</td>
-        </tr>
-        <tr>
-            <td><strong>Date Requested:</strong></td>
-            <td>" . htmlspecialchars($dateRequested) . "</td>
-        </tr>
-        <tr>
-            <td></td>
-            <td style='text-align: center;'><strong>Teacher/Student</strong></td>
-        </tr>
-    </table>
-
-    <div class='section-title'>If user of the lab is a group, list down the names of the students:</div>
-
-    <div class='student-list'>
-";
-
-// Add student names
-if (!empty($students)) {
-    foreach ($students as $index => $studentName) {
-        $html .= "
-        <div class='student-list-item'>" . ($index + 1) . ". " . htmlspecialchars($studentName) . "</div>
-        ";
-    }
-}
-
-// Add empty lines for remaining students (minimum 10 lines)
-$emptyLinesNeeded = max(0, 10 - count($students));
-for ($i = count($students); $i < count($students) + $emptyLinesNeeded; $i++) {
-    $html .= "
-    <div class='student-list-item'>" . ($i + 1) . ". _________________________________</div>
-    ";
-}
-
-$html .= "
-    </div>
-
-    <div class='signature-row' style='margin-top: 30px;'>
-        <div class='signature-cell'>
-            <strong>Endorsed by:</strong>
-            <div class='signature-line' style='margin-top: 40px;'></div>
-            <div style='text-align: center; margin-top: 5px;'><strong>Subject Teacher/Unit Head</strong></div>
+    
+    <div class="form-row">
+        <div class="form-field w-60">
+            <label>Grade Level and Section:</label>
+            <span class="value" style="min-width: 150pt;">Grade 10 - Section A</span>
         </div>
-        <div class='signature-cell'>
-            <strong>Approved by:</strong>
-            <div class='signature-line' style='margin-top: 40px;'></div>
-            <div style='text-align: center; margin-top: 5px;'><strong>SRS/SRA</strong></div>
+        <div class="form-field w-40">
+            <label>Number of Students:</label>
+            <span class="value" style="min-width: 60pt;">25</span>
         </div>
     </div>
-
-    <div class='form-code'>
-        PSHS-00-F-CIID-20-Ver02-Rev1-10/18/20
+    
+    <div class="form-row">
+        <div class="form-field w-60">
+            <label>Subject:</label>
+            <span class="value" style="min-width: 150pt;">Chemistry</span>
+        </div>
+        <div class="form-field w-40">
+            <label>Concurrent Topic:</label>
+            <span class="value" style="min-width: 90pt;">Acids and Bases</span>
+        </div>
     </div>
-
+    
+    <div class="form-row">
+        <div class="form-field w-60">
+            <label>Unit:</label>
+            <span class="value" style="min-width: 150pt;">Chemical Reactions</span>
+        </div>
+        <div class="form-field w-40">
+            <label>Teacher In-Charge:</label>
+            <span class="value" style="min-width: 90pt;">Juan Dela Cruz</span>
+        </div>
+    </div>
+    
+    <div class="form-row">
+        <div class="form-field w-100">
+            <label>Venue of the Experiment:</label>
+            <span class="value" style="min-width: 250pt;">Chemistry Laboratory 1</span>
+        </div>
+    </div>
+    
+    <div class="form-row">
+        <div class="form-field w-50">
+            <label>Date/Inclusive Date:</label>
+            <span class="value" style="min-width: 120pt;">January 20, 2026</span>
+        </div>
+        <div class="form-field w-50">
+            <label>Inclusive Time of Use:</label>
+            <span class="value" style="min-width: 120pt;">1:00 PM - 3:00 PM</span>
+        </div>
+    </div>
+    
+    <div class="material-section">
+        <p>Materials/Equipment Needed:</p>
+        <table>
+            <thead>
+                <tr>
+                    <th rowspan="2" style="width: 8%;">Quantity</th>
+                    <th rowspan="2" style="width: 22%;">Item</th>
+                    <th rowspan="2" style="width: 25%;">Description</th>
+                    <th colspan="1" style="width: 20%;">Issued</th>
+                    <th colspan="1" style="width: 25%;">Returned</th>
+                </tr>
+                <tr>
+                    <th>Condition</th>
+                    <th>Condition/Remarks</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>10</td>
+                    <td>Beaker</td>
+                    <td>250ml glass beaker</td>
+                    <td>Good</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>Test Tube</td>
+                    <td>15ml borosilicate</td>
+                    <td>Good</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>pH Meter</td>
+                    <td>Digital pH meter</td>
+                    <td>Good</td>
+                    <td></td>
+                </tr>
+                <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+                <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+                <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+                <tr>
+                    <td colspan="3"></td>
+                    <td><strong>Received by:</strong></td>
+                    <td><strong>Received and Inspected by:</strong></td>
+                </tr>
+                <tr>
+                    <td colspan="3"></td>
+                    <td><strong>Date:</strong></td>
+                    <td><strong>Date:</strong></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="notes">
+        <ul>
+            <li>Fill out this form completely and legibly; transact with the Unit SRA concerned during office hours.</li>
+            <li>Requests not in accordance with existing Unit regulations and considerations may not be granted.</li>
+        </ul>
+    </div>
+    
+    <div class="signature-section">
+        <div class="form-row">
+            <div class="form-field w-50">
+                <label>Requested:</label>
+                <span class="value" style="min-width: 140pt;">Maria Santos Garcia</span>
+            </div>
+            <div class="form-field w-50">
+                <label>Date Requested:</label>
+                <span class="value" style="min-width: 120pt;">January 15, 2026</span>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-field w-50">
+                <span class="signature-label">Teacher/Student</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="student-list">
+        <p>If user of the lab is a group, list down the names of the students:</p>
+        <ol>
+            <li>Student Name 1</li>
+            <li>Student Name 2</li>
+            <li>Student Name 3</li>
+            <li>Student Name 4</li>
+            <li>Student Name 5</li>
+        </ol>
+    </div>
+    
+    <div class="signature-section">
+        <div class="form-row">
+            <div class="form-field w-50">
+                <label>Endorsed by:</label>
+                <span class="value" style="min-width: 140pt;"></span>
+            </div>
+            <div class="form-field w-50">
+                <label>Approved by:</label>
+                <span class="value" style="min-width: 140pt;"></span>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-field w-50">
+                <span class="signature-label">Subject Teacher/Unit Head</span>
+            </div>
+            <div class="form-field w-50">
+                <span class="signature-label">SRS/SRA</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="footer-text">
+        <p>PSHS-00-F-CIID-20-Ver02-Rev1-10/18/20</p>
+    </div>
 </body>
 </html>
-";
-
-// Generate PDF
-$options = new Options();
-$options->set('isHtml5ParserEnabled', true);
-$options->set('isRemoteEnabled', true);
-
-$dompdf = new Dompdf($options);
-$dompdf->loadHtml($html);
-$dompdf->setPaper('A4', 'portrait');
-$dompdf->render();
-
-$filename = "Lab_Request_Form_" . ($formData['controlNumber'] ?? $formID) . ".pdf";
-$dompdf->stream($filename, ["Attachment" => false]);
-?>
