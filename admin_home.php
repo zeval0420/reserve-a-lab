@@ -37,14 +37,12 @@
                 padding: 15px;
             }
             .fixed-card, .add-scilab-card {
-                height: 400px; display: flex;
+                min-height: 550px; display: flex;
                 justify-content: center; align-items: center;
                 text-align: center;
             }
             .lab-card {
-                min-height: 515px; padding: 20px 10px;
-                justify-content: start; align-items: center;
-                min-height: 600px; padding: 25px 15px;
+                min-height: 520px; padding: 25px 15px;
                 justify-content: space-between; align-items: center;
             }
             .fixed-img, .lab-img {
@@ -209,8 +207,6 @@
                                     data-scilab="<?= htmlspecialchars($id) ?>">
                             </div>
 
-                            <br>
-
                             <div class="d-flex justify-content-center gap-2 mb-3">
                                 <button class="btn btn-danger btn-sm" onclick="openRemoveModal('<?= $id ?>')">
                                     <i class="bi bi-trash"></i> Remove
@@ -219,7 +215,6 @@
                                     <i class="bi bi-pencil"></i> Edit
                                 </button>
                             </div>
-                            <br>
 
                             <div class="d-flex justify-content-center align-items-center gap-2">
                                 <label class="switch m-0">
@@ -234,8 +229,7 @@
 
                     <div class="col-md-4 mb-4">
                         <div class="card add-scilab-card d-flex align-items-center justify-content-center text-center"
-                            style="height:420px; cursor:pointer;" onclick="$('#addLabModal').modal('show')">
-                            style="height:600px; cursor:pointer;" onclick="$('#addLabModal').modal('show')">
+                            style="min-height:420px; cursor:pointer;" onclick="$('#addLabModal').modal('show')">
                             <h4 class="m-auto">Add Science Laboratory</h4>
                         </div>
                     </div>
