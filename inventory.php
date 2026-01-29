@@ -73,7 +73,8 @@
             .btn-scan:hover { background-color: #005fa3; }
             .btn-edit { background-color: #2B55C4; color: white; }
             .btn-remove { background-color: #e74c3c; color: white; }
-            .small-btn { padding: 4px 8px; font-size: 12px; border-radius: 4px; }
+            .small-btn { padding: 6px 12px; font-size: 14px; border-radius: 4px; }
+            #inventory-table th:last-child, #inventory-table td:last-child { min-width: 67px; }
             .no-items { text-align: center; padding: 12px; background: #fff8e6; border: 1px solid #ffe0a3; border-radius: 6px; color: #7a5a00; }
 
             /* Scanner modal compact sizing */
@@ -302,7 +303,7 @@
                     </div>
                     <div class="modal-body">
                         <p>Upload a CSV file with headers: <code>classification, item, productID, description, quantity, unit, status</code></p>
-                        <p class="text-muted small">Matches on <b>productID</b>. Existing items are updated; new items are added.</p>
+                        <p class="text-muted small">Matches on <b>Item Name + Description</b>. Existing items are updated; new items are added.</p>
                         <input type="file" id="csvFile" accept=".csv" class="form-control-file mb-3">
                         <div id="importProgress" style="display:none;">
                             <div class="progress mb-2">
@@ -391,8 +392,8 @@
                                 <td>${item.unit}</td>
                                 <td>${item.status}</td>
                                 <td>
-                                    <button class="action-btn btn-edit small-btn edit-btn">Edit</button>
-                                    <button class="action-btn btn-remove small-btn delete-btn">Remove</button>
+                                    <button class="action-btn btn-edit small-btn edit-btn"><i class="bi bi-pencil"></i></button>
+                                    <button class="action-btn btn-remove small-btn delete-btn"><i class="bi bi-trash"></i></button>
                                 </td>
                             </tr>`;
                         tbody.append(row);
@@ -562,9 +563,12 @@
 
                 for (let i = 0; i < rows.length; i++) {
                     const row = rows[i];
-                    if (!row.productID) continue;
+                    // if (!row.productID) continue;
 
-                    const existing = flatInventory.find(item => item.productID == row.productID);
+                    const existing = flatInventory.find(item => 
+                        (item.item || '').trim().toLowerCase() === (row.item || '').trim().toLowerCase() && 
+                        (item.description || '').trim().toLowerCase() === (row.description || '').trim().toLowerCase()
+                    );
                     const action = existing ? 'update_inventory' : 'add_inventory';
                     const payload = { ...row, action: action };
                     if (existing) payload.id = existing.id;
