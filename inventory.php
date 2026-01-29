@@ -22,7 +22,6 @@
         'Consumable',
         'Reagent',
         'Glassware',
-        'Lab Material',
         'Food Lab'
     ];
 
