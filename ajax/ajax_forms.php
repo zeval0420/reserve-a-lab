@@ -245,7 +245,7 @@
 
         if ($grade !== null && is_numeric($grade)) {
             $grade = intval($grade);
-            $stmt = $conn->prepare("SELECT DISTINCT subjectDescription, subjectAcademicUnit FROM subject WHERE status = 'active' AND subjectGradeLevel = ?");
+            $stmt = $conn->prepare("SELECT DISTINCT subjectCode, subjectAcademicUnit FROM subject WHERE status = 'active' AND subjectGradeLevel = ?");
             $stmt->bind_param("i", $grade);
             $stmt->execute();
             $result = $stmt->get_result();
@@ -253,7 +253,7 @@
             $subjects = [];
             while ($row = $result->fetch_assoc()) {
                 $subjects[] = [
-                    'description' => $row['subjectDescription'],
+                    'description' => $row['subjectCode'],
                     'unit' => $row['subjectAcademicUnit']
                 ];
             }

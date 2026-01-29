@@ -167,7 +167,7 @@
                                                     <button class="btn btn-success btn-sm approve-btn" style="width: 90%;  margin-bottom: 10px; border-radius: 6767px;" data-request='<?= json_encode($row) ?>'>Approve</button>
                                                     <button class="btn btn-danger btn-sm reject-btn" style="width: 90%; border-radius: 6767px;" data-request='<?= json_encode($row) ?>'>Reject</button>
                                                 <?php elseif ($statusFilter === 'Approved'): ?>
-                                                    <a href="templates/generate_pdf.php?id=<?= $row['id'] ?>" target="_blank" class="btn btn-default btn-sm">
+                                                    <a href="templates/print_template.php?id=<?= $row['id'] ?>" target="_blank" class="btn btn-default btn-sm">
                                                         <i class="glyphicon glyphicon-print"></i> Print
                                                     </a>
                                                 <?php endif; ?>
