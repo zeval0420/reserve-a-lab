@@ -147,7 +147,11 @@
             .multiselect-container { width: 100%; border: 1px solid #ced4da; border-radius: 4px; box-shadow: none; margin-top: 2px; padding: 5px 0; }
             .multiselect-container > li { margin-bottom: 2px; }
             .multiselect-container > li > a > label {
-                padding: 10px 15px; width: 100%; cursor: pointer; font-weight: normal; margin: 0;
+                padding: 2px 15px; width: 100%; cursor: pointer; font-weight: normal; margin: 0;
+            }
+            .multiselect-container > li > a { margin: 0 5px; border-radius: 5px; }
+            .multiselect-container > li.active > a {
+                background-color: var(--main-blue) !important; color: white;
             }
         </style>
     </head>
@@ -190,8 +194,7 @@
                         </div>
                         <div class="form-group col-md-6">
                             <label>Section:</label>
-                            <select id="sections-checkboxes" name="sections[]" multiple="multiple">
-                                <option value="php">Select Grade Level First</option>
+                            <select id="sections-checkboxes" name="sections[]" multiple="multiple" disabled>
                             </select>
                             <div id="section-checkboxes" class="checkbox-list"></div>
                         </div>
@@ -201,7 +204,7 @@
                     <div class="form-row row">
                         <div class="form-group col-md-6">
                             <label>Subject:</label>
-                            <select id="subject_select" name="subject" class="form-control" required>
+                            <select id="subject_select" name="subject" class="form-control" required disabled>
                                 <option value="">Select Grade First</option>
                             </select>
                         </div>
@@ -215,8 +218,8 @@
                     <div class="form-row row">
                         <div class="form-group col-md-6">
                             <label>Academic Unit:</label>
-                            <select class="form-control" name="unit" id="unit-select" required>
-                                <option value="">Select Academic Unit</option>
+                            <select class="form-control" name="unit" id="unit-select" required disabled>
+                                <option value="">Select Grade First</option>
                                 <?php $units = array_unique(array_column($subjectOptions, 'subjectAcademicUnit'));
                                 foreach ($units as $unit): ?>
                                     <option value="<?= htmlspecialchars($unit) ?>"><?= htmlspecialchars($unit) ?></option>
@@ -225,8 +228,7 @@
                         </div>
                         <div class="form-group col-md-6">
                             <label>Teacher In-Charge:</label>
-                            <select class="form-control" name="teacher" required>
-                                <option value="">Select Teacher</option>
+                            <select id="teacher-checkboxes" class="form-control" name="teacher[]" multiple="multiple" required>
                                 <?php foreach ($teacherOptions as $t): ?>
                                     <option value="<?= htmlspecialchars($t['name']) ?>"><?= htmlspecialchars($t['name']) ?></option>
                                 <?php endforeach; ?>
@@ -588,6 +590,13 @@
                     return false;
                 }
 
+                // Check that teacher field is filled
+                const selectedTeachers = $('#teacher-checkboxes').val();
+                if (!selectedTeachers || selectedTeachers.length === 0) {
+                    alert("Please select at least one teacher.");
+                    return false;
+                }
+
                 const form = $(this);
                 const sectionsArr = $('#sections-checkboxes').val() || [];
 
@@ -598,7 +607,7 @@
                     <strong>Subject:</strong> ${form.find('[name="subject"]').val()}<br>
                     <strong>Topic:</strong> ${form.find('[name="topic"]').val()}<br>
                     <strong>Unit:</strong> ${form.find('[name="unit"]').val()}<br>
-                    <strong>Teacher:</strong> ${form.find('[name="teacher"]').val()}<br>
+                    <strong>Teacher:</strong> ${(form.find('[name="teacher[]"]').val() || []).join(', ')}<br>
                     <strong>Date:</strong> ${form.find('[name="inclusive_date"]').val()}<br>
                     <strong>Time:</strong> ${form.find('[name="start_time"]').val()} to ${form.find('[name="end_time"]').val()}<br>
                     <hr>
@@ -709,6 +718,11 @@
                 formData.append('action', 'request_submission');
                 formData.append('mergedMaterials', JSON.stringify(Object.values(itemsMap)));
 
+                // Handle teacher array -> string conversion for backend compatibility
+                const teachers = $('#teacher-checkboxes').val();
+                formData.delete('teacher[]');
+                formData.append('teacher', teachers ? teachers.join(', ') : '');
+
                 $.ajax({
                     url: 'ajax/ajax_forms.php',
                     type: 'POST',
@@ -731,7 +745,14 @@
 
             setMinDate();
             populateStudentDropdowns();
-            $('#sections-checkboxes').multiselect({ includeSelectAllOption: true });
+            $('#sections-checkboxes').multiselect({ 
+                includeSelectAllOption: true,
+                nonSelectedText: 'Select Grade First'
+            });
+            $('#teacher-checkboxes').multiselect({
+                includeSelectAllOption: false,
+                nonSelectedText: 'Select Teacher'
+            });
 
             // time validation
             $('input[name="start_time"], input[name="end_time"]').on('change', function() {
@@ -748,10 +769,22 @@
                 const grade = $(this).val();
                 populateStudentDropdownsByGrade(grade);
 
+                if (!grade) {
+                    $('#sections-checkboxes').empty().prop('disabled', true);
+                    $('#sections-checkboxes').multiselect('destroy').multiselect({ includeSelectAllOption: true, nonSelectedText: 'Select Grade First' });
+                    
+                    $('#subject_select').prop('disabled', true).html('<option value="">Select Grade First</option>');
+                    $('#unit-select').prop('disabled', true).html('<option value="">Select Grade First</option>');
+                    return;
+                }
+
                 // Sections checkboxes
                 $.get('ajax/ajax_forms.php', { action:'get_sections', grade }, data => {
-                    $('#sections-checkboxes').html(data).multiselect('rebuild');
-                    ensurePlaceholderIfEmpty('#sections-checkboxes');
+                    $('#sections-checkboxes').html(data).prop('disabled', false);
+                    $('#sections-checkboxes').multiselect('destroy').multiselect({
+                        includeSelectAllOption: true,
+                        nonSelectedText: 'Select Section'
+                    });
                 }).fail(() => $('#sections-checkboxes').html('Error loading sections').multiselect('rebuild'));
 
                 // Subjects & Units
@@ -766,8 +799,8 @@
                             unitOpts += `<option value="${s.unit}">${s.unit}</option>`;
                         }
                     });
-                    $('#subject_select').html(subjOpts);
-                    $('#unit-select').html(unitOpts);
+                    $('#subject_select').html(subjOpts).prop('disabled', false);
+                    $('#unit-select').html(unitOpts).prop('disabled', false);
                 }, 'json').fail(() => $('#subject_select, #unit-select').html('<option value="">Error loading</option>'));
             });
 
@@ -844,14 +877,6 @@
         function setMinDate() {
             const today = new Date().toISOString().split('T')[0];
             $('input[type="date"]').attr('min', today);
-        }
-
-        function ensurePlaceholderIfEmpty(selector) {
-            const $select = $(selector);
-            if (!$select.find('option').length) {
-                $select.append('<option disabled selected>Select Grade Level First</option>');
-                if ($select.data('multiselect')) $select.multiselect('rebuild');
-            }
         }
     </script>
 </html>
