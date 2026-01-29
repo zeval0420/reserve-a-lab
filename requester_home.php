@@ -36,10 +36,12 @@
             .main-wrapper { width: 80vw; min-height: 80vh; margin: 0 auto 10vh; padding: 20px; background:#e6e6e6; border-radius:30px; box-shadow:0 2px 12px rgba(0,0,0,0.1); }
             .lab-btn { margin:15px auto 0; display:block; font-size:18px; padding:5px 20px; border:none; border-radius:7px; width:60%; background:#0e0054; color:white; transition:0.3s; }
             .lab-btn:hover { background:#1e7e34; }
-            .card { text-align:center; padding:15px; border-radius:15px; margin-bottom:25px; box-shadow:0 2px 6px rgba(0,0,0,0.1); transition:0.2s; background:#fff; height:100%; display:flex; flex-direction:column; justify-content:space-between; }
+            .card { text-align:center; padding:15px; border-radius:15px; margin-bottom:25px; box-shadow:0 2px 6px rgba(0,0,0,0.1); transition:0.2s; background:#fff; display:flex; flex-direction:column; justify-content:space-between; }
             .card:hover { transform:translateY(-5px); }
-            .equal-height-row > [class*='col-'] { display:flex; }
-            .equal-height-row > [class*='col-'] .card { width:100%; }
+            .equal-height-row { display: flex; flex-wrap: wrap; }
+            .equal-height-row:before, .equal-height-row:after { display: none; }
+            .equal-height-row > [class*='col-'] { display:flex; flex-direction:column; }
+            .equal-height-row > [class*='col-'] .card { width:100%; flex:1; }
             .fixed-img { width:100%; height:210px; object-fit:cover; border-radius:10px; cursor:pointer; }
             .image-divider { border-top:1px solid #dcdcdc; margin:15px auto; width:85%; }
             .text-danger { font-weight:bold; font-size:14px; }
