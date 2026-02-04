@@ -1,5 +1,17 @@
 <?php
+// Enable error reporting to debug 500 errors
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+if (!file_exists('../vendor/autoload.php')) {
+    die('Error: vendor/autoload.php not found. Please ensure the vendor directory is uploaded.');
+}
 require_once '../vendor/autoload.php';
+
+if (!file_exists('../helperFiles/db_connection.php')) {
+    die('Error: helperFiles/db_connection.php not found. Check directory case sensitivity (helperFiles vs helperfiles).');
+}
 include('../helperFiles/db_connection.php');
 
 use Dompdf\Dompdf;
@@ -109,6 +121,7 @@ $conn->close();
 
 // Fix image path for Dompdf
 $logoPath = $_SERVER['DOCUMENT_ROOT'] . "/img/logo.png";
+$logoPath = dirname(__DIR__) . "/img/logo.png";
 
 // Build HTML
 $html = "
@@ -551,7 +564,17 @@ $dompdf = new Dompdf($options);
 $dompdf->loadHtml($html);
 $dompdf->setPaper('A4', 'portrait');
 $dompdf->render();
+try {
+    $dompdf = new Dompdf($options);
+    $dompdf->loadHtml($html);
+    $dompdf->setPaper('A4', 'portrait');
+    $dompdf->render();
 
 $filename = "Lab_Request_Form_" . ($formData['controlNumber'] ?? $formID) . ".pdf";
 $dompdf->stream($filename, ["Attachment" => false]);
+    $filename = "Lab_Request_Form_" . ($formData['controlNumber'] ?? $formID) . ".pdf";
+    $dompdf->stream($filename, ["Attachment" => false]);
+} catch (Exception $e) {
+    die("PDF Generation Error: " . $e->getMessage());
+}
 ?>
