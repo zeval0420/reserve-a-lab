@@ -146,7 +146,7 @@
                                         <td><?= htmlspecialchars($fullName) ?></td>
                                         <?php if ($statusFilter === 'Approved'): ?><td><?= htmlspecialchars($row['controlNumber']) ?></td><?php endif; ?>
                                         <td><?= htmlspecialchars($row['scilabName']) ?></td>
-                                        <td><?= htmlspecialchars("Grade ".$row['gradeLevel']." - ".$row['section/s']) ?></td>
+                                        <td><?= htmlspecialchars("Grade ".$row['gradeLevel']." - ".$row['sections']) ?></td>
                                         <td><?= htmlspecialchars($row['subject']) ?></td>
                                         <td><?= htmlspecialchars($row['subjectTopic']) ?></td>
                                         <td><?= htmlspecialchars($row['inclusiveDate']).' ('.htmlspecialchars($row['inclusiveTime']).')' ?></td>

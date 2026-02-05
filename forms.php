@@ -741,6 +741,9 @@
                         } else if (res === "session_error") {
                             console.log("Session expired. Please log in again.");
                         }
+                        else {
+                            console.log("Error?");
+                        }
                     },
                     error: function() {
                         alert("Request submitted successfully");

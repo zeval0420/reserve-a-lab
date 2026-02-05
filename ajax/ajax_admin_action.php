@@ -42,7 +42,7 @@
             '[STATUS]' => '<span style="color:' . (strtoupper($status) === 'APPROVED' ? 'green' : (strtoupper($status) === 'REJECTED' ? 'red' : 'black')) . '">' . strtoupper($status) . '</span>',
             '[Control Number]' => $controlNumber ?? 'N/A',
             '[Facility]' => htmlspecialchars($row['scilabName']),
-            '[Grade & Section]' => "Grade {$row['gradeLevel']} - {$row['section/s']}",
+            '[Grade & Section]' => "Grade {$row['gradeLevel']} - {$row['sections']}",
             '[Subject]' => htmlspecialchars($row['subject']),
             '[Concurrent Topic]' => htmlspecialchars($row['subjectTopic']),
             '[Schedule]' => htmlspecialchars("{$row['inclusiveDate']} at {$row['inclusiveTime']}"),

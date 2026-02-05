@@ -125,7 +125,7 @@
         $dateRequested = date('Y-m-d H:i:s');
 
         $stmt = $conn->prepare("INSERT INTO scilab_form_requests (
-            scilabName, gradeLevel, section, subject, subjectTopic, inclusiveDate, inclusiveTime, dateRequested, requesterEmployeeID, sy, teacherInCharge) 
+            scilabName, gradeLevel, sections, subject, subjectTopic, inclusiveDate, inclusiveTime, dateRequested, requesterEmployeeID, sy, teacherInCharge) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
         $stmt->bind_param("sisssssssss", $scilabName, $grade, $sections, $subject, $topic, $startDate, $formattedTime, $dateRequested, $requesterID, $schoolYear, $teacher);
@@ -175,7 +175,10 @@
         $stmt3->close();
 
 
-        $requesterName = $_SESSION['firstname'] . ' ' . $_SESSION['middlename'] . ' ' . $_SESSION['lastname'];
+        $requesterName =
+            ($_SESSION['firstname'] ?? '') . ' ' .
+            ($_SESSION['middlename'] ?? '') . ' ' .
+            ($_SESSION['lastname'] ?? '');
 
         sendSubmissionNotificationToAdmins($conn, [
             'scilabName' => $scilabName,
@@ -196,7 +199,9 @@
         echo "success";
         $stmt->close();
         $stmt2->close();
-    }elseif (isset($_POST['action']) && $_POST['action'] === 'get_disabled_dates') {
+        exit();
+    }
+    elseif (isset($_POST['action']) && $_POST['action'] === 'get_disabled_dates') {
         header('Content-Type: application/json');
 
         $scilabName = $_POST['scilabName'];

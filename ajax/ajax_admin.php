@@ -64,7 +64,7 @@
         }
 
         $query = "
-            SELECT fr.id, fr.scilabName, fr.gradeLevel, fr.`section/s` AS sections, fr.subject, fr.subjectTopic,
+            SELECT fr.id, fr.scilabName, fr.gradeLevel, fr.sections AS sections, fr.subject, fr.subjectTopic,
                 fr.inclusiveDate, fr.inclusiveTime, fr.dateRequested, fr.teacherInCharge,
                 CONCAT(a.firstname, ' ', a.lastname) AS requesterName
             FROM scilab_form_requests fr
