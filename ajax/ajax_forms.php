@@ -125,8 +125,8 @@
         $dateRequested = date('Y-m-d H:i:s');
 
         $stmt = $conn->prepare("INSERT INTO scilab_form_requests (
-            scilabName, gradeLevel, `section/s`, `subject`, subjectTopic, inclusiveDate, inclusiveTime, dateRequested, requesterEmployeeID, sy, teacherInCharge
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            scilabName, gradeLevel, section, subject, subjectTopic, inclusiveDate, inclusiveTime, dateRequested, requesterEmployeeID, sy, teacherInCharge) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
         $stmt->bind_param("sisssssssss", $scilabName, $grade, $sections, $subject, $topic, $startDate, $formattedTime, $dateRequested, $requesterID, $schoolYear, $teacher);
         
@@ -139,7 +139,7 @@
 
         // Handle merged materials sent from JS
         $materials = [];
-        $stmt2 = $conn->prepare("INSERT INTO scilab_material_requests (formID, item, quantity, unit, `description`) VALUES (?, ?, ?, ?, ?)");
+        $stmt2 = $conn->prepare("INSERT INTO scilab_material_requests (formID, item, quantity, unit, description) VALUES (?, ?, ?, ?, ?)");
 
         if (isset($_POST['mergedMaterials'])) {
             $mergedMaterials = json_decode($_POST['mergedMaterials'], true);

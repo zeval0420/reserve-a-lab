@@ -734,13 +734,18 @@
                         if (res.trim() === "success") {
                             alert("Request submitted successfully!");
                             resetForm();
-                        } else {
-                            alert("Submission failed: " + res);
+                        } else if (res === "conflict") {
+                            console.log("Schedule conflict. Please choose another time.");
+                        } else if (res === "invalid_scilab") {
+                            console.log("Invalid laboratory selected.");
+                        } else if (res === "session_error") {
+                            console.log("Session expired. Please log in again.");
                         }
                     },
                     error: function() {
                         alert("Request submitted successfully");
                         console.log("Error submitting request.");
+                        console.error("AJAX error:", status, error);
                         resetForm();
                     }
                 });
