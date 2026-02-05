@@ -24,7 +24,12 @@
 
         $subjectLine = "New SciLab Request Submitted";
         $templatePath = __DIR__ . "/../templates/request_email_template.html";
-        $bodyTemplate = file_get_contents($templatePath);
+
+        if (file_exists($templatePath)) {
+            $bodyTemplate = file_get_contents($templatePath);
+        } else {
+            $bodyTemplate = "A new request has been submitted. Please check the dashboard for details.";
+        }
 
         $replacements = [
             "[Facility]" => $data['scilabName'],

@@ -145,6 +145,7 @@
             }
             button.multiselect .caret { margin-left: auto; }
             .multiselect-container { width: 100%; border: 1px solid #ced4da; border-radius: 4px; box-shadow: none; margin-top: 2px; padding: 5px 0; }
+            .multiselect-container { width: 100%; border: 1px solid #ced4da; border-radius: 4px; box-shadow: none; margin-top: 2px; padding: 5px 0; max-height: 300px; overflow-y: auto; }
             .multiselect-container > li { margin-bottom: 2px; }
             .multiselect-container > li > a > label {
                 padding: 2px 15px; width: 100%; cursor: pointer; font-weight: normal; margin: 0;

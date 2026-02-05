@@ -365,6 +365,7 @@ $html = "
         <div class='form-field w-40'>
             <label>Number of Students:</label>
             <span class='value' style='min-width: 60pt;'>25</span>
+            <span class='value' style='min-width: 60pt;'>" . count($students) . "</span>
         </div>
     </div>
     
@@ -485,10 +486,12 @@ $html .= "
             <div class='form-field w-50'>
                 <label>Requested by:</label>
                 <span class='value' style='min-width: 140pt;'><?php echo htmlspecialchars($requesterName); ?></span>
+                <span class='value' style='min-width: 140pt;'>" . htmlspecialchars($requesterName) . "</span>
             </div>
             <div class='form-field w-50'>
                 <label>Date Requested:</label>
                 <span class='value' style='min-width: 120pt;'><?php echo htmlspecialchars($dateRequested); ?></span>
+                <span class='value' style='min-width: 120pt;'>" . htmlspecialchars($dateRequested) . "</span>
             </div>
         </div>
         <div class='form-row'>
@@ -559,7 +562,17 @@ $html .= "
 $options = new Options();
 $options->set('isHtml5ParserEnabled', true);
 $options->set('isRemoteEnabled', true);
-
+try {
+    $options = new Options();
+    $options->set('isHtml5ParserEnabled', true);
+    $options->set('isRemoteEnabled', true);
+    // Set a temp directory for Dompdf, which can help on restricted hosting environments
+    $options->set('tempDir', sys_get_temp_dir());
+    // Set chroot to the project root for security and to help resolve local file paths
+    $options->set('chroot', dirname(__DIR__));
+} catch (Exception $e) {
+    die("PDF Generation Error: " . $e->getMessage());
+}
 $dompdf = new Dompdf($options);
 $dompdf->loadHtml($html);
 $dompdf->setPaper('A4', 'portrait');
@@ -577,4 +590,5 @@ $dompdf->stream($filename, ["Attachment" => false]);
 } catch (Exception $e) {
     die("PDF Generation Error: " . $e->getMessage());
 }
+
 ?>
