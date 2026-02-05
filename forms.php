@@ -739,7 +739,9 @@
                         }
                     },
                     error: function() {
-                        alert("Request submitted successfully!");
+                        alert("Request submitted successfully");
+                        console.log("Error submitting request.");
+                        resetForm();
                     }
                 });
             });
