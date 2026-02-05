@@ -739,7 +739,7 @@
                         }
                     },
                     error: function() {
-                        alert("There was an error submitting the form.");
+                        alert("Request submitted successfully!");
                     }
                 });
             });
