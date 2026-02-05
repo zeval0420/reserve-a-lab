@@ -9,7 +9,7 @@
         if ($_SESSION['role'] === 'admin') {
             header("Location: admin_home.php");
             exit();
-        } elseif ($_SESSION['role'] === 'requestor') {
+        } elseif ($_SESSION['role'] === 'requester' || $_SESSION['role'] === 'teacher') {
             header("Location: requester_home.php");
             exit();
         }
@@ -397,8 +397,8 @@
                         } else if (response === "admin") {
                             //alert("Login successful! Redirecting to Admin Home...");
                             window.location.href = "admin_home.php";
-                        } else if (response === "requestor") {
-                            //alert("Login successful! Redirecting to Requestor Home...");
+                        } else if (response === "requester" || response === "teacher") {
+                            //alert("Login successful! Redirecting to Home...");
                             window.location.href = "requester_home.php";
                         } else {
                             alert("Unexpected response: " + response);

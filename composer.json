@@ -1,5 +1,6 @@
 {
-    "name": "vendor/autoload.php",
+    "name": "gjjvaldez/reserve-a-lab",
+    "description": "A web application for reserving laboratories.",
     "autoload": {
         "psr-4": {
             "Vendor\\AutoloadPhp\\": "src/"
@@ -10,5 +11,7 @@
             "name": "Gabriel James Valdez"
         }
     ],
-    "require": {}
+    "require": {
+        "dompdf/dompdf": "^3.1.0"
+    }
 }

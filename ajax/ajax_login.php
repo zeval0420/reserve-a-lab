@@ -46,9 +46,12 @@ if (isset($_POST["action"]) && $_POST["action"] === "loginUser") {
             if (in_array($position, $adminRoles)) {
                 $_SESSION[$session_role] = "admin";
                 echo "admin";
+            } elseif ($position === 'Teacher') {
+                $_SESSION[$session_role] = "teacher";
+                echo "teacher";
             } else {
-                $_SESSION[$session_role] = "requestor";
-                echo "requestor";
+                $_SESSION[$session_role] = "requester";
+                echo "requester";
             }
         }
 
@@ -86,7 +89,7 @@ if (isset($_POST["action"]) && $_POST["action"] === "loginUser") {
         // $_SESSION['student_id'] = $student['id'];
         $_SESSION['student_lrn'] = $student['LRN'];
 
-        echo "requestor";
+        echo "requester";
     }
 
     $stmt->close();

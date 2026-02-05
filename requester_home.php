@@ -8,10 +8,8 @@
     if(!isset($_SESSION['role'])) {
         header("Location: index.php");
         exit();
-    } elseif($_SESSION['role'] === 'admin') {
-        header("Location: admin_home.php");
-        exit();
-    }
+    } 
+
 
     function getLabImages($labName) {
         $folder = 'img/labimages/' . $labName;
@@ -24,6 +22,44 @@
             }
         }
         return $images;
+    }
+
+    if ($_SESSION['role'] === 'teacher' || $_SESSION['role'] === 'admin') {
+        if ($_SESSION['role'] === 'admin'){
+            $sql = "SELECT * FROM scilab_form_requests WHERE statusScilabPersonnel = 'Pending'";
+        } else {
+            $teacherName = $_SESSION['username'];
+            $sql = "SELECT * FROM scilab_form_requests WHERE teacherInCharge = '$teacherName' AND statusScilabPersonnel = 'Pending'";
+        }
+        $result = $conn->query($sql);
+        $requests = [];
+        while ($row = $result->fetch_assoc()) {
+            $requests[] = $row;
+        }
+
+        if (count($requests) > 0) {
+            echo '<div class="main-wrapper" style="margin-top: 20px;">';
+            echo '<h2>Pending Requests for You</h2>';
+            echo '<table class="table table-striped table-hover">';
+            echo '<thead><tr><th>Requester</th><th>Lab Name</th><th>Date of Use</th><th>Time of Use</th><th>Action</th></tr></thead>';
+            echo '<tbody>';
+            foreach ($requests as $request) {
+                echo '<tr>';
+                echo '<td>' . htmlspecialchars($request['requesterEmployeeID']) . '</td>';
+                echo '<td>' . htmlspecialchars($request['scilabName']) . '</td>';
+                echo '<td>' . htmlspecialchars($request['inclusiveDate']) . '</td>';
+                echo '<td>' . htmlspecialchars($request['inclusiveTime']) . '</td>';
+                if ($_SESSION['role'] === 'teacher'){
+                    echo '<td><a href="supervisor_approve.php?id=' . $request['id'] . '" class="btn btn-primary">View</a></td>';
+                } else {
+                    echo '<td><a href="admin_approve.php?status=Pending&search='. $request['id'] .'" class="btn btn-primary">View</a></td>';
+                }
+                echo '</tr>';
+            }
+            echo '</tbody>';
+            echo '</table>';
+            echo '</div>';
+        }
     }
 ?>
 
