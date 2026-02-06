@@ -169,7 +169,7 @@
             <div class="row">
                 <div class="inline-field col-md-7">
                     <label>Grade Level and Section:</label>
-                    <span class="text"><?= htmlspecialchars($form['gradeLevel'] . ' - ' . $form['section/s']) ?></span>
+                    <span class="text"><?= htmlspecialchars($form['gradeLevel'] . ' - ' . $form['sections']) ?></span>
                 </div>
                 <div class="inline-field col-md-5">
                     <label>Number of Students:</label>

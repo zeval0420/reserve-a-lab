@@ -30,7 +30,7 @@ $stmt = $conn->prepare("
         fr.controlNumber,
         fr.sy,
         fr.gradeLevel,
-        fr.`section/s`,
+        fr.sections,
         fr.scilabName,
         fr.subject,
         fr.subjectTopic,
@@ -360,7 +360,7 @@ $html = "
     <div class='form-row'>
         <div class='form-field w-60'>
             <label>Grade Level and Section:</label>
-            <span class='value' style='min-width: 150pt;'>" . htmlspecialchars('Grade ' . $formData['gradeLevel'] . ' - ' . $formData['section/s']) . "</span>
+            <span class='value' style='min-width: 150pt;'>" . htmlspecialchars('Grade ' . $formData['gradeLevel'] . ' - ' . $formData['sections']) . "</span>
         </div>
         <div class='form-field w-40'>
             <label>Number of Students:</label>
