@@ -11,8 +11,10 @@ if (!$requestId) {
     die("Please provide a request ID.");
 }
 
-$sql = "SELECT * FROM scilab_form_requests WHERE id = '$requestId'";
-$result = $conn->query($sql);
+$stmt = $conn->prepare("SELECT * FROM scilab_form_requests WHERE id = ?");
+$stmt->bind_param("i", $requestId);
+$stmt->execute();
+$result = $stmt->get_result();
 $request = $result->fetch_assoc();
 
 if (!$request) {
@@ -652,7 +654,18 @@ async function handleAction(action) {
             })
         });
         
-        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(`Server Error: ${response.status} ${response.statusText}`);
+        }
+
+        const text = await response.text();
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            console.error('Server response:', text);
+            throw new Error('Invalid JSON response from server. Check console for details.');
+        }
         
         if (data.success) {
             successMessage.textContent = 'Request ' + (action === 'approve' ? 'approved' : 'rejected') + ' successfully.';

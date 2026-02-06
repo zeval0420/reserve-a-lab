@@ -1,4 +1,7 @@
 <?php
+// Start output buffering to prevent unwanted output (whitespace, warnings)
+ob_start();
+
 include('../helperFiles/db_connection.php');
 include('../helperFiles/session_handler.php');
 require '../vendor/autoload.php';
@@ -6,18 +9,20 @@ require '../vendor/autoload.php';
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-header('Content-Type: application/json');
-
 $data = json_decode(file_get_contents('php://input'), true);
 $requestId = $data['request_id'] ?? null;
 $action = $data['action'] ?? null;
 
 if (!$requestId || !$action) {
+    ob_end_clean();
+    header('Content-Type: application/json');
     echo json_encode(['success' => false, 'message' => 'Invalid input.']);
     exit();
 }
 
 if (!isset($_SESSION['username']) || !isset($_SESSION['email'])) {
+    ob_end_clean();
+    header('Content-Type: application/json');
     echo json_encode(['success' => false, 'message' => 'Unauthorized']);
     exit();
 }
@@ -33,13 +38,22 @@ $userAccount = $userResult->fetch_assoc();
 $userStmt->close();
 
 if (!$userAccount) {
+    ob_end_clean();
+    header('Content-Type: application/json');
     echo json_encode(['success' => false, 'message' => 'Unauthorized']);
     exit();
 }
 
 $userPosition = trim($userAccount['position']);
 
-$stmt = $conn->prepare("SELECT supervisor_status, subject_teacher_status, lab_personnel_status, cid_chief_status, supervisor_name, subject_teacher_name, requesterEmployeeID, scilabName, inclusiveDate, inclusiveTime FROM scilab_form_requests WHERE id = ?");
+$stmt = $conn->prepare("SELECT * FROM scilab_form_requests WHERE id = ?");
+if (!$stmt) {
+    ob_end_clean();
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'message' => 'Database prepare failed: ' . $conn->error]);
+    exit();
+}
+
 $stmt->bind_param("i", $requestId);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -47,17 +61,20 @@ $request = $result->fetch_assoc();
 $stmt->close();
 
 if (!$request) {
+    ob_end_clean();
+    header('Content-Type: application/json');
     echo json_encode(['success' => false, 'message' => 'Request not found.']);
     exit();
 }
 
-$supervisor_status = $request['supervisor_status'];
-$subject_teacher_status = $request['subject_teacher_status'];
-$lab_personnel_status = $request['lab_personnel_status'];
-$cid_chief_status = $request['cid_chief_status'];
+$supervisor_status = $request['supervisor_status'] ?? 'pending';
+$subject_teacher_status = $request['subject_teacher_status'] ?? 'pending';
+$lab_personnel_status = $request['lab_personnel_status'] ?? 'pending';
+$cid_chief_status = $request['cid_chief_status'] ?? 'pending';
 
-$supervisor_name = trim($request['supervisor_name']);
-$subject_teacher_name = trim($request['subject_teacher_name']);
+$teacherInCharge = trim($request['teacherInCharge'] ?? '');
+$supervisor_name = trim($request['supervisor_name'] ?? $teacherInCharge);
+$subject_teacher_name = trim($request['subject_teacher_name'] ?? '');
 
 $studentName = $request['requesterEmployeeID'];
 $labName = $request['scilabName'];
@@ -83,6 +100,8 @@ if (strcasecmp($loggedInUsername, $supervisor_name) === 0) {
     $updatedStage = 'subject_teacher';
     
     if ($supervisor_status !== 'approved') {
+        ob_end_clean();
+        header('Content-Type: application/json');
         echo json_encode(['success' => false, 'message' => 'Approval not allowed at this stage.']);
         exit();
     }
@@ -95,6 +114,8 @@ if (strcasecmp($loggedInUsername, $supervisor_name) === 0) {
     $updatedStage = 'lab_personnel';
     
     if ($supervisor_status !== 'approved' || $subject_teacher_status !== 'approved') {
+        ob_end_clean();
+        header('Content-Type: application/json');
         echo json_encode(['success' => false, 'message' => 'Approval not allowed at this stage.']);
         exit();
     }
@@ -107,6 +128,8 @@ if (strcasecmp($loggedInUsername, $supervisor_name) === 0) {
     $updatedStage = 'cid_chief';
     
     if ($supervisor_status !== 'approved' || $subject_teacher_status !== 'approved' || $lab_personnel_status !== 'approved') {
+        ob_end_clean();
+        header('Content-Type: application/json');
         echo json_encode(['success' => false, 'message' => 'Approval not allowed at this stage.']);
         exit();
     }
@@ -115,11 +138,15 @@ if (strcasecmp($loggedInUsername, $supervisor_name) === 0) {
 }
 
 if (!$authorized) {
+    ob_end_clean();
+    header('Content-Type: application/json');
     echo json_encode(['success' => false, 'message' => 'Approval not allowed at this stage.']);
     exit();
 }
 
 if ($currentStageStatus === 'approved') {
+    ob_end_clean();
+    header('Content-Type: application/json');
     echo json_encode(['success' => false, 'message' => 'Approval not allowed at this stage.']);
     exit();
 }
@@ -130,6 +157,8 @@ if ($action === 'approve') {
 } elseif ($action === 'reject') {
     $newStatus = 'rejected';
 } else {
+    ob_end_clean();
+    header('Content-Type: application/json');
     echo json_encode(['success' => false, 'message' => 'Invalid action.']);
     exit();
 }
@@ -138,6 +167,8 @@ $updateStmt = $conn->prepare("UPDATE scilab_form_requests SET $statusColumn = ? 
 $updateStmt->bind_param("si", $newStatus, $requestId);
 
 if (!$updateStmt->execute()) {
+    ob_end_clean();
+    header('Content-Type: application/json');
     echo json_encode(['success' => false, 'message' => 'Database update failed.']);
     $updateStmt->close();
     exit();
@@ -198,12 +229,12 @@ if ($action === 'approve' && $nextRole !== null) {
                 $mail->isSMTP();
                 $mail->Host = 'smtp.gmail.com';
                 $mail->SMTPAuth = true;
-                $mail->Username = 'your-email@gmail.com';
-                $mail->Password = 'your-app-password';
+                $mail->Username = 'pshsircscilab@gmail.com';
+                $mail->Password = 'wxzmkkrffptfchcc';
                 $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
                 $mail->Port = 587;
                 
-                $mail->setFrom('noreply@school.edu', 'Science Laboratory System');
+                $mail->setFrom('pshsircscilab@gmail.com', 'Science Laboratory System');
                 $mail->addAddress($recipient['email'], $recipient['username']);
                 
                 $mail->isHTML(true);
@@ -291,12 +322,12 @@ if ($action === 'approve' && $nextRole !== null) {
     }
 }
 
+ob_end_clean();
+header('Content-Type: application/json');
 echo json_encode([
     'success' => true,
     'updated_stage' => $updatedStage,
     'next_stage' => $nextRole,
     'notification_sent' => $notificationSent
 ]);
-
 $conn->close();
-?>
