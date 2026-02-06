@@ -36,6 +36,7 @@ $purpose = $request['subjectTopic'];
 $teacherInCharge = $request['teacherInCharge'];
 $status = $request['statusScilabPersonnel'] ?? 'pending';
 
+include('helperFiles/headData.php');
 include('helperFiles/header.php');
 ?>
 
@@ -50,16 +51,17 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     min-height: 100vh;
-    padding: 20px;
 }
 
 .container {
     max-width: 900px;
     margin: 0 auto;
     padding: 20px;
+    min-height: 88vh;
 }
 
 .glass-card {
+    min-height: 300px;
     background: rgba(255, 255, 255, 0.15);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
