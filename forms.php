@@ -60,7 +60,6 @@
         'Consumable',
         'Reagent',
         'Glassware',
-        'Lab Material',
         'Food Lab'
     ];
 
@@ -73,7 +72,7 @@
     // Creates a placeholder string for SQL IN clause
     $inClause = "'" . implode("','", $CLASSIFICATIONS) . "'";
 
-    $result = $conn->query("SELECT classification, item, description, unit 
+    $result = $conn->query("SELECT classification, item, description, unit, laboratory
                             FROM scilab_inventory 
                             WHERE classification IN ($inClause) AND (status IS NULL OR status != 'Removed')
                             ORDER BY classification, item ASC");
@@ -82,6 +81,14 @@
     if ($result && $result->num_rows > 0) {
         while ($row = $result->fetch_assoc()) {
             $class = $row['classification'];
+            $laboratory = $row['laboratory'];
+
+            if (str_contains($laboratory, 'Specialized Equipment Room')) {
+                $class = 'Specialized Equipment';
+            } elseif ($class === 'Equipment' || $class === 'Semi Expendable') {
+                $class = 'Regular Equipment';
+            }
+
             $item = $row['item'];
             $desc = $row['description'];
             $unit = $row['unit'];
@@ -94,6 +101,20 @@
             }
 
             $itemOptions[$class][$item]['descriptions'][] = $desc;
+        }
+    }
+
+    // CREATE NEW CLASSIFICATIONS LIST WITHOUT CHANGING THE ORIGINAL
+    $DISPLAY_CLASSIFICATIONS = ['Regular Equipment', 'Specialized Equipment']; // new classes to be displayed
+
+    foreach ($CLASSIFICATIONS as $class) {
+        // skip these classes
+        if ($class === 'Equipment' || $class === 'Semi Expendable') {
+            continue;
+        }
+        // avoid duplicates (just in case)
+        if (!in_array($class, $DISPLAY_CLASSIFICATIONS)) {
+            $DISPLAY_CLASSIFICATIONS[] = $class;
         }
     }
 ?>
@@ -313,7 +334,7 @@
 
     <!-- JavaScript -->
     <script> 
-        const CLASSIFICATIONS = <?= json_encode($CLASSIFICATIONS) ?>;
+        const CLASSIFICATIONS = <?= json_encode($DISPLAY_CLASSIFICATIONS) ?>;
 
         const $container = $('#materials-container');
         CLASSIFICATIONS.forEach(classification => {
@@ -360,8 +381,7 @@
         function buildItemOptions(itemsObj) {
             return Object.keys(itemsObj).map(item => {
                 const data = itemsObj[item];
-                const unit = data.unit ? ` (${data.unit})` : '';
-                return `<option value="${item}" data-unit="${data.unit || ''}">${item}${unit}</option>`;
+                return `<option value="${item}" data-unit="${data.unit || ''}">${item}</option>`;
             }).join('');
         }
 
@@ -734,6 +754,7 @@
                         if (res.trim() === "success") {
                             alert("Request submitted successfully!");
                             resetForm();
+                            location.reload();
                         } else if (res === "conflict") {
                             console.log("Schedule conflict. Please choose another time.");
                         } else if (res === "invalid_scilab") {
@@ -750,6 +771,7 @@
                         console.log("Error submitting request.");
                         console.error("AJAX error:", status, error);
                         resetForm();
+                        location.reload();
                     }
                 });
             });
