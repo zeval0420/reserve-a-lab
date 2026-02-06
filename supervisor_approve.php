@@ -4,14 +4,7 @@ include('helperFiles/session_handler.php');
 
 $email = $_SESSION['email'] ?? null;
 $username = $_SESSION['username'] ?? null;
-/*
-if(isset($_SESSION['role'])) {
-    if($_SESSION['role'] === 'admin') header("Location: admin_home.php");
-} else {
-    header("Location: index.php");
-    exit();
-}
-*/
+
 $requestId = $_GET['id'] ?? null;
 
 if (!$requestId) {
@@ -34,7 +27,13 @@ $time = $request['inclusiveTime'];
 $laboratoryName = $request['scilabName'];
 $purpose = $request['subjectTopic'];
 $teacherInCharge = $request['teacherInCharge'];
-$status = $request['statusScilabPersonnel'] ?? 'pending';
+
+$supervisor_status = $request['supervisor_status'] ?? 'pending';
+$subject_teacher_status = $request['subject_teacher_status'] ?? 'pending';
+$lab_personnel_status = $request['lab_personnel_status'] ?? 'pending';
+$cid_chief_status = $request['cid_chief_status'] ?? 'pending';
+
+$currentRole = $_SESSION['role'] ?? 'supervisor';
 
 include('helperFiles/headData.php');
 include('helperFiles/header.php');
@@ -60,8 +59,129 @@ body {
     min-height: 88vh;
 }
 
+.approval-timeline {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 20px;
+    padding: 28px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    margin-bottom: 24px;
+}
+
+.timeline-header {
+    font-size: 16px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 24px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.timeline-steps {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+}
+
+.timeline-line {
+    position: absolute;
+    top: 20px;
+    left: 40px;
+    right: 40px;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.2);
+    z-index: 0;
+}
+
+.timeline-step {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+}
+
+.step-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 700;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    margin-bottom: 12px;
+    transition: all 0.3s ease;
+}
+
+.step-pending .step-icon {
+    background: rgba(245, 158, 11, 0.3);
+    color: #fef3c7;
+    box-shadow: 0 0 16px rgba(245, 158, 11, 0.3);
+}
+
+.step-approved .step-icon {
+    background: rgba(34, 197, 94, 0.35);
+    color: #dcfce7;
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
+}
+
+.step-locked .step-icon {
+    background: rgba(148, 163, 184, 0.25);
+    color: rgba(255, 255, 255, 0.4);
+    box-shadow: none;
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.step-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #ffffff;
+    text-align: center;
+    line-height: 1.3;
+    max-width: 100px;
+}
+
+.step-locked .step-label {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.step-status {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 6px;
+    padding: 4px 10px;
+    border-radius: 8px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+
+.step-pending .step-status {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fef3c7;
+}
+
+.step-approved .step-status {
+    background: rgba(34, 197, 94, 0.25);
+    color: #dcfce7;
+}
+
+.step-locked .step-status {
+    background: rgba(148, 163, 184, 0.15);
+    color: rgba(255, 255, 255, 0.4);
+}
+
 .glass-card {
-    min-height: 300px;
+    min-height: 200px;
     background: rgba(255, 255, 255, 0.15);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -89,38 +209,6 @@ body {
     color: #ffffff;
     margin-bottom: 24px;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.status-badge {
-    display: inline-block;
-    padding: 8px 16px;
-    border-radius: 12px;
-    font-size: 14px;
-    font-weight: 600;
-    margin-bottom: 20px;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.status-pending {
-    background: rgba(245, 158, 11, 0.25);
-    color: #fef3c7;
-    box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
-}
-
-.status-approved {
-    background: rgba(34, 197, 94, 0.25);
-    color: #dcfce7;
-    box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
-}
-
-.status-rejected {
-    background: rgba(239, 68, 68, 0.25);
-    color: #fee2e2;
-    box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
 }
 
 .btn-view {
@@ -320,9 +408,55 @@ body {
     display: block;
 }
 
+.success-message {
+    background: rgba(34, 197, 94, 0.25);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(34, 197, 94, 0.4);
+    color: #dcfce7;
+    padding: 16px;
+    border-radius: 12px;
+    margin-top: 16px;
+    font-size: 14px;
+    display: none;
+}
+
+.success-message.show {
+    display: block;
+}
+
 @media (max-width: 768px) {
     .container {
         padding: 10px;
+    }
+
+    .approval-timeline {
+        padding: 20px;
+    }
+
+    .timeline-steps {
+        flex-direction: column;
+        gap: 24px;
+    }
+
+    .timeline-line {
+        display: none;
+    }
+
+    .timeline-step {
+        flex-direction: row;
+        width: 100%;
+        justify-content: flex-start;
+        gap: 16px;
+    }
+
+    .step-icon {
+        margin-bottom: 0;
+    }
+
+    .step-label {
+        text-align: left;
+        max-width: none;
     }
 
     .glass-card {
@@ -376,11 +510,38 @@ body {
 </style>
 
 <div class="container">
-    <div class="glass-card">
-        <div class="status-badge status-<?= htmlspecialchars($status) ?>" id="statusBadge">
-            <?= htmlspecialchars(ucfirst($status)) ?>
+    <div class="approval-timeline">
+        <div class="timeline-header">Approval Progress</div>
+        <div class="timeline-steps">
+            <div class="timeline-line"></div>
+            
+            <div class="timeline-step step-<?= $supervisor_status ?>">
+                <div class="step-icon"><?= $supervisor_status === 'approved' ? '✓' : '1' ?></div>
+                <div class="step-label">Supervisor</div>
+                <div class="step-status"><?= ucfirst($supervisor_status) ?></div>
+            </div>
+            
+            <div class="timeline-step step-<?= $supervisor_status === 'approved' ? $subject_teacher_status : 'locked' ?>">
+                <div class="step-icon"><?= $subject_teacher_status === 'approved' ? '✓' : '2' ?></div>
+                <div class="step-label">Subject Teacher</div>
+                <div class="step-status"><?= $supervisor_status === 'approved' ? ucfirst($subject_teacher_status) : 'Locked' ?></div>
+            </div>
+            
+            <div class="timeline-step step-<?= $supervisor_status === 'approved' && $subject_teacher_status === 'approved' ? $lab_personnel_status : 'locked' ?>">
+                <div class="step-icon"><?= $lab_personnel_status === 'approved' ? '✓' : '3' ?></div>
+                <div class="step-label">Lab Personnel</div>
+                <div class="step-status"><?= $supervisor_status === 'approved' && $subject_teacher_status === 'approved' ? ucfirst($lab_personnel_status) : 'Locked' ?></div>
+            </div>
+            
+            <div class="timeline-step step-<?= $supervisor_status === 'approved' && $subject_teacher_status === 'approved' && $lab_personnel_status === 'approved' ? $cid_chief_status : 'locked' ?>">
+                <div class="step-icon"><?= $cid_chief_status === 'approved' ? '✓' : '4' ?></div>
+                <div class="step-label">CID Chief</div>
+                <div class="step-status"><?= $supervisor_status === 'approved' && $subject_teacher_status === 'approved' && $lab_personnel_status === 'approved' ? ucfirst($cid_chief_status) : 'Locked' ?></div>
+            </div>
         </div>
-        
+    </div>
+
+    <div class="glass-card">
         <p class="request-text">
             <?= htmlspecialchars($name) ?> from <?= htmlspecialchars($grade) ?> - <?= htmlspecialchars($section) ?> requests to be supervised on <?= htmlspecialchars($date) ?> <?= htmlspecialchars($time) ?> at <?= htmlspecialchars($laboratoryName) ?>.
         </p>
@@ -426,10 +587,13 @@ body {
         </div>
         
         <div class="error-message" id="errorMessage"></div>
+        <div class="success-message" id="successMessage"></div>
         
         <div class="modal-actions">
-            <button class="btn-action btn-approve" id="btnApprove" onclick="handleAction('approve')">Approve</button>
-            <button class="btn-action btn-reject" id="btnReject" onclick="handleAction('reject')">Reject</button>
+            <?php if ($supervisor_status === 'pending'): ?>
+                <button class="btn-action btn-approve" id="btnApprove" onclick="handleAction('approve')">Approve</button>
+                <button class="btn-action btn-reject" id="btnReject" onclick="handleAction('reject')">Reject</button>
+            <?php endif; ?>
             <button class="btn-action btn-close" onclick="closeModal()">Close</button>
         </div>
     </div>
@@ -438,10 +602,8 @@ body {
 <script>
 const requestId = <?= json_encode($requestId) ?>;
 const modalOverlay = document.getElementById('modalOverlay');
-const statusBadge = document.getElementById('statusBadge');
-const btnApprove = document.getElementById('btnApprove');
-const btnReject = document.getElementById('btnReject');
 const errorMessage = document.getElementById('errorMessage');
+const successMessage = document.getElementById('successMessage');
 
 function openModal() {
     modalOverlay.classList.add('active');
@@ -466,12 +628,17 @@ document.addEventListener('keydown', function(event) {
 });
 
 async function handleAction(action) {
+    const btnApprove = document.getElementById('btnApprove');
+    const btnReject = document.getElementById('btnReject');
     const button = action === 'approve' ? btnApprove : btnReject;
     
+    if (!button) return;
+    
     button.classList.add('loading');
-    btnApprove.disabled = true;
-    btnReject.disabled = true;
+    if (btnApprove) btnApprove.disabled = true;
+    if (btnReject) btnReject.disabled = true;
     errorMessage.classList.remove('show');
+    successMessage.classList.remove('show');
     
     try {
         const response = await fetch('ajax/ajax_supervisor_action.php', {
@@ -488,13 +655,12 @@ async function handleAction(action) {
         const data = await response.json();
         
         if (data.success) {
-            const newStatus = action === 'approve' ? 'approved' : 'rejected';
-            statusBadge.className = 'status-badge status-' + newStatus;
-            statusBadge.textContent = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+            successMessage.textContent = 'Request ' + (action === 'approve' ? 'approved' : 'rejected') + ' successfully.';
+            successMessage.classList.add('show');
             
             setTimeout(() => {
-                closeModal();
-            }, 800);
+                window.location.reload();
+            }, 1200);
         } else {
             throw new Error(data.message || 'An error occurred');
         }
@@ -502,8 +668,8 @@ async function handleAction(action) {
         errorMessage.textContent = error.message;
         errorMessage.classList.add('show');
         button.classList.remove('loading');
-        btnApprove.disabled = false;
-        btnReject.disabled = false;
+        if (btnApprove) btnApprove.disabled = false;
+        if (btnReject) btnReject.disabled = false;
     }
 }
 </script>
