@@ -79,6 +79,12 @@
             table.dataTable { width: 100% !important; table-layout: auto !important; white-space: nowrap; }
             .btn-scan { background-color: #0078D7; color: #fff; border: none; padding: 8px 12px; border-radius: 6px; margin-right: 8px; }
             .btn-scan:hover { background-color: #005fa3; }
+
+            @media (max-width: 768px) {
+                .form-container { padding: 10px; margin: 10px auto; }
+                .action-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+                .status-buttons .btn { width: 100%; margin-bottom: 5px; display: block; }
+            }
         </style>
     </head>
     <body>

@@ -157,12 +157,19 @@
             .form-group .multiselect-native-select .btn-group, 
             .form-group .btn-group { width: 100%; }
             button.multiselect {
-                width: 100%; text-align: left; background-color: #fff; border: 1px solid #ced4da;
-                color: #495057; display: flex; align-items: center; justify-content: space-between;
-                height: 38px; border-radius: 4px; box-shadow: none; background-image: none;
+                width: 100%; text-align: left; 
+                background: linear-gradient(135deg, rgba(43, 85, 196, 0.05), rgba(43, 85, 196, 0.15)) !important;
+                backdrop-filter: blur(8px);
+                -webkit-backdrop-filter: blur(8px);
+                border: 1px solid rgba(43, 85, 196, 0.2) !important;
+                color: #2B55C4 !important; 
+                display: flex; align-items: center; justify-content: space-between;
+                height: 38px; border-radius: 20px !important; box-shadow: 0 4px 12px rgba(43, 85, 196, 0.1); background-image: none;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                font-weight: 600;
             }
             button.multiselect:focus, button.multiselect.active {
-                box-shadow: none; border-color: #80bdff; outline: 0; background-color: #fff;
+                box-shadow: 0 8px 20px rgba(43, 85, 196, 0.2); border-color: rgba(43, 85, 196, 0.4) !important; outline: 0;
             }
             button.multiselect .caret { margin-left: auto; }
             .multiselect-container { width: 100%; border: 1px solid #ced4da; border-radius: 4px; box-shadow: none; margin-top: 2px; padding: 5px 0; }
@@ -174,6 +181,37 @@
             .multiselect-container > li > a { margin: 0 5px; border-radius: 5px; }
             .multiselect-container > li.active > a {
                 background-color: var(--main-blue) !important; color: white;
+            }
+
+            .liquid-input {
+                background: linear-gradient(135deg, rgba(43, 85, 196, 0.05), rgba(43, 85, 196, 0.15)) !important;
+                backdrop-filter: blur(8px);
+                -webkit-backdrop-filter: blur(8px);
+                border: 1px solid rgba(43, 85, 196, 0.2) !important;
+                border-radius: 20px !important;
+                color: #2B55C4 !important;
+                box-shadow: 0 4px 12px rgba(43, 85, 196, 0.1);
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                font-weight: 600;
+            }
+            .liquid-input:focus { box-shadow: 0 8px 20px rgba(43, 85, 196, 0.2); border-color: rgba(43, 85, 196, 0.4) !important; outline: none; }
+            
+            select.liquid-input {
+                appearance: none;
+                -webkit-appearance: none;
+                -moz-appearance: none;
+                background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232B55C4' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") !important;
+                background-repeat: no-repeat !important;
+                background-position: right 1rem center !important;
+                background-size: 1em !important;
+                padding-right: 2.5rem !important;
+            }
+
+            @media (max-width: 768px) {
+                .form-title { width: 95%; padding: 20px 5%; margin-top: 20px; }
+                .form-title h4 { font-size: 1.8rem; }
+                .form-container { padding: 15px; margin: 10px 0 30px; }
+                .container { padding-left: 10px; padding-right: 10px; }
             }
         </style>
     </head>
@@ -194,7 +232,7 @@
                     <!-- Venue Selection -->
                     <div class="form-group">
                         <label>Facility:</label>
-                        <select id="venue_select" class="form-control" name="venue" required>
+                        <select id="venue_select" class="form-control liquid-input" name="venue" required>
                             <?php foreach ($venues as $name => $label): ?>
                                 <option value="<?= htmlspecialchars($name) ?>" <?= $name == $defaultVenue ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($label) ?>
@@ -207,7 +245,7 @@
                     <div class="form-row row">
                         <div class="form-group col-md-6">
                             <label>Grade Level:</label>
-                            <select id="grade_select" name="grade_level" class="form-control" required>
+                            <select id="grade_select" name="grade_level" class="form-control liquid-input" required>
                                 <option value="">Select Grade</option>
                                 <?php ksort($sectionOptions); foreach ($sectionOptions as $grade => $sections): ?>
                                     <option value="<?= $grade ?>"><?= $grade ?></option>
@@ -226,13 +264,13 @@
                     <div class="form-row row">
                         <div class="form-group col-md-6">
                             <label>Subject:</label>
-                            <select id="subject_select" name="subject" class="form-control" required disabled>
+                            <select id="subject_select" name="subject" class="form-control liquid-input" required disabled>
                                 <option value="">Select Grade First</option>
                             </select>
                         </div>
                         <div class="form-group col-md-6">
                             <label>Concurrent Topic:</label>
-                            <input type="text" class="form-control" name="topic" required>
+                            <input type="text" class="form-control liquid-input" name="topic" required>
                         </div>
                     </div>
 
@@ -240,7 +278,7 @@
                     <div class="form-row row">
                         <div class="form-group col-md-6">
                             <label>Academic Unit:</label>
-                            <select class="form-control" name="unit" id="unit-select" required disabled>
+                            <select class="form-control liquid-input" name="unit" id="unit-select" required disabled>
                                 <option value="">Select Grade First</option>
                                 <?php $units = array_unique(array_column($subjectOptions, 'subjectAcademicUnit'));
                                 foreach ($units as $unit): ?>
@@ -262,16 +300,16 @@
                     <div class="form-row row">
                         <div class="form-group col-md-4">
                             <label>Date:</label>
-                            <input id="datepicker" type="date" class="form-control" name="inclusive_date" required
+                            <input id="datepicker" type="date" class="form-control liquid-input" name="inclusive_date" required
                                 value="<?= htmlspecialchars($_SESSION['selected_date'] ?? '') ?>">
                         </div>
                         <div class="form-group col-md-4">
                             <label>Start Time:</label>
-                            <input type="time" class="form-control" name="start_time" required>
+                            <input type="time" class="form-control liquid-input" name="start_time" required>
                         </div>
                         <div class="form-group col-md-4">
                             <label>End Time:</label>
-                            <input type="time" class="form-control" name="end_time" required>
+                            <input type="time" class="form-control liquid-input" name="end_time" required>
                         </div>
                     </div>
                         
@@ -305,7 +343,7 @@
                     <br>
                     <hr class="image-divider">
                     <div style="width: 100%; text-align: right; margin-top: 15px;">
-                        <button type="submit" class="btn btn-primary" style="background-color: #0036af; font-weight: bold; color: white;">
+                        <button type="submit" class="btn-liquid" style="font-weight: bold;">
                             SUBMIT
                         </button>
                     </div>
@@ -476,10 +514,10 @@
             
             let descriptionField = '';
             if (classification === 'Reagent') {
-                descriptionField = `<input type="text" class="form-control description-input" name="description[]" placeholder="Description (Optional)" disabled>`;
+                descriptionField = `<input type="text" class="form-control description-input liquid-input" name="description[]" placeholder="Description (Optional)" disabled>`;
             } else {
                 descriptionField = `
-                    <select class="form-control description-select" name="description[]" disabled>
+                    <select class="form-control description-select liquid-input" name="description[]" disabled>
                         <option value="">Select Description</option>
                     </select>`;
             }
@@ -488,12 +526,12 @@
                 <tr>
                     <td>
                         <div style="display: flex; align-items: center;">
-                            <input type="number" class="form-control quantity-input" name="quantity[]" min="1" value="1" style="width: 60%;" disabled>
-                            <input type="text" class="form-control unit-input" name="unit[]" style="width: 40%; margin-left: 5px;" placeholder="Unit" disabled>
+                            <input type="number" class="form-control quantity-input liquid-input" name="quantity[]" min="1" value="1" style="width: 60%;" disabled>
+                            <input type="text" class="form-control unit-input liquid-input" name="unit[]" style="width: 40%; margin-left: 5px;" placeholder="Unit" disabled>
                         </div>
                     </td>
                     <td>
-                        <select class="form-control item-select" name="item[]">
+                        <select class="form-control item-select liquid-input" name="item[]">
                             <option value="">Select Item</option>${itemOpts}
                         </select>
                     </td>
@@ -539,7 +577,7 @@
             $('#student-list-table tbody').append(`
                 <tr>
                     <td>
-                        <select class="form-control student-select" name="students[]">
+                        <select class="form-control student-select liquid-input" name="students[]">
                             <option value="">Select Student</option>
                             ${studentOpts}
                         </select>
@@ -844,7 +882,7 @@
                 populateStudentDropdownsByGrade(grade);
                 const row = $(`
                     <tr>
-                        <td><select class="form-control student-select" name="students[]"><option value="">Select Student</option></select></td>
+                        <td><select class="form-control student-select liquid-input" name="students[]"><option value="">Select Student</option></select></td>
                         <td style="text-align:center;"><button type="button" class="btn btn-danger remove-student-btn"><span class="glyphicon glyphicon-minus"></span></button></td>
                     </tr>
                 `);

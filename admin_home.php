@@ -152,6 +152,11 @@
                 border: 1px solid #ddd;
             }
             .scilab-color-picker::-moz-color-swatch { border-radius: 50%; border: 1px solid #ddd; }
+
+            @media (max-width: 768px) {
+                .main-wrapper { width: 95vw; margin-bottom: 5vh; border-radius: 15px; padding: 10px; }
+                .card, .lab-card { margin-bottom: 15px; }
+            }
         </style>
     </head>
 

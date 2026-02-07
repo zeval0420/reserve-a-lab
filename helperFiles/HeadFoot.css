@@ -277,3 +277,75 @@ body {
         font-size: 20px;
     }
 }
+
+/* Liquid Glass Button Style */
+.btn-liquid, .btn-liquid-white {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 18px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 13px;
+    text-decoration: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid;
+    cursor: pointer;
+}
+
+/* Blue variant (default/light background) */
+.btn-liquid {
+    display: inline-block;
+    padding: 6px 18px;
+    color: #2B55C4;
+    background: linear-gradient(135deg, rgba(43, 85, 196, 0.05), rgba(43, 85, 196, 0.15));
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(43, 85, 196, 0.2);
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 13px;
+    text-decoration: none;
+    box-shadow: 0 4px 12px rgba(43, 85, 196, 0.1);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-liquid:hover {
+    background: linear-gradient(135deg, rgba(43, 85, 196, 0.1), rgba(43, 85, 196, 0.25));
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(43, 85, 196, 0.2);
+    color: #1a3a8f;
+    text-decoration: none;
+    border-color: rgba(43, 85, 196, 0.3);
+}
+
+.btn-liquid:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(43, 85, 196, 0.1);
+}
+
+/* White variant (dark background) */
+.btn-liquid-white {
+    color: #ffffff;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.2));
+    border-color: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+.btn-liquid-white:hover {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.3));
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    color: #ffffff;
+    text-decoration: none;
+    border-color: rgba(255, 255, 255, 0.5);
+}
+.btn-liquid-white:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}

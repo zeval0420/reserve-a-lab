@@ -1,4 +1,3 @@
-<link rel="stylesheet" href="helperFiles/HeadFoot.css">
 <header class="header background-gradient">
     <div id="banner" style="color: white; overflow: hidden;">
         <img src="img/logo.png" alt="PSHS Logo" class="logo"style="float: left; margin-right: 20px;">
@@ -13,7 +12,7 @@
     </div>    
     <div class="nav-icons">
         <button type="button" 
-                class="btn btn-outline-primary btn-sm" 
+                class="btn-liquid-white" 
                 id="notif-btn"
                 data-toggle="popover" 
                 data-placement="bottom"
@@ -22,14 +21,14 @@
                 data-content="Loading...">
                 <i class="bi bi-bell-fill"></i>
         </button>
-        <button type="button" class="btn btn-outline-success btn-sm" data-toggle="popover" title="<?php echo $_SESSION['username']; ?>" data-html="true" data-content='<a href="helperFiles/logout.php">Logout</a>'>
+        <button type="button" class="btn-liquid-white" data-toggle="popover" title="<?php echo $_SESSION['username']; ?>" data-html="true" data-content='<a href="helperFiles/logout.php">Logout</a>'>
             <i class="bi bi-person-fill"></i>
         </button>
     </div>
 </header>
 <nav class="main-nav">
     <div class="nav-left">
-        <button type="button" class="btn btn-link nav-link" id="openCalendarBtn">
+        <button type="button" class="btn-liquid" id="openCalendarBtn">
             View Calendar
         </button>
     </div>

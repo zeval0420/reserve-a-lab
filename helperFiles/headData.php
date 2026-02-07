@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <!-- Local Header and Footer CSS -->
-<!-- <link rel="stylesheet" href="helperFiles/HeadFoot.css"> -->
+<link rel="stylesheet" href="helperFiles/HeadFoot.css">
 
 <!-- Favicon -->
 <link rel="icon" type="image/x-icon" href="img/logo.png">

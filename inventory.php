@@ -117,6 +117,12 @@
                 padding: 10px 15px;
             }
 
+            @media (max-width: 768px) {
+                .form-container { padding: 10px; margin: 10px auto; }
+                .inventory-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+                .inventory-header > div { width: 100%; display: flex; flex-wrap: wrap; gap: 5px; }
+                .btn-scan, .btn-add { flex: 1; text-align: center; }
+            }
         </style>
     </head>
 

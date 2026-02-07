@@ -70,8 +70,6 @@
         <?php include('helperFiles/headData.php'); ?>
         <style>
             .main-wrapper { width: 80vw; min-height: 80vh; margin: 0 auto 10vh; padding: 20px; background:#e6e6e6; border-radius:30px; box-shadow:0 2px 12px rgba(0,0,0,0.1); }
-            .lab-btn { margin:15px auto 0; display:block; font-size:18px; padding:5px 20px; border:none; border-radius:7px; width:60%; background:#0e0054; color:white; transition:0.3s; }
-            .lab-btn:hover { background:#1e7e34; }
             .card { text-align:center; padding:15px; border-radius:15px; margin-bottom:25px; box-shadow:0 2px 6px rgba(0,0,0,0.1); transition:0.2s; background:#fff; display:flex; flex-direction:column; justify-content:space-between; }
             .card:hover { transform:translateY(-5px); }
             .equal-height-row { display: flex; flex-wrap: wrap; }
@@ -101,6 +99,24 @@
             .slot-pill.requested { background:#fff4e0; color:#b06a00; border-color:#ffd199; }
             .empty-slot-hint { margin:10px 0 0; font-size:13px; color:#6c757d; }
             .scilab-name { width: 80%; padding: 10px 12px; border-radius: 8px; font-weight: bold; color: #ffffff; margin: auto; margin-top: 15px; }
+
+            .liquid-input {
+                background: linear-gradient(135deg, rgba(43, 85, 196, 0.05), rgba(43, 85, 196, 0.15)) !important;
+                backdrop-filter: blur(8px);
+                -webkit-backdrop-filter: blur(8px);
+                border: 1px solid rgba(43, 85, 196, 0.2) !important;
+                border-radius: 20px !important;
+                color: #2B55C4 !important;
+                box-shadow: 0 4px 12px rgba(43, 85, 196, 0.1);
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                font-weight: 600;
+            }
+            .liquid-input:focus { box-shadow: 0 8px 20px rgba(43, 85, 196, 0.2); border-color: rgba(43, 85, 196, 0.4) !important; outline: none; }
+
+            @media (max-width: 768px) {
+                .main-wrapper { width: 95vw; margin-bottom: 5vh; border-radius: 15px; padding: 10px; }
+                .card { margin-bottom: 15px; }
+            }
         </style>
     </head>
 
@@ -113,8 +129,8 @@
             <div class="container text-center my-4">
                 <div class="d-inline-flex align-items-center gap-2" style="font-size:21px; padding:15px 0;">
                     <div style="font-size:3vh; font-weight:bold; color:#0e0054; margin-bottom:20px;">Request for Science Laboratory Utilization</div>
-                    <label for="datepicker" class="form-label fw-bold mb-0">Select Date of Use:</label>
-                    <input type="date" id="datepicker" class="form-control bg-light border-secondary text-dark" style="width:250px; display:inline-block; margin-left:10px; font-size:16px;">
+                    <label for="datepicker" class="form-label fw-bold mb-0" style="color: #0e0054;">Select Date of Use:</label>
+                    <input type="date" id="datepicker" class="form-control liquid-input" style="width:250px; display:inline-block; margin-left:10px; font-size:16px;">
                 </div>
             </div>
 
@@ -148,7 +164,7 @@
                                     <div class="slot-pill-list" data-lab-schedule></div>
                                     <p class="empty-slot-hint mb-0">No requests for this date yet.</p>
                                 </div>
-                                <a href="forms.php?scilabname=<?= htmlspecialchars($lab['scilabName']) ?>" class="btn btn-primary lab-btn mt-auto" style="margin-bottom: 5px">REQUEST</a>
+                                <a href="forms.php?scilabname=<?= htmlspecialchars($lab['scilabName']) ?>" class="btn-liquid mt-auto" style="margin: 15px auto 5px; width: 60%; justify-content: center;">REQUEST</a>
                             </div>
                         </div>
                     <?php endforeach; else: ?>

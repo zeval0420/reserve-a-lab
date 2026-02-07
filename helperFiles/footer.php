@@ -32,18 +32,16 @@
 
                     <p class="mt-2 mb-1 font-weight-bold">Gabriel James Valdez</p>
                     <p class="mt-2 mb-1 font-weight-bold">Zyx Leiabe A. Barangan</p>
-                    <p class="mt-2 mb-1 font-weight-bold">Christian Benedict U. Soy</p>
                     <p class="mt-2 mb-1 font-weight-bold">Rojan Joefel C. Dumlao</p>
-                    <p class="mt-2 mb-1 font-weight-bold">Riveca Tan Pamerol</p>
 
                 </div>
                 <div class="mb-2 col-12 col-md-6 ">
                     <br/>
-                    <p class="mt-2 mb-1 font-weight-bold" style="font-size: 16px; font-weight: bold;">FULL STACK WEB DEVELOPMENT</p>
-                    <p class="mt-2 mb-1 font-weight-bold">Grade 10 Elective</p>
+                    <p class="mt-2 mb-1 font-weight-bold" style="font-size: 16px; font-weight: bold;">RESEARCH PROJECT</p>
+                    <p class="mt-2 mb-1 font-weight-bold">Grade 11</p>
                     <br/>
-                    <p class="mt-2 mb-1 font-weight-bold" style="font-size: 16px; font-weight: bold;">Teacher: June Leonel Ngayaan</p>
-                    <p class="mt-2 mb-1 font-weight-bold">School Year: 2024-2025</p>
+                    <p class="mt-2 mb-1 font-weight-bold" style="font-size: 16px; font-weight: bold;">Adviser: June Leonel Ngayaan</p>
+                    <p class="mt-2 mb-1 font-weight-bold">School Year: 2025-2026</p>
                 </div>
             </div>
         </div>
