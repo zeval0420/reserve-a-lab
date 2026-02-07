@@ -56,6 +56,38 @@
             .table th { background-color: #2B55C4; color: white; text-align: center; white-space: nowrap; }
             table tbody td { white-space: normal !important; word-wrap: break-word; vertical-align: top; max-width:200px; }
             .date-pick { margin-left: 20px; }
+
+            .btn-liquid {
+                display: inline-block;
+                padding: 6px 18px;
+                color: #2B55C4;
+                background: linear-gradient(135deg, rgba(43, 85, 196, 0.05), rgba(43, 85, 196, 0.15));
+                backdrop-filter: blur(8px);
+                -webkit-backdrop-filter: blur(8px);
+                border: 1px solid rgba(43, 85, 196, 0.2);
+                border-radius: 20px;
+                font-weight: 600;
+                font-size: 13px;
+                text-decoration: none;
+                box-shadow: 0 4px 12px rgba(43, 85, 196, 0.1);
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                position: relative;
+                overflow: hidden;
+            }
+
+            .btn-liquid:hover {
+                background: linear-gradient(135deg, rgba(43, 85, 196, 0.1), rgba(43, 85, 196, 0.25));
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px rgba(43, 85, 196, 0.2);
+                color: #1a3a8f;
+                text-decoration: none;
+                border-color: rgba(43, 85, 196, 0.3);
+            }
+
+            .btn-liquid:active {
+                transform: translateY(0);
+                box-shadow: 0 2px 8px rgba(43, 85, 196, 0.1);
+            }
         </style>
     </head>
 
@@ -70,7 +102,7 @@
                         <thead>
                             <tr>
                                 <th>#</th><th>Lab Name</th><th>Grade - Section</th><th>Subject</th>
-                                <th>Topic</th><th>Date of Use</th><th>Time</th><th>Status</th>
+                                <th>Topic</th><th>Date of Use</th><th>Time</th><th>Status</th><th>Process</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -92,6 +124,7 @@
                                 <td><?= htmlspecialchars($row['inclusiveDate']) ?></td>
                                 <td><?= htmlspecialchars($row['inclusiveTime']) ?></td>
                                 <td><span class="label <?= $labelClass ?>" style="font-size:12px;text-transform:uppercase;padding:5px;"><?= htmlspecialchars($status) ?></span></td>
+                                <td><a href="supervisor_approve.php?id=<?= $row['id'] ?>" class="btn-liquid">View</a></td>
                             </tr>
                             <?php endwhile; else: ?>
                             <?php endif; ?>
