@@ -669,7 +669,7 @@
 
             async function saveBulkChanges() {
                 const updates = [];
-                $('#inventory-table tbody tr').each(function() {
+                $('#inventory-table tbody tr.modified-row').each(function() {
                     const row = $(this);
                     if(row.find('.dataTables_empty').length) return;
 
@@ -685,6 +685,12 @@
                         action: 'update_inventory'
                     });
                 });
+
+                if (updates.length === 0) {
+                    alert("No changes to save.");
+                    exitEditMode();
+                    return;
+                }
 
                 $('#editModeBtn').text('Saving...').prop('disabled', true);
                 
