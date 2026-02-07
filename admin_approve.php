@@ -83,7 +83,25 @@
             @media (max-width: 768px) {
                 .form-container { padding: 10px; margin: 10px auto; }
                 .action-header { flex-direction: column; align-items: flex-start; gap: 10px; }
-                .status-buttons .btn { width: 100%; margin-bottom: 5px; display: block; }
+            }
+
+            .status-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+            
+            .btn-liquid.active {
+                background: #2B55C4; color: white;
+            }
+            .btn-liquid-success.active {
+                background: #28a745; color: white;
+            }
+            .btn-liquid-danger.active {
+                background: #dc3545; color: white;
+            }
+            
+            .btn-liquid .badge, .btn-liquid-success .badge, .btn-liquid-danger .badge {
+                margin-right: 5px; background: rgba(0,0,0,0.1); color: inherit;
+            }
+            .btn-liquid.active .badge, .btn-liquid-success.active .badge, .btn-liquid-danger.active .badge {
+                background: rgba(255,255,255,0.2); color: white;
             }
         </style>
     </head>
@@ -101,13 +119,13 @@
                 </div>
 
                 <div class="status-buttons mb-3">
-                    <a href="?status=Pending" class="btn <?= $statusFilter === 'Pending' ? 'btn-primary' : 'btn-outline-primary' ?>">
+                    <a href="?status=Pending" class="btn-liquid <?= $statusFilter === 'Pending' ? 'active' : '' ?>">
                         <span class="badge badge-pill badge-secondary"><?= $counts['Pending'] ?></span> Pending
                     </a>
-                    <a href="?status=Approved" class="btn <?= $statusFilter === 'Approved' ? 'btn-success' : 'btn-outline-success' ?>">
+                    <a href="?status=Approved" class="btn-liquid-success <?= $statusFilter === 'Approved' ? 'active' : '' ?>">
                         <span class="badge badge-pill badge-secondary"><?= $counts['Approved'] ?></span> Approved
                     </a>
-                    <a href="?status=Rejected" class="btn <?= $statusFilter === 'Rejected' ? 'btn-danger' : 'btn-outline-danger' ?>">
+                    <a href="?status=Rejected" class="btn-liquid-danger <?= $statusFilter === 'Rejected' ? 'active' : '' ?>">
                         <span class="badge badge-pill badge-secondary"><?= $counts['Rejected'] ?></span> Rejected
                     </a>
                 </div>
@@ -170,10 +188,10 @@
                                         <?php if ($statusFilter !== 'Rejected'): ?>
                                             <td>
                                                 <?php if ($statusFilter === 'Pending'): ?>
-                                                    <button class="btn btn-success btn-sm approve-btn" style="width: 90%;  margin-bottom: 10px; border-radius: 6767px;" data-request='<?= json_encode($row) ?>'>Approve</button>
-                                                    <button class="btn btn-danger btn-sm reject-btn" style="width: 90%; border-radius: 6767px;" data-request='<?= json_encode($row) ?>'>Reject</button>
+                                                    <button class="btn-liquid-success approve-btn" style="width: 90%; margin-bottom: 10px;" data-request='<?= json_encode($row) ?>'>Approve</button>
+                                                    <button class="btn-liquid-danger reject-btn" style="width: 90%;" data-request='<?= json_encode($row) ?>'>Reject</button>
                                                 <?php elseif ($statusFilter === 'Approved'): ?>
-                                                    <a href="templates/print_template.php?id=<?= $row['id'] ?>" target="_blank" class="btn btn-default btn-sm">
+                                                    <a href="templates/print_template.php?id=<?= $row['id'] ?>" target="_blank" class="btn-liquid">
                                                         <i class="glyphicon glyphicon-print"></i> Print
                                                     </a>
                                                 <?php endif; ?>

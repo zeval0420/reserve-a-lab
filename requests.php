@@ -56,6 +56,11 @@
             .table th { background-color: #2B55C4; color: white; text-align: center; white-space: nowrap; }
             table tbody td { white-space: normal !important; word-wrap: break-word; vertical-align: top; max-width:200px; }
             .date-pick { margin-left: 20px; }
+
+            @media (max-width: 768px) {
+                .form-title h4 { font-size: 1.8rem; }
+                .form-container { padding: 15px; width: 98%; }
+            }
         </style>
     </head>
 

@@ -60,27 +60,34 @@
         }
 
         .ec-button {
-            padding: 8px 14px;
+            padding: 6px 18px !important;
             margin: 0 4px;
-            border-radius: 6px;
-            border: 1px solid #064580ff !important;      
-            background-color: #064580ff !important; 
-            color: white !important;          
-            font-weight: 500;
+            border-radius: 20px !important;
+            border: 1px solid rgba(43, 85, 196, 0.2) !important;
+            background: linear-gradient(135deg, rgba(43, 85, 196, 0.05), rgba(43, 85, 196, 0.15)) !important;
+            color: #2B55C4 !important;
+            font-weight: 600 !important;
+            font-size: 13px !important;
             cursor: pointer;
-            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(43, 85, 196, 0.1);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
         }
 
         /* Hover effect */
         .ec-button:hover {
-            background-color: #55a0e1ff !important;
-            border-color: #55a0e1ff !important;
-            color: black !important;
+            background: linear-gradient(135deg, rgba(43, 85, 196, 0.1), rgba(43, 85, 196, 0.25)) !important;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(43, 85, 196, 0.2);
+            color: #1a3a8f !important;
+            border-color: rgba(43, 85, 196, 0.3) !important;
         }
         .ec-button.ec-active {
-            background-color: #55a0e1ff !important;
-            border-color: #55a0e1ff !important;
-            color: black !important;
+            background: linear-gradient(135deg, rgba(43, 85, 196, 0.2), rgba(43, 85, 196, 0.35)) !important;
+            color: #1a3a8f !important;
+            border-color: rgba(43, 85, 196, 0.4) !important;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
         }
 
         .ec-event-title {

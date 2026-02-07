@@ -59,8 +59,6 @@
             body { background-color: #f5f5f5; }
             .form-container { background-color: #fff; padding: 25px; margin: 25px auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); width: 98%; }
             .inventory-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-            .btn-add { background-color: #00b050; color: #fff; border: none; padding: 8px 12px; border-radius: 6px; }
-            .tabs { display: flex; gap: 10px; margin-bottom: 15px; }
             .tab { background-color: #e0e0e0; color: #333; padding: 8px 16px; border-radius: 5px; cursor: pointer; }
             .tab.active { background-color: #2B55C4; color: white; }
             table.inventory-table { width: 100%; border-collapse: collapse; }
@@ -68,8 +66,6 @@
             table.inventory-table td { padding: 8px; border-bottom: 1px solid #eee; font-size: 13px; }
             table.inventory-table tbody tr:hover { background-color: #fafafa; }
             .action-btn { padding: 6px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 13px; }
-            .btn-scan { background-color: #0078D7; color: #fff; border: none; padding: 8px 12px; border-radius: 6px; margin-right: 8px; }
-            .btn-scan:hover { background-color: #005fa3; }
             .btn-edit { background-color: #2B55C4; color: white; }
             .btn-remove { background-color: #e74c3c; color: white; }
             .small-btn { padding: 6px 12px; font-size: 14px; border-radius: 4px; }
@@ -134,14 +130,13 @@
                 <div class="inventory-header">
                     <h2>Inventory Management</h2>
                     <div>
-                        <button id="scanBarcodeBtn" class="btn-scan">Scan Barcode</button>
-                        <button id="bulkImportBtn" class="btn-scan" style="background-color: #17a2b8;">Bulk Import</button>
-                        <button id="editModeBtn" class="btn-scan" style="background-color: #ffc107; color: #212529;">Edit Mode</button>
-                        <button id="addItemBtn" class="btn-add">Add Product</button>
+                        <button id="scanBarcodeBtn" class="btn-liquid">Scan Barcode</button>
+                        <button id="bulkImportBtn" class="btn-liquid-info">Bulk Import</button>
+                        <button id="editModeBtn" class="btn-liquid-warning">Edit Mode</button>
+                        <button id="cancelEditBtn" class="btn-liquid-danger" style="display:none;">Cancel</button>
+                        <button id="addItemBtn" class="btn-liquid-success">Add Product</button>
                     </div>
                 </div>
-
-                <!-- CLassification Tabs Section -->
                 <div class="tabs" id="tabsContainer"></div>
 
                 <table id="inventory-table" class="table table-striped table-bordered" style="width:100%">
@@ -397,8 +392,8 @@
                                 <td>${item.unit}</td>
                                 <td>${item.status}</td>
                                 <td>
-                                    <button class="action-btn btn-edit small-btn edit-btn"><i class="bi bi-pencil"></i></button>
-                                    <button class="action-btn btn-remove small-btn delete-btn"><i class="bi bi-trash"></i></button>
+                                    <button class="btn-liquid edit-btn" style="padding: 6px 12px;"><i class="bi bi-pencil"></i></button>
+                                    <button class="btn-liquid-danger delete-btn" style="padding: 6px 12px;"><i class="bi bi-trash"></i></button>
                                 </td>
                             </tr>`;
                         tbody.append(row);
@@ -604,16 +599,21 @@
                 }
             });
 
+            $('#cancelEditBtn').click(function() {
+                exitEditMode();
+            });
+
             function enterEditMode() {
                 isEditMode = true;
-                $('#editModeBtn').text('Save Changes').removeClass('btn-scan').addClass('btn-success').css({'background-color': '', 'color': ''});
+                $('#editModeBtn').text('Save Changes').removeClass('btn-liquid-warning').addClass('btn-liquid-success');
+                $('#cancelEditBtn').show();
+                $('#addItemBtn, #scanBarcodeBtn, #bulkImportBtn').prop('disabled', true);
                 
                 // Disable DataTable controls to prevent state loss during edit
                 $('.dataTables_length, .dataTables_filter, .dataTables_paginate, .dataTables_info').hide();
 
                 $('#inventory-table tbody tr').each(function() {
                     const row = $(this);
-                    if(row.find('.dataTables_empty').length) return;
 
                     const cells = row.find('td');
                     
@@ -641,6 +641,15 @@
                     // Hide action buttons
                     cells.eq(6).find('button').hide();
                 });
+            }
+
+            function exitEditMode() {
+                isEditMode = false;
+                $('#editModeBtn').text('Edit Mode').removeClass('btn-liquid-success').addClass('btn-liquid-warning');
+                $('#cancelEditBtn').hide();
+                $('#addItemBtn, #scanBarcodeBtn, #bulkImportBtn').prop('disabled', false);
+                
+                renderTable(currentType);
             }
 
             async function saveBulkChanges() {
@@ -793,85 +802,6 @@
                 try {
                     if (quaggaInitialized) {
                         // Quagga.stop() will stop the camera stream; Quagga.pause() can be used to resume
-                        Quagga.stop();
-                    }
-                } catch (e) {
-                    console.warn("Error stopping Quagga:", e);
-                }
-
-                // Explicitly stop any remaining camera tracks attached to video element(s)
-                try {
-                    const videos = document.querySelectorAll('#scanner-container video');
-                    videos.forEach(video => {
-                        const stream = video.srcObject;
-                        if (stream && stream.getTracks) {
-                            stream.getTracks().forEach(track => {
-                                try { track.stop(); } catch (e) { /* ignore */ }
-                            });
-                        }
-                        // also revoke srcObject
-                        try { video.srcObject = null; } catch (e) {}
-                    });
-                } catch (e) {
-                    console.warn('Error stopping video tracks:', e);
-                }
-
-                // Clear container for next use
-                $('#scanner-container').empty();
-                // keep quaggaInitialized true so restart can call Quagga.start() without reinit
-            }
-
-            // ===== Handle Scanned Barcode =====
-            function handleScannedBarcode(code) {
-                if (!code) return;
-
-                $('#result').text(code);
-
-                // flatten inventory for easier lookup
-                const foundItem = Object.values(allInventory).flat()
-                    .find(item => (item.productID || '').toString().trim() === code);
-
-                if (foundItem) {
-                    // Product exists — highlight in table
-                    $('#barcodeScannerModal').modal('hide');
-                    alert("Item found: " + foundItem.item);
-
-                    // Switch tab if necessary
-                    if (foundItem.classification !== currentType) {
-                        $(`.tab[data-type="${foundItem.classification}"]`).click();
-                    }
-
-                    // Highlight after small delay to allow tab switch and DataTable redraw
-                    setTimeout(() => {
-                        const row = $(`tr[data-id="${foundItem.id}"]`);
-                        if (row.length > 0) {
-                            $('html, body').animate({ scrollTop: row.offset().top - 100 }, 600);
-                            row.css('background-color', '#fff3cd'); // yellow highlight
-                            setTimeout(() => row.css('background-color', ''), 2000);
-                        } else {
-                            $('#inventory-table').DataTable().rows().every(function () {
-                                const d = this.data();
-                                if (d && d[1] && d[1].toString().trim() === code) {
-                                    const node = this.node();
-                                    $(node).css('background-color', '#fff3cd');
-                                    $('html, body').animate({ scrollTop: $(node).offset().top - 100 }, 600);
-                                    setTimeout(() => $(node).css('background-color', ''), 2000);
-                                }
-                            });
-                        }
-                    }, 400);
-                } else {
-                    // Product not found — open Add Product modal with prefilled productID
-                    $('#barcodeScannerModal').modal('hide');
-                    setTimeout(() => {
-                        $('#addProductModal').modal('show');
-                        $('#addProductForm [name="productID"]').val(code);
-                    }, 400);
-                }
-            }
-        });
-    </script>
-</html>
                         Quagga.stop();
                     }
                 } catch (e) {

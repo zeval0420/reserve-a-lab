@@ -349,3 +349,139 @@ body {
     transform: translateY(0);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
+
+/* Success variant (Green) */
+.btn-liquid-success {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 18px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 13px;
+    text-decoration: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(40, 167, 69, 0.2);
+    cursor: pointer;
+    color: #28a745;
+    background: linear-gradient(135deg, rgba(40, 167, 69, 0.05), rgba(40, 167, 69, 0.15));
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.1);
+}
+.btn-liquid-success:hover {
+    background: linear-gradient(135deg, rgba(40, 167, 69, 0.1), rgba(40, 167, 69, 0.25));
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(40, 167, 69, 0.2);
+    color: #1e7e34;
+    text-decoration: none;
+    border-color: rgba(40, 167, 69, 0.3);
+}
+.btn-liquid-success:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.1);
+}
+
+/* Danger variant (Red) */
+.btn-liquid-danger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 18px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 13px;
+    text-decoration: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(220, 53, 69, 0.2);
+    cursor: pointer;
+    color: #dc3545;
+    background: linear-gradient(135deg, rgba(220, 53, 69, 0.05), rgba(220, 53, 69, 0.15));
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.1);
+}
+.btn-liquid-danger:hover {
+    background: linear-gradient(135deg, rgba(220, 53, 69, 0.1), rgba(220, 53, 69, 0.25));
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(220, 53, 69, 0.2);
+    color: #bd2130;
+    text-decoration: none;
+    border-color: rgba(220, 53, 69, 0.3);
+}
+.btn-liquid-danger:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.1);
+}
+
+/* Info variant (Cyan) */
+.btn-liquid-info {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 18px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 13px;
+    text-decoration: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(23, 162, 184, 0.2);
+    cursor: pointer;
+    color: #17a2b8;
+    background: linear-gradient(135deg, rgba(23, 162, 184, 0.05), rgba(23, 162, 184, 0.15));
+    box-shadow: 0 4px 12px rgba(23, 162, 184, 0.1);
+}
+.btn-liquid-info:hover {
+    background: linear-gradient(135deg, rgba(23, 162, 184, 0.1), rgba(23, 162, 184, 0.25));
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(23, 162, 184, 0.2);
+    color: #117a8b;
+    text-decoration: none;
+    border-color: rgba(23, 162, 184, 0.3);
+}
+.btn-liquid-info:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(23, 162, 184, 0.1);
+}
+
+/* Warning variant (Yellow) */
+.btn-liquid-warning {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 18px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 13px;
+    text-decoration: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 193, 7, 0.2);
+    cursor: pointer;
+    color: #856404;
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.05), rgba(255, 193, 7, 0.15));
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.1);
+}
+.btn-liquid-warning:hover {
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.1), rgba(255, 193, 7, 0.25));
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(255, 193, 7, 0.2);
+    color: #533f03;
+    text-decoration: none;
+    border-color: rgba(255, 193, 7, 0.3);
+}
+.btn-liquid-warning:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(255, 193, 7, 0.1);
+}

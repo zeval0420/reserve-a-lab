@@ -206,6 +206,32 @@
                 height: 45px;
             }
 
+            .guest-login-btn {
+                position: fixed;
+                bottom: 30px;
+                left: 30px;
+                padding: 0.9rem 1.5rem;
+                background: rgba(0, 51, 102, 0.8);
+                border: none;
+                border-radius: 15px;
+                font-weight: bold;
+                font-size: 1.2rem;
+                color: white;
+                cursor: pointer;
+                box-shadow: 0 4px 15px rgba(0, 51, 102, 0.3);
+                backdrop-filter: blur(6px);
+                transition: all 0.3s ease;
+                z-index: 1000;
+                opacity: 0;
+                animation: fadeInUp 0.8s ease forwards 0.5s;
+            }
+
+            .guest-login-btn:hover {
+                background: rgba(0, 51, 102, 1);
+                transform: scale(1.05);
+                box-shadow: 0 6px 20px rgba(0, 51, 102, 0.5);
+            }
+
             /* ===== Medium Screens ===== */
             @media (max-width: 992px) {
                 .system-name {
@@ -272,6 +298,13 @@
                     font-size: 1.2rem;
                     padding: 0.9rem;
                 }
+
+                .guest-login-btn {
+                    bottom: 20px;
+                    left: 20px;
+                    font-size: 1rem;
+                    padding: 0.8rem 1.2rem;
+                }
             }
         </style>
     </head>
@@ -318,6 +351,8 @@
                 <button type="submit" class="btn btn-primary">Log in</button>
             </form>
         </div>
+
+        <button class="guest-login-btn" onclick="guestLogin()">Guest Login</button>
 
         <script>
             $(document).ready(function () {
@@ -408,6 +443,10 @@
                         alert("An error occurred. Please try again.");
                     }
                 });
+            }
+
+            function guestLogin() {
+                alert("Guest login functionality is currently under development.");
             }
         </script>
     </body>

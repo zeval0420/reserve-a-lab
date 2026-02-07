@@ -29,8 +29,10 @@
                 border-radius: 30px; box-shadow: 0 2px 12px rgba(0,0,0,0.1);
             }
             .card, .lab-card {
-                background-color: #fff; border-radius: 15px;
-                box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+                background: rgba(255, 255, 255, 0.85);
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+                border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
                 text-align: center; display: flex;
                 flex-direction: column; justify-content: space-between;
                 transition: transform 0.2s ease-in-out; margin-bottom: 25px;
@@ -213,10 +215,10 @@
                             </div>
 
                             <div class="d-flex justify-content-center gap-2 mb-3">
-                                <button class="btn btn-danger btn-sm" onclick="openRemoveModal('<?= $id ?>')">
+                                <button class="btn-liquid-danger" onclick="openRemoveModal('<?= $id ?>')">
                                     <i class="bi bi-trash"></i> Remove
                                 </button>
-                                <button class="btn btn-primary btn-sm" onclick="openEditModal('<?= $id ?>')">
+                                <button class="btn-liquid" onclick="openEditModal('<?= $id ?>')">
                                     <i class="bi bi-pencil"></i> Edit
                                 </button>
                             </div>

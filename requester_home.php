@@ -50,9 +50,9 @@
                 echo '<td>' . htmlspecialchars($request['inclusiveDate']) . '</td>';
                 echo '<td>' . htmlspecialchars($request['inclusiveTime']) . '</td>';
                 if ($_SESSION['role'] === 'teacher'){
-                    echo '<td><a href="supervisor_approve.php?id=' . $request['id'] . '" class="btn btn-primary">View</a></td>';
+                    echo '<td><a href="supervisor_approve.php?id=' . $request['id'] . '" class="btn-liquid">View</a></td>';
                 } else {
-                    echo '<td><a href="admin_approve.php?status=Pending&search='. $request['id'] .'" class="btn btn-primary">View</a></td>';
+                    echo '<td><a href="admin_approve.php?status=Pending&search='. $request['id'] .'" class="btn-liquid">View</a></td>';
                 }
                 echo '</tr>';
             }
