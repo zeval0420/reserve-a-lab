@@ -119,6 +119,8 @@
                 .inventory-header > div { width: 100%; display: flex; flex-wrap: wrap; gap: 5px; }
                 .btn-scan, .btn-add { flex: 1; text-align: center; }
             }
+
+            .modified-row { background-color: #fff8e1 !important; }
         </style>
     </head>
 
@@ -590,6 +592,7 @@
 
             // ================= EDIT MODE LOGIC ==================
             let isEditMode = false;
+            let hasUnsavedChanges = false;
 
             $('#editModeBtn').click(function() {
                 if (!isEditMode) {
@@ -600,11 +603,22 @@
             });
 
             $('#cancelEditBtn').click(function() {
+                if (hasUnsavedChanges && !confirm("You have unsaved changes. Are you sure you want to discard them?")) {
+                    return;
+                }
                 exitEditMode();
+            });
+
+            $('#inventory-table').on('input change', 'input, select', function() {
+                if (isEditMode) {
+                    hasUnsavedChanges = true;
+                    $(this).closest('tr').addClass('modified-row');
+                }
             });
 
             function enterEditMode() {
                 isEditMode = true;
+                hasUnsavedChanges = false;
                 $('#editModeBtn').text('Save Changes').removeClass('btn-liquid-warning').addClass('btn-liquid-success');
                 $('#cancelEditBtn').show();
                 $('#addItemBtn, #scanBarcodeBtn, #bulkImportBtn').prop('disabled', true);
@@ -645,6 +659,7 @@
 
             function exitEditMode() {
                 isEditMode = false;
+                hasUnsavedChanges = false;
                 $('#editModeBtn').text('Edit Mode').removeClass('btn-liquid-success').addClass('btn-liquid-warning');
                 $('#cancelEditBtn').hide();
                 $('#addItemBtn, #scanBarcodeBtn, #bulkImportBtn').prop('disabled', false);
