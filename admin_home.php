@@ -54,9 +54,6 @@
             .lab-img { height: 160px; }
             .unavailable { color: red; }
             .action-btns { margin-bottom: 10px; }
-            .availability-label {
-                margin-left: 10px; font-weight: bold; vertical-align: middle;
-            }
             .image-divider {
                 border: none; border-top: 2px solid #e0e0e0;
                 width: 80%; margin: 15px auto;
@@ -65,20 +62,48 @@
             /* Switch */
             .switch {
                 position: relative; display: inline-block;
-                width: 40px; height: 22px; vertical-align: middle;
+                width: 140px; height: 34px; vertical-align: middle;
             }
             .switch input { opacity: 0; width: 0; height: 0; }
             .slider {
                 position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-                background-color: #ccc; transition: 0.4s; border-radius: 22px;
+                background: linear-gradient(135deg, rgba(200, 200, 200, 0.3), rgba(200, 200, 200, 0.5));
+                backdrop-filter: blur(4px);
+                -webkit-backdrop-filter: blur(4px);
+                border: 1px solid rgba(255, 255, 255, 0.4);
+                transition: 0.4s; border-radius: 34px;
+                box-shadow: inset 0 1px 4px rgba(0,0,0,0.1);
             }
             .slider::before {
-                content: ""; position: absolute; height: 16px; width: 16px;
-                left: 3px; bottom: 3px; background-color: white;
+                content: ""; position: absolute; height: 26px; width: 26px;
+                left: 4px; bottom: 3px; background-color: white;
                 transition: 0.4s; border-radius: 50%;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+                z-index: 2;
             }
-            input:checked + .slider { background-color: #2b55c4; }
-            input:checked + .slider::before { transform: translateX(18px); }
+            input:checked + .slider { 
+                background: linear-gradient(135deg, rgba(43, 85, 196, 0.7), rgba(43, 85, 196, 0.9));
+                border-color: rgba(43, 85, 196, 0.3);
+            }
+            input:checked + .slider::before { transform: translateX(106px); }
+
+            .slider::after {
+                content: 'Not Available';
+                color: #666;
+                position: absolute;
+                right: 15px;
+                top: 50%;
+                transform: translateY(-50%);
+                font-size: 12px;
+                font-weight: bold;
+                transition: all 0.4s;
+            }
+            input:checked + .slider::after {
+                content: 'Available';
+                color: white;
+                right: unset;
+                left: 15px;
+            }
 
             /* Gallery */
             #galleryOverlay {
@@ -228,7 +253,6 @@
                                     <input type="checkbox" onchange="toggleLab(this)">
                                     <span class="slider round"></span>
                                 </label>
-                                <span class="availability-label">Not Available</span>
                             </div>
                         </div>
                     </div>
@@ -415,12 +439,9 @@
                 const data = JSON.parse(res);
                 $('.card').each(function () {
                     const card = $(this), id = card.data('scilab'),
-                        chk = card.find('input[type="checkbox"]'),
-                        lbl = card.find('.availability-label');
+                        chk = card.find('input[type="checkbox"]');
                     const avail = data[id] === 'Available';
                     chk.prop('checked', avail);
-                    lbl.text(avail ? 'Available' : 'Not Available')
-                    .css('color', avail ? '#28a745' : 'red');
                 });
             }).fail(() => showToast('Failed to fetch availability data.', 'error'));
         });
@@ -468,10 +489,8 @@
         function toggleLab(chk) {
             const card = $(chk).closest('.card'),
                 name = card.find('h4').text().trim(),
-                label = card.find('.availability-label'),
                 newState = chk.checked ? 'Available' : 'Not Available';
             $.post('ajax/ajax_admin.php', { scilabName: name, availability: newState }, () => {
-                label.text(newState).css('color', chk.checked ? '#28a745' : 'red');
             }).fail(() => showToast('Failed to update availability.', 'error'));
         }
 

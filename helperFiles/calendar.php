@@ -147,6 +147,8 @@
     <div id="calendarHeader">
         <h2>ACTIVITY CALENDAR</h2>
         <div style="display: flex; align-items: center; gap: 15px;">
+            <button id="calendarTodayBtn" class="btn-liquid" style="padding: 6px 12px;">Today</button>
+            <input type="date" id="calendarDatePicker" class="liquid-input" style="padding: 5px 10px; font-size: 13px; cursor: pointer;">
             <select id="calendarLabFilter" class="liquid-input" style="padding: 6px 30px 6px 12px; font-size: 13px; cursor: pointer; min-width: 150px;">
                 <option value="all">All Laboratories</option>
             </select>
@@ -178,6 +180,10 @@
     openCalendarBtn.addEventListener("click", () => {
         calendarModal.style.display = "flex";
         calendarOverlay.style.display = "block";
+
+        // Set date picker to today
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('calendarDatePicker').value = today;
 
         // STEP 1 — fetch events from DB
         $.ajax({
@@ -233,11 +239,26 @@
 
     document.getElementById('calendarLabFilter').addEventListener('change', applyLabFilter);
 
+    document.getElementById('calendarDatePicker').addEventListener('change', function() {
+        if (ec && this.value) {
+            ec.setOption('date', this.value);
+        }
+    });
+
+    document.getElementById('calendarTodayBtn').addEventListener('click', function() {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('calendarDatePicker').value = today;
+        if (ec) {
+            ec.setOption('date', today);
+        }
+    });
+
     function createCalendar(events) {
         setTimeout(() => {
             ec = EventCalendar.create(document.getElementById('ec'), {
                 initialDate: new Date(),  // <-- start at today
                 initialView: 'timeGridWeek',
+                scrollTime: '06:00:00',
                 view: 'timeGridWeek',
                 headerToolbar: {
                     start: 'dayGridMonth,timeGridWeek,timeGridDay',
@@ -301,9 +322,17 @@
                 
                 eventTitle.innerText = data.scilabName;
 
-                let viewButton = '';
+                let buttonsHtml = '';
+                if (data.statusScilabPersonnel === 'Approved') {
+                    buttonsHtml += `<a href="templates/print_template.php?id=${data.id}" target="_blank" class="btn-liquid" style="margin-right: 5px;"><i class="bi bi-file-earmark-pdf"></i> Download PDF</a>`;
+                }
+
                 if (currentUserRole === 'admin') {
-                    viewButton = `<div style="margin-top:15px; text-align:right;"><a href="admin_approve.php?status=Approved&search=${data.id}" class="btn-liquid">View Full Request</a></div>`;
+                    buttonsHtml += `<a href="admin_approve.php?status=Approved&search=${data.id}" class="btn-liquid">View Full Request</a>`;
+                }
+
+                if (buttonsHtml) {
+                    buttonsHtml = `<div style="margin-top:15px; text-align:right;">${buttonsHtml}</div>`;
                 }
 
                 eventBody.innerHTML = `
@@ -313,7 +342,7 @@
                     <p><strong>Date:</strong> ${data.inclusiveDate}</p>
                     <p><strong>Time:</strong> ${data.inclusiveTime}</p>
                     <p><strong>Status:</strong> <span class="badge" style="background-color:#28a745;">${data.statusScilabPersonnel}</span></p>
-                    ${viewButton}
+                    ${buttonsHtml}
                 `;
             },
             error: function() {
