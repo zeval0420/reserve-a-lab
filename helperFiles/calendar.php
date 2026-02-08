@@ -97,6 +97,47 @@
             font-size: 14px !important;
             font-weight: 600;
         }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .spin { animation: spin 1s linear infinite; display: inline-block; }
+
+        /* Event Details Modal */
+        #eventDetailsModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+        }
+        #eventDetailsContent {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 20px;
+            width: 90%;
+            max-width: 500px;
+            padding: 25px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+        #closeEventDetails {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            border: none;
+            background: transparent;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+        #closeEventDetails:hover { color: #000; }
     </style>
 </head>
 
@@ -105,10 +146,23 @@
 <div id="calendarModal">
     <div id="calendarHeader">
         <h2>ACTIVITY CALENDAR</h2>
-        <button id="closeCalendarBtn">&times;</button>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <select id="calendarLabFilter" class="liquid-input" style="padding: 6px 30px 6px 12px; font-size: 13px; cursor: pointer; min-width: 150px;">
+                <option value="all">All Laboratories</option>
+            </select>
+            <button id="closeCalendarBtn">&times;</button>
+        </div>
     </div>
 
     <div id="ec"></div>
+</div>
+
+<div id="eventDetailsModal">
+    <div id="eventDetailsContent">
+        <button id="closeEventDetails">&times;</button>
+        <h3 id="eventTitle" style="margin-top:0; color:#0e0054; border-bottom:1px solid rgba(0,0,0,0.1); padding-bottom:10px; margin-bottom:15px;"></h3>
+        <div id="eventBody"></div>
+    </div>
 </div>
 
 <script>
@@ -116,6 +170,7 @@
     const calendarModal = document.getElementById("calendarModal");
     const calendarOverlay = document.getElementById("calendarOverlay");
     const closeCalendarBtn = document.getElementById("closeCalendarBtn");
+    const currentUserRole = "<?php echo $_SESSION['role'] ?? ''; ?>";
     
     let ec = null;
     let events_array = [];
@@ -134,13 +189,8 @@
             success: function(response) {
                 // STEP 2 — process events_array
                 events_array = response; // directly replace
-
-                // STEP 3 — calendar initialization happens AFTER ajax
-                if (!ec) {
-                    createCalendar(events_array);
-                } else {
-                    updateCalendar(events_array);
-                }
+                populateLabFilter(events_array);
+                applyLabFilter();
             },
 
             error: function(xhr) {
@@ -149,6 +199,39 @@
             }
         });
     });
+
+    function populateLabFilter(events) {
+        const filter = document.getElementById('calendarLabFilter');
+        const current = filter.value;
+        // Extract unique lab names (titles)
+        const labs = [...new Set(events.map(e => e.title))].sort();
+        
+        filter.innerHTML = '<option value="all">All Laboratories</option>';
+        
+        labs.forEach(lab => {
+            const opt = document.createElement('option');
+            opt.value = lab;
+            opt.textContent = lab;
+            filter.appendChild(opt);
+        });
+        
+        if (labs.includes(current)) filter.value = current;
+    }
+
+    function applyLabFilter() {
+        const selected = document.getElementById('calendarLabFilter').value;
+        const filtered = selected === 'all' 
+            ? events_array 
+            : events_array.filter(e => e.title === selected);
+
+        if (!ec) {
+            createCalendar(filtered);
+        } else {
+            updateCalendar(filtered);
+        }
+    }
+
+    document.getElementById('calendarLabFilter').addEventListener('change', applyLabFilter);
 
     function createCalendar(events) {
         setTimeout(() => {
@@ -170,7 +253,10 @@
                 events: events_array,
                 nowIndicator: true,
                 eventStartEditable: false,   // cannot drag/move events
-                eventDurationEditable: false // cannot resize events
+                eventDurationEditable: false, // cannot resize events
+                eventClick: function(info) {
+                    showEventDetails(info.event.id);
+                }
             });
         }, 60);
     }
@@ -191,4 +277,51 @@
     window.addEventListener("resize", () => {
         if (ec) ec.updateSize();
     });
+
+    const eventDetailsModal = document.getElementById('eventDetailsModal');
+    const closeEventDetails = document.getElementById('closeEventDetails');
+    const eventBody = document.getElementById('eventBody');
+    const eventTitle = document.getElementById('eventTitle');
+
+    function showEventDetails(id) {
+        eventDetailsModal.style.display = 'flex';
+        eventBody.innerHTML = '<div style="text-align:center; padding:20px;"><i class="bi bi-arrow-repeat spin" style="font-size:2rem; color:#2B55C4;"></i></div>';
+        eventTitle.innerText = 'Request Details';
+
+        $.ajax({
+            url: "ajax/ajax_calendar.php",
+            type: "POST",
+            data: { action: "get_request_details", id: id },
+            dataType: "json",
+            success: function(data) {
+                if(data.error) {
+                    eventBody.innerHTML = '<p class="text-danger">Details not found.</p>';
+                    return;
+                }
+                
+                eventTitle.innerText = data.scilabName;
+
+                let viewButton = '';
+                if (currentUserRole === 'admin') {
+                    viewButton = `<div style="margin-top:15px; text-align:right;"><a href="admin_approve.php?status=Approved&search=${data.id}" class="btn-liquid">View Full Request</a></div>`;
+                }
+
+                eventBody.innerHTML = `
+                    <p><strong>Requester:</strong> ${data.requesterName || data.requesterEmployeeID}</p>
+                    <p><strong>Subject:</strong> ${data.subject}</p>
+                    <p><strong>Topic:</strong> ${data.subjectTopic}</p>
+                    <p><strong>Date:</strong> ${data.inclusiveDate}</p>
+                    <p><strong>Time:</strong> ${data.inclusiveTime}</p>
+                    <p><strong>Status:</strong> <span class="badge" style="background-color:#28a745;">${data.statusScilabPersonnel}</span></p>
+                    ${viewButton}
+                `;
+            },
+            error: function() {
+                eventBody.innerHTML = '<p class="text-danger">Failed to load details.</p>';
+            }
+        });
+    }
+
+    closeEventDetails.addEventListener('click', () => eventDetailsModal.style.display = 'none');
+    eventDetailsModal.addEventListener('click', (e) => { if(e.target === eventDetailsModal) eventDetailsModal.style.display = 'none'; });
 </script>

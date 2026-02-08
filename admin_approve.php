@@ -169,7 +169,7 @@
                                         $teacherInCharge = !empty($row['teacherInCharge']) ? htmlspecialchars($row['teacherInCharge']) : '—';
                                 ?>
                                     <tr id="row-<?= $row['id'] ?>">
-                                        <td><?= $i++ ?></td>
+                                        <td><span style="display:none;"><?= $row['id'] ?></span><?= $i++ ?></td>
                                         <td><?= htmlspecialchars($fullName) ?></td>
                                         <?php if ($statusFilter === 'Approved'): ?><td><?= htmlspecialchars($row['controlNumber']) ?></td><?php endif; ?>
                                         <td><?= htmlspecialchars($row['scilabName']) ?></td>

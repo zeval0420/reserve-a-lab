@@ -18,6 +18,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'get_calendar_events') {
 
     $stmt = $conn->prepare("
         SELECT 
+            sfr.id,
             sfr.scilabName,
             sfr.inclusiveDate,
             sfr.inclusiveTime,
@@ -49,6 +50,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'get_calendar_events') {
         $color = $row['color'] ?? "#7f8c8d";
 
         $events[] = [
+            "id" => $row['id'],
             "title" => $row['scilabName'],
             "start" => $startDateTime,
             "end"   => $endDateTime,
@@ -60,4 +62,22 @@ if (isset($_POST['action']) && $_POST['action'] === 'get_calendar_events') {
     exit();
 }
 
+if (isset($_POST['action']) && $_POST['action'] === 'get_request_details') {
+    $id = $_POST['id'];
+    $stmt = $conn->prepare("
+        SELECT r.*, CONCAT(a.firstname, ' ', a.lastname) as requesterName 
+        FROM scilab_form_requests r
+        LEFT JOIN accounts a ON r.requesterEmployeeID = a.employeeID
+        WHERE r.id = ?
+    ");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($row = $result->fetch_assoc()) {
+        echo json_encode($row);
+    } else {
+        echo json_encode(['error' => 'Not found']);
+    }
+    exit;
+}
 ?>
