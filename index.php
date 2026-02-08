@@ -347,14 +347,14 @@
                         </svg>
                   </div>
                 </div>
+  
+                <button type="submit" class="btn btn-primary">Log in</button>
 
-                <div style="text-align: right; margin-bottom: 15px;">
-                    <a href="#" onclick="$('#forgotPasswordModal').modal('show'); return false;" style="color: white; text-decoration: none; font-size: 0.9rem; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">
+                <div style="text-align: right; margin-top: 15px;">
+                    <a href="#" onclick="$('#forgotPasswordModal').modal('show'); return false;" style="color: white; text-decoration: none; font-size: 1.2rem; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">
                         Forgot Password?
                     </a>
                 </div>
-  
-                <button type="submit" class="btn btn-primary">Log in</button>
             </form>
         </div>
 

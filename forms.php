@@ -280,6 +280,11 @@
                 background-size: 1em !important;
                 padding-right: 2.5rem !important;
             }
+            
+            .is-invalid {
+                border-color: #dc3545 !important;
+                box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+            }
 
             @media (max-width: 768px) {
                 .form-title { width: 95%; padding: 20px 5%; margin-top: 20px; }
@@ -438,6 +443,21 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
                         <button type="button" class="btn btn-primary" id="confirmSubmit">Confirm</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Modal -->
+        <div class="modal fade" id="progressModal" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
+            <div class="modal-dialog modal-sm" role="document" style="margin-top: 30vh;">
+                <div class="modal-content">
+                    <div class="modal-body text-center">
+                        <h4 class="modal-title mb-3">Submitting Request...</h4>
+                        <div class="progress">
+                            <div id="submissionProgressBar" class="progress-bar progress-bar-striped active" role="progressbar" style="width: 0%">0%</div>
+                        </div>
+                        <small class="text-muted">Please wait while we process your request.</small>
                     </div>
                 </div>
             </div>
@@ -715,20 +735,27 @@
             $('form').submit(function(e) {
                 e.preventDefault();
 
+                // Reset validation visual cues
+                $('.is-invalid').removeClass('is-invalid');
+                let isValid = true;
+
                 // Check that section field is filled
                 const selectedSections = $('#sections-checkboxes').val();
                 if (!selectedSections || selectedSections.length === 0) {
                     showToast("Please select at least one section.", 'warning');
-                    $('#sections-checkboxes').focus();
-                    return false;
+                    $('#sections-checkboxes').next('.btn-group').find('.multiselect').addClass('is-invalid');
+                    isValid = false;
                 }
 
                 // Check that teacher field is filled
                 const selectedTeachers = $('#teacher-checkboxes').val();
                 if (!selectedTeachers || selectedTeachers.length === 0) {
                     showToast("Please select at least one teacher.", 'warning');
-                    return false;
+                    $('#teacher-checkboxes').next('.btn-group').find('.multiselect').addClass('is-invalid');
+                    isValid = false;
                 }
+
+                if (!isValid) return false;
 
                 const form = $(this);
                 const sectionsArr = $('#sections-checkboxes').val() || [];
@@ -822,6 +849,18 @@
             // Confirm submit
             $('#confirmSubmit').click(function() {
                 $('#summaryModal').modal('hide');
+                
+                // Show progress modal
+                $('#progressModal').modal('show');
+                let progress = 0;
+                const $bar = $('#submissionProgressBar');
+                $bar.css('width', '0%').text('0%');
+                
+                const progressInterval = setInterval(() => {
+                    progress += Math.random() * 10;
+                    if (progress > 90) progress = 90;
+                    $bar.css('width', progress + '%').text(Math.round(progress) + '%');
+                }, 200);
 
                 // Collect and merge duplicate materials
                 const itemsMap = {};
@@ -863,27 +902,32 @@
                     processData: false,
                     contentType: false,
                     success: function(res) {
-                        if (res.trim() === "success") {
-                            showToast("Request submitted successfully!", 'success');
-                            resetForm();
-                            location.reload();
-                        } else if (res === "conflict") {
-                            console.log("Schedule conflict. Please choose another time.");
-                        } else if (res === "invalid_scilab") {
-                            console.log("Invalid laboratory selected.");
-                        } else if (res === "session_error") {
-                            console.log("Session expired. Please log in again.");
-                        }
-                        else {
-                            console.log("Error?");
-                        }
+                        clearInterval(progressInterval);
+                        $bar.css('width', '100%').text('100%');
+                        
+                        setTimeout(() => {
+                            $('#progressModal').modal('hide');
+                            if (res.trim() === "success") {
+                                showToast("Request submitted successfully!", 'success');
+                                resetForm();
+                                location.reload();
+                            } else if (res === "conflict") {
+                                showToast("Schedule conflict. Please choose another time.", 'error');
+                            } else if (res === "invalid_scilab") {
+                                showToast("Invalid laboratory selected.", 'error');
+                            } else if (res === "session_error") {
+                                showToast("Session expired. Please log in again.", 'error');
+                            } else {
+                                showToast("Error: " + res, 'error');
+                            }
+                        }, 500);
                     },
-                    error: function() {
+                    error: function(xhr, status, error) {
+                        clearInterval(progressInterval);
+                        $('#progressModal').modal('hide');
                         showToast("Error submitting request.", 'error');
                         console.log("Error submitting request.");
                         console.error("AJAX error:", status, error);
-                        resetForm();
-                        location.reload();
                     }
                 });
             });
@@ -892,21 +936,35 @@
             populateStudentDropdowns();
             $('#sections-checkboxes').multiselect({ 
                 includeSelectAllOption: true,
-                nonSelectedText: 'Select Grade First'
+                nonSelectedText: 'Select Grade First',
+                onChange: function() {
+                    $('#sections-checkboxes').next('.btn-group').find('.multiselect').removeClass('is-invalid');
+                }
             });
             $('#teacher-checkboxes').multiselect({
                 includeSelectAllOption: false,
-                nonSelectedText: 'Select Teacher'
+                nonSelectedText: 'Select Teacher',
+                onChange: function() {
+                    $('#teacher-checkboxes').next('.btn-group').find('.multiselect').removeClass('is-invalid');
+                }
             });
 
             // time validation
             $('input[name="start_time"], input[name="end_time"]').on('change', function() {
                 const start = $('input[name="start_time"]').val();
                 const end = $('input[name="end_time"]').val();
+                
+                $('input[name="end_time"]').removeClass('is-invalid');
+                
                 if (start && end && start >= end) {
                     showToast("End time must be later than start time.", 'warning');
                     $('input[name="end_time"]').val('');
+                    $('input[name="end_time"]').addClass('is-invalid');
                 }
+            });
+            
+            $('input[name="start_time"], input[name="end_time"]').on('input', function() {
+                $(this).removeClass('is-invalid');
             });
 
             // grade -> sections & subjects
@@ -916,7 +974,13 @@
 
                 if (!grade) {
                     $('#sections-checkboxes').empty().prop('disabled', true);
-                    $('#sections-checkboxes').multiselect('destroy').multiselect({ includeSelectAllOption: true, nonSelectedText: 'Select Grade First' });
+                    $('#sections-checkboxes').multiselect('destroy').multiselect({ 
+                        includeSelectAllOption: true, 
+                        nonSelectedText: 'Select Grade First',
+                        onChange: function() {
+                            $('#sections-checkboxes').next('.btn-group').find('.multiselect').removeClass('is-invalid');
+                        }
+                    });
                     
                     $('#subject_select').prop('disabled', true).html('<option value="">Select Grade First</option>');
                     $('#unit-select').prop('disabled', true).html('<option value="">Select Grade First</option>');
@@ -928,7 +992,10 @@
                     $('#sections-checkboxes').html(data).prop('disabled', false);
                     $('#sections-checkboxes').multiselect('destroy').multiselect({
                         includeSelectAllOption: true,
-                        nonSelectedText: 'Select Section'
+                        nonSelectedText: 'Select Section',
+                        onChange: function() {
+                            $('#sections-checkboxes').next('.btn-group').find('.multiselect').removeClass('is-invalid');
+                        }
                     });
                 }).fail(() => $('#sections-checkboxes').html('Error loading sections').multiselect('rebuild'));
 
