@@ -117,6 +117,18 @@ $stmt->close();
 $requesterName = $requesterData['fullName'] ?? 'N/A';
 $dateRequested = date('F d, Y', strtotime($formData['dateRequested']));
 
+// Fetch SRS/SRA names for "Approved by"
+$srsNames = [];
+$srsStmt = $conn->prepare("SELECT firstname, middlename, lastname FROM accounts WHERE position IN ('Sci. Res. Assist.', 'Sci. Research Specialist I') AND status = 'active'");
+$srsStmt->execute();
+$srsResult = $srsStmt->get_result();
+while ($row = $srsResult->fetch_assoc()) {
+    $mi = !empty($row['middlename']) ? substr($row['middlename'], 0, 1) . '. ' : '';
+    $srsNames[] = strtoupper($row['firstname'] . ' ' . $mi . $row['lastname']);
+}
+$srsString = implode(" / ", $srsNames);
+$srsStmt->close();
+
 $conn->close();
 
 // Fix image path for Dompdf
@@ -529,11 +541,11 @@ $html .= "
         <div class='form-row'>
             <div class='form-field w-50'>
                 <label>Endorsed by:</label>
-                <span class='value' style='min-width: 140pt;'></span>
+                <span class='value' style='min-width: 140pt;'>" . htmlspecialchars($formData['teacherInCharge'] ?? '') . "</span>
             </div>
             <div class='form-field w-50'>
                 <label>Approved by:</label>
-                <span class='value' style='min-width: 140pt;'></span>
+                <span class='value' style='min-width: 140pt;'>" . htmlspecialchars($srsString) . "</span>
             </div>
         </div>
         <div class='form-row'>
