@@ -38,7 +38,8 @@ $stmt = $conn->prepare("
         fr.inclusiveDate,
         fr.inclusiveTime,
         fr.requesterEmployeeID,
-        fr.dateRequested
+        fr.dateRequested,
+        fr.statusScilabPersonnel
     FROM scilab_form_requests fr
     WHERE fr.id = ?
 ");
@@ -134,6 +135,24 @@ $conn->close();
 // Fix image path for Dompdf
 $logoPath = $_SERVER['DOCUMENT_ROOT'] . "/img/logo.png";
 $logoPath = dirname(__DIR__) . "/img/logo.png";
+
+// Helper to generate signature HTML
+function getSignatureHtml($relativePath) {
+    if (empty($relativePath)) return '';
+    $fullPath = dirname(__DIR__) . "/" . $relativePath;
+    if (file_exists($fullPath)) {
+        return "<img src='{$fullPath}' style='position: absolute; top: -30px; left: 50px; height: 60px; z-index: 10; opacity: 0.9;'>";
+    }
+    return '';
+}
+
+$endorsedBySig = getSignatureHtml($formData['subject_teacher_signature'] ?? '');
+$approvedBySig = getSignatureHtml($formData['lab_personnel_signature'] ?? '');
+
+// Fallback for approved by if no digital signature but status is approved (legacy support)
+if (empty($approvedBySig) && ($formData['statusScilabPersonnel'] ?? '') === 'Approved') {
+    $approvedBySig = getSignatureHtml('img/signature.png');
+}
 
 // Build HTML
 $html = "
@@ -540,12 +559,18 @@ $html .= "
     <div class='signature-section'>
         <div class='form-row'>
             <div class='form-field w-50'>
-                <label>Endorsed by:</label>
-                <span class='value' style='min-width: 140pt;'>" . htmlspecialchars($formData['teacherInCharge'] ?? '') . "</span>
+                <div style='position: relative;'>
+                    <label>Endorsed by:</label>
+                    <span class='value' style='min-width: 140pt;'>" . htmlspecialchars($formData['teacherInCharge'] ?? '') . "</span>
+                    $endorsedBySig
+                </div>
             </div>
             <div class='form-field w-50'>
-                <label>Approved by:</label>
-                <span class='value' style='min-width: 140pt;'>" . htmlspecialchars($srsString) . "</span>
+                <div style='position: relative;'>
+                    <label>Approved by:</label>
+                    <span class='value' style='min-width: 140pt;'>" . htmlspecialchars($srsString) . "</span>
+                    $approvedBySig
+                </div>
             </div>
         </div>
         <div class='form-row'>

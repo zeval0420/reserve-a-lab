@@ -23,7 +23,7 @@ if (!$request) {
 
 $name = $request['requesterEmployeeID'];
 $grade = $request['gradeLevel'];
-$section = $request['section/s'];
+$section = $request['sections'];
 $date = $request['inclusiveDate'];
 $time = $request['inclusiveTime'];
 $laboratoryName = $request['scilabName'];
@@ -36,6 +36,18 @@ $lab_personnel_status = $request['lab_personnel_status'] ?? 'pending';
 $cid_chief_status = $request['cid_chief_status'] ?? 'pending';
 
 $currentRole = $_SESSION['role'] ?? 'supervisor';
+
+// Fetch current user's stored signature if available
+$userStoredSignature = '';
+if (isset($_SESSION['username'])) {
+    $safeUsername = preg_replace('/[^a-zA-Z0-9]/', '_', $_SESSION['username']);
+    foreach (['png', 'jpg', 'jpeg', 'gif'] as $ext) {
+        if (file_exists("img/signatures/" . $safeUsername . "." . $ext)) {
+            $userStoredSignature = "img/signatures/" . $safeUsername . "." . $ext;
+            break;
+        }
+    }
+}
 
 include('helperFiles/headData.php');
 include('helperFiles/header.php');
@@ -509,6 +521,36 @@ body {
         padding: 24px;
     }
 }
+
+/* Signature Styles */
+.btn-tab {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    flex: 1;
+    transition: all 0.2s;
+}
+.btn-tab:hover, .btn-tab.active {
+    background: rgba(255, 255, 255, 0.3);
+}
+.btn-small {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+}
+.btn-small:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+#sigCanvas {
+    touch-action: none;
+}
 </style>
 
 <div class="container">
@@ -591,18 +633,47 @@ body {
         <div class="error-message" id="errorMessage"></div>
         <div class="success-message" id="successMessage"></div>
         
-        <div class="modal-actions">
+        <div id="signatureSection" style="display:none; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 20px;">
+            <div class="detail-label" style="margin-bottom: 15px;">Add Signature</div>
+            
+            <div class="sig-tabs" style="display:flex; gap:10px; margin-bottom:15px;">
+                <button class="btn-tab active" id="tabDraw" onclick="switchSigTab('draw')">Draw</button>
+                <button class="btn-tab" id="tabUpload" onclick="switchSigTab('upload')">Upload</button>
+            </div>
+
+            <div id="sig-draw-area">
+                <canvas id="sigCanvas" width="500" height="200" style="background: white; border-radius: 8px; cursor: crosshair; width: 100%;"></canvas>
+                <div style="margin-top: 5px; text-align: right;">
+                    <button class="btn-small" onclick="clearCanvas()">Clear</button>
+                </div>
+            </div>
+
+            <div id="sig-upload-area" style="display:none;">
+                <input type="file" id="sigUpload" accept="image/*" class="form-control liquid-input" onchange="previewSignature(this)" style="color: white;">
+                <div id="sigPreview" style="margin-top: 10px; height: 150px; background: rgba(255,255,255,0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                    <span style="color: rgba(255,255,255,0.5);">No image selected</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-actions" id="defaultActions">
             <?php if ($supervisor_status === 'pending'): ?>
-                <button class="btn-action btn-approve" id="btnApprove" onclick="handleAction('approve')">Approve</button>
+                <button class="btn-action btn-approve" id="btnApprove" onclick="initiateApproval()">Approve</button>
                 <button class="btn-action btn-reject" id="btnReject" onclick="handleAction('reject')">Reject</button>
             <?php endif; ?>
             <button class="btn-action btn-close" onclick="closeModal()">Close</button>
+        </div>
+
+        <div class="modal-actions" id="signatureActions" style="display:none;">
+            <button class="btn-action btn-approve" onclick="submitApproval()">Confirm Approval</button>
+            <button class="btn-action btn-close" onclick="hideSignatureSection()">Back</button>
         </div>
     </div>
 </div>
 
 <script>
 const requestId = <?= json_encode($requestId) ?>;
+const userStoredSignature = <?= json_encode($userStoredSignature) ?>;
 const modalOverlay = document.getElementById('modalOverlay');
 const errorMessage = document.getElementById('errorMessage');
 const successMessage = document.getElementById('successMessage');
@@ -610,6 +681,7 @@ const successMessage = document.getElementById('successMessage');
 function openModal() {
     modalOverlay.classList.add('active');
     document.body.style.overflow = 'hidden';
+    hideSignatureSection(); // Reset state
 }
 
 function closeModal() {
@@ -629,7 +701,122 @@ document.addEventListener('keydown', function(event) {
     }
 });
 
-async function handleAction(action) {
+let signatureData = null;
+let isDrawing = false;
+const canvas = document.getElementById('sigCanvas');
+const ctx = canvas.getContext('2d');
+
+// Canvas drawing logic
+function startDrawing(e) {
+    isDrawing = true;
+    draw(e);
+}
+function stopDrawing() {
+    isDrawing = false;
+    ctx.beginPath();
+}
+function draw(e) {
+    if (!isDrawing) return;
+    e.preventDefault();
+    
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX || e.touches[0].clientX) - rect.left;
+    const y = (e.clientY || e.touches[0].clientY) - rect.top;
+    
+    // Scale for canvas resolution vs display size
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#000';
+    
+    ctx.lineTo(x * scaleX, y * scaleY);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x * scaleX, y * scaleY);
+}
+
+canvas.addEventListener('mousedown', startDrawing);
+canvas.addEventListener('mousemove', draw);
+canvas.addEventListener('mouseup', stopDrawing);
+canvas.addEventListener('mouseout', stopDrawing);
+canvas.addEventListener('touchstart', startDrawing);
+canvas.addEventListener('touchmove', draw);
+canvas.addEventListener('touchend', stopDrawing);
+
+function clearCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function switchSigTab(tab) {
+    document.getElementById('tabDraw').classList.toggle('active', tab === 'draw');
+    document.getElementById('tabUpload').classList.toggle('active', tab === 'upload');
+    document.getElementById('sig-draw-area').style.display = tab === 'draw' ? 'block' : 'none';
+    document.getElementById('sig-upload-area').style.display = tab === 'upload' ? 'block' : 'none';
+}
+
+function previewSignature(input) {
+    const file = input.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('sigPreview').innerHTML = `<img src="${e.target.result}" style="max-width:100%; max-height:100%;">`;
+            signatureData = e.target.result; // Store for submission
+        }
+        reader.readAsDataURL(file);
+    }
+}
+
+function initiateApproval() {
+    document.getElementById('defaultActions').style.display = 'none';
+    document.getElementById('signatureSection').style.display = 'block';
+    document.getElementById('signatureActions').style.display = 'flex';
+
+    // Auto-load stored signature if available and canvas is empty
+    if (userStoredSignature && !isCanvasDirty()) {
+        const img = new Image();
+        img.onload = function() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        };
+        img.src = userStoredSignature;
+    }
+}
+
+function hideSignatureSection() {
+    document.getElementById('defaultActions').style.display = 'flex';
+    document.getElementById('signatureSection').style.display = 'none';
+    document.getElementById('signatureActions').style.display = 'none';
+}
+
+function isCanvasDirty() {
+    const blank = document.createElement('canvas');
+    blank.width = canvas.width;
+    blank.height = canvas.height;
+    return canvas.toDataURL() !== blank.toDataURL();
+}
+
+async function submitApproval() {
+    // Determine which signature to use
+    const isDraw = document.getElementById('tabDraw').classList.contains('active');
+    let finalSignature = null;
+
+    if (isDraw) {
+        finalSignature = canvas.toDataURL('image/png');
+    } else {
+        finalSignature = signatureData;
+    }
+
+    if (!finalSignature) {
+        alert("Please provide a signature.");
+        return;
+    }
+
+    handleAction('approve', finalSignature);
+}
+
+async function handleAction(action, signature = null) {
     const btnApprove = document.getElementById('btnApprove');
     const btnReject = document.getElementById('btnReject');
     const button = action === 'approve' ? btnApprove : btnReject;
@@ -650,7 +837,8 @@ async function handleAction(action) {
             },
             body: JSON.stringify({
                 request_id: requestId,
-                action: action
+                action: action,
+                signature: signature
             })
         });
         
