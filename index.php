@@ -347,6 +347,12 @@
                         </svg>
                   </div>
                 </div>
+
+                <div style="text-align: right; margin-bottom: 15px;">
+                    <a href="#" onclick="$('#forgotPasswordModal').modal('show'); return false;" style="color: white; text-decoration: none; font-size: 0.9rem; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">
+                        Forgot Password?
+                    </a>
+                </div>
   
                 <button type="submit" class="btn btn-primary">Log in</button>
             </form>
@@ -356,6 +362,30 @@
 
         <!-- Toast Container -->
         <div id="toast-container"></div>
+
+        <!-- Forgot Password Modal -->
+        <div class="modal fade" id="forgotPasswordModal" tabindex="-1" role="dialog">
+            <div class="modal-dialog modal-sm" role="document">
+                <div class="modal-content" style="color: #333;">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Reset Password</h5>
+                        <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Enter your email address to receive a password reset link.</p>
+                        <form id="forgotPasswordForm">
+                            <div class="form-group">
+                                <input type="email" name="reset_email" class="form-control liquid-input" placeholder="Email Address" required>
+                            </div>
+                            <div class="text-right">
+                                <button type="button" class="btn-liquid-secondary" data-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn-liquid-success">Send Link</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <script>
             $(document).ready(function () {
@@ -393,6 +423,21 @@
                     $button.toggleClass("open");
                     $button.html(isOpen ? eyeIcons.open : eyeIcons.closed);
                     $password.attr("type", isOpen ? "password" : "text");
+                });
+
+                // Forgot Password Submission
+                $('#forgotPasswordForm').submit(function(e) {
+                    e.preventDefault();
+                    const email = $(this).find('input[name="reset_email"]').val();
+                    
+                    $.post('ajax/ajax_login.php', { action: 'forgotPassword', email: email }, function(res) {
+                        if (res.trim() === 'success') {
+                            showToast("Reset link sent to your email.", "success");
+                            $('#forgotPasswordModal').modal('hide');
+                        } else {
+                            showToast(res, "error");
+                        }
+                    }).fail(function() { showToast("Server error.", "error"); });
                 });
             });
             function loginUser() {
