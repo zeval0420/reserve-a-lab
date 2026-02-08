@@ -18,7 +18,18 @@
                 <i class="bi bi-bell-fill"></i>
                 <span class="notification-badge" id="notif-badge">0</span>
         </button>
-        <button type="button" class="btn-liquid-white" data-toggle="popover" title="<?php echo $_SESSION['username']; ?>" data-html="true" data-content='<div style="display:flex; flex-direction:column; gap:5px;"><a href="#" class="popover-link" onclick="openChangePasswordModal(); return false;"><i class="bi bi-key-fill"></i> Change Password</a><a href="helperFiles/logout.php" class="popover-link text-danger"><i class="bi bi-box-arrow-right"></i> Logout</a></div>'>
+        <?php
+            $popoverContent = '<div style="display:flex; flex-direction:column; gap:5px;">';
+            
+            if (isset($_SESSION['email']) && $_SESSION['email'] === 'admin.controller@local') {
+                $popoverContent .= '<a href="controller_dashboard.php" class="popover-link"><i class="bi bi-speedometer2"></i> Dashboard</a>';
+            }
+            
+            $popoverContent .= '<a href="#" class="popover-link" onclick="openChangePasswordModal(); return false;"><i class="bi bi-key-fill"></i> Change Password</a>';
+            $popoverContent .= '<a href="helperFiles/logout.php" class="popover-link text-danger"><i class="bi bi-box-arrow-right"></i> Logout</a>';
+            $popoverContent .= '</div>';
+        ?>
+        <button type="button" class="btn-liquid-white" data-toggle="popover" title="<?php echo $_SESSION['username']; ?>" data-html="true" data-content='<?php echo $popoverContent; ?>'>
             <i class="bi bi-person-fill"></i>
         </button>
     </div>
