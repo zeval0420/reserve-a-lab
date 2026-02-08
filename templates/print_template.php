@@ -364,7 +364,6 @@ $html = "
         </div>
         <div class='form-field w-40'>
             <label>Number of Students:</label>
-            <span class='value' style='min-width: 60pt;'>25</span>
             <span class='value' style='min-width: 60pt;'>" . count($students) . "</span>
         </div>
     </div>
@@ -485,12 +484,10 @@ $html .= "
         <div class='form-row'>
             <div class='form-field w-50'>
                 <label>Requested by:</label>
-                <span class='value' style='min-width: 140pt;'><?php echo htmlspecialchars($requesterName); ?></span>
                 <span class='value' style='min-width: 140pt;'>" . htmlspecialchars($requesterName) . "</span>
             </div>
             <div class='form-field w-50'>
                 <label>Date Requested:</label>
-                <span class='value' style='min-width: 120pt;'><?php echo htmlspecialchars($dateRequested); ?></span>
                 <span class='value' style='min-width: 120pt;'>" . htmlspecialchars($dateRequested) . "</span>
             </div>
         </div>
