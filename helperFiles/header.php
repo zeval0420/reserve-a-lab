@@ -18,7 +18,7 @@
                 <i class="bi bi-bell-fill"></i>
                 <span class="notification-badge" id="notif-badge">0</span>
         </button>
-        <button type="button" class="btn-liquid-white" data-toggle="popover" title="<?php echo $_SESSION['username']; ?>" data-html="true" data-content='<a href="helperFiles/logout.php">Logout</a>'>
+        <button type="button" class="btn-liquid-white" data-toggle="popover" title="<?php echo $_SESSION['username']; ?>" data-html="true" data-content='<div style="display:flex; flex-direction:column; gap:5px;"><a href="#" class="popover-link" onclick="openChangePasswordModal(); return false;"><i class="bi bi-key-fill"></i> Change Password</a><a href="helperFiles/logout.php" class="popover-link text-danger"><i class="bi bi-box-arrow-right"></i> Logout</a></div>'>
             <i class="bi bi-person-fill"></i>
         </button>
     </div>
@@ -88,3 +88,77 @@
         <?php endif; ?>
     </ul>
 </nav>
+
+<!-- Change Password Modal -->
+<div class="modal fade" id="changePasswordModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-sm" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Change Password</h5>
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <form id="changePasswordForm">
+                    <div class="form-group">
+                        <label>Current Password</label>
+                        <input type="password" name="current_password" class="form-control liquid-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>New Password</label>
+                        <input type="password" name="new_password" class="form-control liquid-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Confirm New Password</label>
+                        <input type="password" name="confirm_password" class="form-control liquid-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: normal; cursor: pointer; font-size: 13px;">
+                            <input type="checkbox" id="showPassToggle" style="vertical-align: middle; margin-top: -2px;"> Show Password
+                        </label>
+                    </div>
+                    <div class="text-right">
+                        <button type="button" class="btn-liquid-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn-liquid-success">Update</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function openChangePasswordModal() {
+    $('#changePasswordModal').modal('show');
+    $('[data-toggle="popover"]').popover('hide');
+}
+
+$(document).ready(function() {
+    $('#showPassToggle').change(function() {
+        const type = $(this).is(':checked') ? 'text' : 'password';
+        $('#changePasswordForm input[name*="password"]').attr('type', type);
+    });
+
+    $('#changePasswordForm').submit(function(e) {
+        e.preventDefault();
+        const newPass = $('input[name="new_password"]').val();
+        const confirmPass = $('input[name="confirm_password"]').val();
+        
+        if(newPass !== confirmPass) {
+            showToast("New passwords do not match.", "warning");
+            return;
+        }
+
+        $.post('ajax/ajax_account.php', $(this).serialize() + '&action=change_password', function(res) {
+            if(res.trim() === 'success') {
+                showToast("Password updated successfully.", "success");
+                $('#changePasswordModal').modal('hide');
+                $('#changePasswordForm')[0].reset();
+            } else {
+                showToast(res, "error");
+            }
+        }).fail(function() {
+            showToast("Server error.", "error");
+        });
+    });
+});
+</script>

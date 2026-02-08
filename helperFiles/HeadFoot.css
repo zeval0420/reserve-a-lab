@@ -776,3 +776,29 @@ select.liquid-input {
     border-color: rgba(43, 85, 196, 0.2);
     box-shadow: 0 4px 10px rgba(43, 85, 196, 0.15);
 }
+
+/* Popover Links */
+.popover-link {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    color: #333;
+    text-decoration: none;
+    transition: all 0.2s;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+}
+.popover-link:hover {
+    background-color: rgba(43, 85, 196, 0.08);
+    text-decoration: none;
+    color: #2B55C4;
+}
+.popover-link i {
+    font-size: 16px;
+    margin-right: 10px;
+}
+.popover-link.text-danger:hover {
+    color: #dc3545;
+    background-color: rgba(220, 53, 69, 0.1);
+}
