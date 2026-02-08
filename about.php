@@ -831,25 +831,28 @@
                MODAL IMPROVEMENTS
             ======================================== */
             .modal-content {
-                border-radius: var(--radius-lg);
-                border: none;
+                background: rgba(255, 255, 255, 0.95);
+                backdrop-filter: blur(16px);
+                -webkit-backdrop-filter: blur(16px);
+                border: 1px solid rgba(255, 255, 255, 0.5);
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+                border-radius: 20px;
                 overflow: hidden;
             }
 
             .modal-header {
-                background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
-                color: white;
-                border: none;
+                border-bottom: 1px solid rgba(0, 0, 0, 0.08);
                 padding: 1.5rem 2rem;
             }
 
             .modal-title {
                 font-weight: 600;
                 font-size: 1.3rem;
+                color: var(--primary-blue);
             }
 
             .modal-header .close {
-                color: white;
+                color: var(--text-dark);
                 opacity: 1;
                 font-size: 1.5rem;
                 transition: transform var(--transition-fast);

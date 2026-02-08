@@ -14,18 +14,35 @@
         <button type="button" 
                 class="btn-liquid-white" 
                 id="notif-btn"
-                data-toggle="popover" 
-                data-placement="bottom"
-                title="Notifications" 
-                data-html="true" 
-                data-content="Loading...">
+                onclick="toggleNotificationSidebar()">
                 <i class="bi bi-bell-fill"></i>
+                <span class="notification-badge" id="notif-badge">0</span>
         </button>
         <button type="button" class="btn-liquid-white" data-toggle="popover" title="<?php echo $_SESSION['username']; ?>" data-html="true" data-content='<a href="helperFiles/logout.php">Logout</a>'>
             <i class="bi bi-person-fill"></i>
         </button>
     </div>
 </header>
+
+<!-- Notification Sidebar -->
+<div class="ns-overlay" id="ns-overlay" onclick="toggleNotificationSidebar()"></div>
+<div class="notification-sidebar" id="notification-sidebar">
+    <div class="ns-header">
+        <h3 class="ns-title">Notifications</h3>
+        <button class="ns-close" onclick="toggleNotificationSidebar()">&times;</button>
+        <div style="width: 100%; margin-top: 10px; text-align: right;"><span class="ns-mark-read-btn" onclick="markNotificationsAsRead()">Mark as Read</span></div>
+    </div>
+    <div class="ns-filters">
+        <span class="ns-filter active" onclick="filterNotifications('all')">All</span>
+        <span class="ns-filter" onclick="filterNotifications('success')">Success</span>
+        <span class="ns-filter" onclick="filterNotifications('error')">Error</span>
+        <span class="ns-filter" onclick="filterNotifications('warning')">Warning</span>
+        <span class="ns-filter" onclick="filterNotifications('info')">Info</span>
+    </div>
+    <div class="ns-content" id="ns-content"></div>
+    <div class="ns-clear-btn" onclick="clearNotifications()">Clear History</div>
+</div>
+
 <nav class="main-nav">
     <div class="nav-left">
         <button type="button" class="btn-liquid" id="openCalendarBtn">
@@ -71,29 +88,3 @@
         <?php endif; ?>
     </ul>
 </nav>
-
-<?php if ($role === 'admin'): ?>
-    <script>
-        $(function () {
-            $('[data-toggle="popover"]').popover({ trigger: 'click', placement: 'bottom' });
-            $(document).click(e => {
-                $('[data-toggle="popover"]').each(function () {
-                    if (!$(this).is(e.target) && !$(this).has(e.target).length && !$('.popover').has(e.target).length)
-                        $(this).popover('hide');
-                });
-            });
-            $('#notif-btn').on('shown.bs.popover', function () {
-                const btn = $(this);
-                fetch('ajax/ajax_admin.php?action=get_pending_count')
-                    .then(res => res.text())
-                    .then(data => {
-                        const content = `
-                            <div>You have <span class="badge bg-danger">${data}</span> new requests.<br>
-                            <a href="admin_approve.php">Go to requests page</a></div>`;
-                        $('#' + btn.attr('aria-describedby')).find('.popover-content').html(content);
-                    })
-                    .catch(err => console.error('Error fetching pending count:', err));
-            });
-        });  
-    </script>
-<?php endif; ?>

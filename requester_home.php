@@ -263,8 +263,8 @@
                     method:'POST',
                     data:{ action:'get_lab_images', lab:lab },
                     dataType:'json',
-                    success:function(images){ images.length ? showGallery(images, lab) : alert('No images available.'); },
-                    error:function(){ alert('Failed to load gallery.'); }
+                    success:function(images){ images.length ? showGallery(images, lab) : showToast('No images available.', 'info'); },
+                    error:function(){ showToast('Failed to load gallery.', 'error'); }
                 });
             });
 
@@ -299,7 +299,7 @@
                         });
                     },
                     error:function(){
-                        alert('Unable to refresh laboratory schedules. Please try again.');
+                        showToast('Unable to refresh laboratory schedules. Please try again.', 'error');
                     }
                 });
             }

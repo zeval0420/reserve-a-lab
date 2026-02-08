@@ -103,6 +103,9 @@
             .btn-liquid.active .badge, .btn-liquid-success.active .badge, .btn-liquid-danger.active .badge {
                 background: rgba(255,255,255,0.2); color: white;
             }
+
+            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+            .spin { animation: spin 1s linear infinite; display: inline-block; }
         </style>
     </head>
     <body>
@@ -220,17 +223,17 @@
                                 <div id="approveDetails"></div>
                                 <div class="form-group mt-3">
                                     <label for="controlNumber">Control Number:</label>
-                                    <input type="text" class="form-control" name="controlNumber" id="controlNumber" placeholder="Enter Control Number" required>
+                                    <input type="text" class="form-control liquid-input" name="controlNumber" id="controlNumber" placeholder="Enter Control Number" required>
                                 </div>
                                 <div class="form-group">
                                     <label for="approveRemarks">Remarks:</label>
-                                    <textarea class="form-control" name="approveRemarks" id="approveRemarks" placeholder="Enter remarks (optional)"></textarea>
+                                    <textarea class="form-control liquid-input" name="approveRemarks" id="approveRemarks" placeholder="Enter remarks (optional)"></textarea>
                                 </div>
                             </div>
                             <div class="modal-footer">
                                 <input type="hidden" name="approveId" id="approveId">
-                                <button type="submit" class="btn btn-success">Confirm</button>
-                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn-liquid-success">Confirm</button>
+                                <button type="button" class="btn-liquid-secondary" data-dismiss="modal">Cancel</button>
                             </div>
                         </form>
                     </div>
@@ -249,12 +252,12 @@
                             <div id="rejectSummaryContent"></div>
                             <div class="form-group mt-3">
                                 <label for="rejectionFeedback"><strong>Reason for Rejection:</strong></label>
-                                <textarea id="rejectionFeedback" class="form-control" rows="3" required></textarea>
+                                <textarea id="rejectionFeedback" class="form-control liquid-input" rows="3" required></textarea>
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-danger" id="confirmReject">Yes, Reject</button>
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn-liquid-danger" id="confirmReject">Yes, Reject</button>
+                            <button type="button" class="btn-liquid-secondary" data-dismiss="modal">Cancel</button>
                         </div>
                     </div>
                 </div>
@@ -271,29 +274,29 @@
                         <div class="modal-body">
                             <div class="form-group text-center">
                                 <label><strong>Quick Select Timeframe</strong></label>
-                                <div class="btn-group" role="group">
-                                    <button type="button" class="btn btn-outline-primary date-range-btn" data-range="week">Past Week</button>
-                                    <button type="button" class="btn btn-outline-primary date-range-btn" data-range="month">Past Month</button>
-                                    <button type="button" class="btn btn-outline-primary date-range-btn" data-range="3-months">Past 3 Months</button>
-                                    <button type="button" class="btn btn-outline-primary date-range-btn" data-range="year">Past Year</button>
+                                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                                    <button type="button" class="btn-liquid date-range-btn" data-range="week">Past Week</button>
+                                    <button type="button" class="btn-liquid date-range-btn" data-range="month">Past Month</button>
+                                    <button type="button" class="btn-liquid date-range-btn" data-range="3-months">Past 3 Months</button>
+                                    <button type="button" class="btn-liquid date-range-btn" data-range="year">Past Year</button>
                                 </div>
                             </div>
                             <hr>
                             <div class="form-group row">
                                 <div class="col-md-6">
                                     <label for="startDate"><strong>Or Select Manually:</strong> Start Date</label>
-                                    <input type="date" class="form-control" id="startDate">
+                                    <input type="date" class="form-control liquid-input" id="startDate">
                                 </div>
                                 <div class="col-md-6">
                                     <label for="endDate">End Date</label>
-                                    <input type="date" class="form-control" id="endDate">
+                                    <input type="date" class="form-control liquid-input" id="endDate">
                                 </div>
                             </div>
                             <div id="summaryContent"></div>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-                            <button type="button" class="btn btn-primary" id="generateSummary">Generate Summary</button>
+                            <button type="button" class="btn-liquid-secondary" data-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn-liquid" id="generateSummary">Generate Summary</button>
                         </div>
                 </div>
             </div>
@@ -348,12 +351,12 @@
                 const remarks = $('#approveRemarks').val().trim();
 
                 if (control === '') {
-                    alert('Control Number required.');
+                    showToast('Control Number required.', 'warning');
                     return;
                 }
 
                 $.post('ajax/ajax_admin_action.php', { action: 'approve', id: id, controlNumber: control, remarks: remarks }, function (response) {
-                    alert(response);
+                    showToast(response, response.toLowerCase().includes('approved') ? 'success' : 'error');
                     location.reload();
                 });
             });
@@ -376,12 +379,12 @@
                 const id = $(this).data('id');
                 const feedback = $('#rejectionFeedback').val().trim();
                 if (feedback === '') {
-                    alert('Please provide feedback.');
+                    showToast('Please provide feedback.', 'warning');
                     return;
                 }
 
                 $.post('ajax/ajax_admin_action.php', { action: 'reject', id: id, feedback: feedback }, function (response) {
-                    alert(response);
+                    showToast(response, response.toLowerCase().includes('rejected') ? 'success' : 'error');
                     location.reload();
                 });
             });
@@ -441,25 +444,28 @@
 
                 // Basic validation
                 if (!startDate || !endDate) {
-                    alert('Please select both start and end dates.');
+                    showToast('Please select both start and end dates.', 'warning');
                     return;
                 }
 
                 if (new Date(startDate) > new Date(endDate)) {
-                    alert('Start date cannot be after the end date.');
+                    showToast('Start date cannot be after the end date.', 'warning');
                     return;
                 }
 
+                const $btn = $(this);
+                const originalText = $btn.html();
+
                 // Show a loading state and disable the button
                 $('#summaryContent').html('<p class="text-center mt-3">Generating summary, please wait...</p>');
-                $(this).prop('disabled', true);
+                $btn.prop('disabled', true).html('<i class="bi bi-arrow-repeat spin"></i> Generating...');
 
                 $.post('ajax/ajax_admin_action.php', {
                     action: 'generate_summary',
                     startDate: startDate,
                     endDate: endDate
                 }, function (response) {
-                    $('#generateSummary').prop('disabled', false); // Re-enable button
+                    $btn.prop('disabled', false).html(originalText); // Re-enable button
                     // jQuery automatically parses the JSON response, so we can use it directly.
                     // The 'response' variable is already an object.
                     if (response && response.success) {
@@ -482,7 +488,7 @@
                         }
 
                         if (hasItems) {
-                            const printButtonHtml = '<div class="text-right mb-3"><button type="button" class="btn btn-info" id="printSummary">Print Report</button></div>';
+                            const printButtonHtml = '<div class="text-right mb-3"><button type="button" class="btn-liquid-info" id="printSummary">Print Report</button></div>';
                             $('#summaryContent').html(printButtonHtml + content);
                         } else {
                             $('#summaryContent').html('<p class="text-center mt-3">No items were used in the selected date range.</p>');
@@ -492,7 +498,7 @@
                         $('#summaryContent').html(`<p class="text-danger mt-3">Error: ${response.message || 'Could not generate summary.'}</p>`);
                     }
                 }).fail(function() {
-                    $('#generateSummary').prop('disabled', false);
+                    $btn.prop('disabled', false).html(originalText);
                     $('#summaryContent').html('<p class="text-danger mt-3">Error: Could not connect to the server.</p>');
                 });
             });
@@ -505,11 +511,11 @@
 
                 // Check if dates are selected and a summary has been generated
                 if (!startDate || !endDate) {
-                    alert('Please select a date range before printing.');
+                    showToast('Please select a date range before printing.', 'warning');
                     return;
                 }
                 if (!summaryContent || !summaryContent.includes('<table')) {
-                    alert('Please generate a summary before printing.');
+                    showToast('Please generate a summary before printing.', 'warning');
                     return;
                 }
 

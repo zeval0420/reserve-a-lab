@@ -59,8 +59,41 @@
             body { background-color: #f5f5f5; }
             .form-container { background-color: #fff; padding: 25px; margin: 25px auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); width: 98%; }
             .inventory-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-            .tab { background-color: #e0e0e0; color: #333; padding: 8px 16px; border-radius: 5px; cursor: pointer; }
-            .tab.active { background-color: #2B55C4; color: white; }
+            .tabs { display: flex; gap: 10px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px; -webkit-overflow-scrolling: touch; }
+            .tabs::-webkit-scrollbar { height: 6px; }
+            .tabs::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 10px; }
+            
+            .tab { 
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                padding: 8px 20px;
+                border-radius: 20px;
+                font-weight: 600;
+                font-size: 13px;
+                cursor: pointer;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                border: 1px solid rgba(43, 85, 196, 0.2);
+                background: linear-gradient(135deg, rgba(43, 85, 196, 0.05), rgba(43, 85, 196, 0.15));
+                color: #2B55C4;
+                backdrop-filter: blur(8px);
+                -webkit-backdrop-filter: blur(8px);
+                box-shadow: 0 4px 12px rgba(43, 85, 196, 0.1);
+                white-space: nowrap;
+                flex-shrink: 0;
+            }
+            .tab:hover {
+                background: linear-gradient(135deg, rgba(43, 85, 196, 0.1), rgba(43, 85, 196, 0.25));
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px rgba(43, 85, 196, 0.2);
+                color: #1a3a8f;
+                border-color: rgba(43, 85, 196, 0.3);
+            }
+            .tab.active { 
+                background: #2B55C4; 
+                color: white; 
+                border-color: #2B55C4;
+            }
             table.inventory-table { width: 100%; border-collapse: collapse; }
             table.inventory-table th { background-color: #2B55C4; color: #fff; padding: 10px; text-align: left; font-size: 13px; }
             table.inventory-table td { padding: 8px; border-bottom: 1px solid #eee; font-size: 13px; }
@@ -170,27 +203,27 @@
                         <form id="addProductForm">
                             <div class="form-group">
                                 <label>Classification</label>
-                                <select class="form-control" name="classification" required></select>
+                                <select class="form-control liquid-input" name="classification" required></select>
                             </div>
                             <div class="form-group">
                                 <label>Product Name</label>
-                                <input type="text" class="form-control" name="item" required>
+                                <input type="text" class="form-control liquid-input" name="item" required>
                             </div>
                             <div class="form-group">
                                 <label>Product ID</label>
-                                <input type="text" class="form-control" name="productID" required>
+                                <input type="text" class="form-control liquid-input" name="productID" required>
                             </div>
                             <div class="form-group">
                                 <label>Description</label>
-                                <input type="text" class="form-control" name="description" required>
+                                <input type="text" class="form-control liquid-input" name="description" required>
                             </div>
                             <div class="form-group">
                                 <label>Quantity</label>
-                                <input type="number" class="form-control" name="quantity" min="1" required>
+                                <input type="number" class="form-control liquid-input" name="quantity" min="1" required>
                             </div>
                             <div class="form-group">
                                 <label>Quantity Unit</label>
-                                <select class="form-control" name="unit" required>
+                                <select class="form-control liquid-input" name="unit" required>
                                     <option value="">Select Unit</option>
                                     <option value="pieces">pieces</option>
                                     <option value="mL">mL</option>
@@ -200,7 +233,7 @@
                             </div>
                             <div class="form-group">
                                 <label>Status</label>
-                                <select class="form-control" name="status" required>
+                                <select class="form-control liquid-input" name="status" required>
                                     <option value="">Select Status</option>
                                     <option value="Available">Available</option>
                                     <option value="Out of Stock">Out of Stock</option>
@@ -209,8 +242,8 @@
                         </form>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                        <button type="button" class="btn btn-success" id="saveProductBtn">Add</button>
+                        <button type="button" class="btn-liquid-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn-liquid-success" id="saveProductBtn">Add</button>
                     </div>
                 </div>
             </div>
@@ -229,27 +262,27 @@
                             <input type="hidden" name="id">
                             <div class="form-group">
                                 <label>Classification</label>
-                                <select class="form-control" name="classification" required></select>
+                                <select class="form-control liquid-input" name="classification" required></select>
                             </div>
                             <div class="form-group">
                                 <label>Product Name</label>
-                                <input type="text" class="form-control" name="item" required>
+                                <input type="text" class="form-control liquid-input" name="item" required>
                             </div>
                             <div class="form-group">
                                 <label>Product ID</label>
-                                <input type="text" class="form-control" name="productID" required>
+                                <input type="text" class="form-control liquid-input" name="productID" required>
                             </div>
                             <div class="form-group">
                                 <label>Description</label>
-                                <input type="text" class="form-control" name="description" required>
+                                <input type="text" class="form-control liquid-input" name="description" required>
                             </div>
                             <div class="form-group">
                                 <label>Quantity</label>
-                                <input type="number" class="form-control" name="quantity" min="1" required>
+                                <input type="number" class="form-control liquid-input" name="quantity" min="1" required>
                             </div>
                             <div class="form-group">
                                 <label>Quantity Unit</label>
-                                <select class="form-control" name="unit" required>
+                                <select class="form-control liquid-input" name="unit" required>
                                     <option value="pieces">pieces</option>
                                     <option value="mL">mL</option>
                                     <option value="grams">grams</option>
@@ -258,7 +291,7 @@
                             </div>
                             <div class="form-group">
                                 <label>Status</label>
-                                <select class="form-control" name="status" required>
+                                <select class="form-control liquid-input" name="status" required>
                                     <option value="Available">Available</option>
                                     <option value="Out of Stock">Out of Stock</option>
                                 </select>
@@ -266,8 +299,8 @@
                         </form>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                        <button type="button" class="btn btn-success" id="saveEditBtn">Save Changes</button>
+                        <button type="button" class="btn-liquid-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn-liquid-success" id="saveEditBtn">Save Changes</button>
                     </div>
                 </div>
             </div>
@@ -276,8 +309,8 @@
         <!-- Barcode Scanner Modal (compact vertically) -->
         <div class="modal fade" id="barcodeScannerModal" tabindex="-1" role="dialog" aria-labelledby="barcodeScannerModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
-                <div class="modal-content" style="border-radius: 10px;">
-                    <div class="modal-header bg-success text-white py-2">
+                <div class="modal-content">
+                    <div class="modal-header py-2">
                         <h5 class="modal-title" id="barcodeScannerModalLabel">📷 Scan Product Barcode</h5>
                         <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
                     </div>
@@ -289,7 +322,7 @@
                         <p style="margin-top:8px;"><strong>Detected Code:</strong> <span id="result">None</span></p>
                     </div>
                     <div class="modal-footer p-2 justify-content-center">
-                        <button id="stopScannerBtn" class="btn btn-danger btn-sm">Stop Scanner</button>
+                        <button id="stopScannerBtn" class="btn-liquid-danger">Stop Scanner</button>
                     </div>
                 </div>
             </div>
@@ -315,8 +348,8 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                        <button type="button" class="btn btn-primary" id="processImportBtn">Start Import</button>
+                        <button type="button" class="btn-liquid-secondary" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn-liquid" id="processImportBtn">Start Import</button>
                     </div>
                 </div>
             </div>
@@ -329,8 +362,8 @@
                     <div class="modal-header"><h5>Confirm Remove</h5></div>
                     <div class="modal-body">Are you sure you want to remove this item?</div>
                     <div class="modal-footer">
-                        <button class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                        <button class="btn btn-danger" id="confirmRemoveBtn">Remove</button>
+                        <button class="btn-liquid-secondary" data-dismiss="modal">Cancel</button>
+                        <button class="btn-liquid-danger" id="confirmRemoveBtn">Remove</button>
                     </div>
                 </div>
             </div>
@@ -438,7 +471,7 @@
                     if (res.trim() === 'success') {
                         $('tr[data-id="' + removeId + '"]').remove();
                         $('#confirmRemoveModal').modal('hide');
-                    } else alert('Failed to remove item.');
+                    } else showToast('Failed to remove item.', 'error');
                 });
             });
 
@@ -457,9 +490,9 @@
 
                 $.post('ajax/ajax_inventory.php', formData, function (res) {
                     if (res.trim() === 'success') {
-                        alert('Product added successfully');
+                        showToast('Product added successfully', 'success');
                         location.reload();
-                    } else alert('Failed to add product');
+                    } else showToast('Failed to add product', 'error');
                 });
             });
 
@@ -489,7 +522,7 @@
 
                 $.post('ajax/ajax_inventory.php', { ...newData, action: 'update_inventory' }, function (res) {
                     if (res.trim() === 'success') {
-                        alert('Record successfully updated');
+                        showToast('Record successfully updated', 'success');
 
                         const row = $('tr[data-id="' + newData.id + '"]');
                         row.find('td:eq(0)').text(newData.item);
@@ -503,7 +536,7 @@
                         if (index !== -1) allInventory[currentType][index] = { ...newData };
 
                         $('#editProductModal').modal('hide');
-                    } else alert('Failed to update record');
+                    } else showToast('Failed to update record', 'error');
                 });
             });
 
@@ -519,7 +552,7 @@
             $('#processImportBtn').click(function () {
                 const fileInput = document.getElementById('csvFile');
                 if (!fileInput.files.length) {
-                    alert('Please select a CSV file.');
+                    showToast('Please select a CSV file.', 'warning');
                     return;
                 }
 
@@ -530,7 +563,7 @@
                     const text = e.target.result;
                     const rows = parseCSV(text);
                     if (rows.length === 0) {
-                        alert('No valid data found or empty file.');
+                        showToast('No valid data found or empty file.', 'warning');
                         return;
                     }
                     processBulkData(rows);
@@ -586,7 +619,7 @@
                     $('.progress-bar').css('width', pct + '%').text(pct + '%');
                 }
 
-                alert(`Import Complete.\nSuccess: ${success}\nFailed: ${failed}`);
+                showToast(`Import Complete. Success: ${success}, Failed: ${failed}`, 'info', 5000);
                 location.reload();
             }
 
@@ -634,7 +667,7 @@
                     // Helper to create input safely
                     const mkInput = (val, name, type='text') => {
                         const safeVal = val.replace(/"/g, '&quot;');
-                        return `<input type="${type}" class="form-control form-control-sm" name="${name}" value="${safeVal}" style="min-width: 80px;">`;
+                        return `<input type="${type}" class="form-control form-control-sm liquid-input" name="${name}" value="${safeVal}" style="min-width: 80px;">`;
                     };
                     
                     cells.eq(0).html(mkInput(cells.eq(0).text(), 'item'));
@@ -645,12 +678,12 @@
                     const unitVal = cells.eq(4).text();
                     const units = ['pieces', 'mL', 'grams', 'boxes'];
                     let unitOpts = units.map(u => `<option value="${u}" ${u === unitVal ? 'selected' : ''}>${u}</option>`).join('');
-                    cells.eq(4).html(`<select class="form-control form-control-sm" name="unit">${unitOpts}</select>`);
+                    cells.eq(4).html(`<select class="form-control form-control-sm liquid-input" name="unit">${unitOpts}</select>`);
 
                     const statusVal = cells.eq(5).text();
                     const statuses = ['Available', 'Out of Stock'];
                     let statusOpts = statuses.map(s => `<option value="${s}" ${s === statusVal ? 'selected' : ''}>${s}</option>`).join('');
-                    cells.eq(5).html(`<select class="form-control form-control-sm" name="status">${statusOpts}</select>`);
+                    cells.eq(5).html(`<select class="form-control form-control-sm liquid-input" name="status">${statusOpts}</select>`);
 
                     // Hide action buttons
                     cells.eq(6).find('button').hide();
@@ -687,7 +720,7 @@
                 });
 
                 if (updates.length === 0) {
-                    alert("No changes to save.");
+                    showToast("No changes to save.", 'info');
                     exitEditMode();
                     return;
                 }
@@ -697,7 +730,7 @@
                 // Process updates sequentially or in parallel. Parallel is faster.
                 await Promise.all(updates.map(data => $.post('ajax/ajax_inventory.php', data)));
                 
-                alert('Changes saved.');
+                showToast('Changes saved.', 'success');
                 location.reload();
             }
 
@@ -774,7 +807,7 @@
                     }, function (err) {
                         if (err) {
                             console.error('Quagga init error:', err);
-                            alert("Error initializing scanner: " + (err.message || err));
+                            showToast("Error initializing scanner: " + (err.message || err), 'error');
                             scannerActive = false;
                             return;
                         }
@@ -864,7 +897,7 @@
                 if (foundItem) {
                     // Product exists — highlight in table
                     $('#barcodeScannerModal').modal('hide');
-                    alert("Item found: " + foundItem.item);
+                    showToast("Item found: " + foundItem.item, 'success');
 
                     // Switch tab if necessary
                     if (foundItem.classification !== currentType) {

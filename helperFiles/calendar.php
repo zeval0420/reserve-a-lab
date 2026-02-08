@@ -21,13 +21,16 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: white;
-            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 20px;
             width: 95%;
             max-width: 1200px;
             max-height: 90vh; /* limit height to viewport */
             z-index: 99;
-            box-shadow: 0 0 15px rgba(0,0,0,0.3);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
             flex-direction: column;
         }
 
@@ -37,7 +40,7 @@
             justify-content: space-between;
             align-items: center;
             padding: 10px 15px;
-            border-bottom: 1px solid #ddd;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
         }
 
         #calendarHeader h2 {
@@ -142,7 +145,7 @@
 
             error: function(xhr) {
                 console.log("AJAX Error:", xhr.responseText);
-                alert("There was an error in opening the calendar.");
+                showToast("There was an error in opening the calendar.", 'error');
             }
         });
     });

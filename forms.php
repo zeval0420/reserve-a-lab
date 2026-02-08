@@ -172,15 +172,89 @@
                 box-shadow: 0 8px 20px rgba(43, 85, 196, 0.2); border-color: rgba(43, 85, 196, 0.4) !important; outline: 0;
             }
             button.multiselect .caret { margin-left: auto; }
-            .multiselect-container { width: 100%; border: 1px solid #ced4da; border-radius: 4px; box-shadow: none; margin-top: 2px; padding: 5px 0; }
-            .multiselect-container { width: 100%; border: 1px solid #ced4da; border-radius: 4px; box-shadow: none; margin-top: 2px; padding: 5px 0; max-height: 300px; overflow-y: auto; }
+            .multiselect-container {
+                width: 100%;
+                background: rgba(255, 255, 255, 0.95) !important;
+                backdrop-filter: blur(16px);
+                -webkit-backdrop-filter: blur(16px);
+                border: 1px solid rgba(43, 85, 196, 0.2) !important;
+                border-radius: 15px !important;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15) !important;
+                margin-top: 5px !important;
+                padding: 8px 0;
+                max-height: 300px;
+                overflow-y: auto;
+            }
             .multiselect-container > li { margin-bottom: 2px; }
             .multiselect-container > li > a > label {
                 padding: 2px 15px; width: 100%; cursor: pointer; font-weight: normal; margin: 0;
             }
-            .multiselect-container > li > a { margin: 0 5px; border-radius: 5px; }
+            .multiselect-container > li > a { margin: 0 5px; border-radius: 8px; transition: all 0.2s; }
+            .multiselect-container > li > a:hover { background-color: rgba(43, 85, 196, 0.1); color: #2B55C4; }
             .multiselect-container > li.active > a {
-                background-color: var(--main-blue) !important; color: white;
+                background: linear-gradient(135deg, rgba(43, 85, 196, 0.8), rgba(43, 85, 196, 0.9)) !important;
+                color: white !important;
+                box-shadow: 0 4px 10px rgba(43, 85, 196, 0.3);
+            }
+            
+            /* Custom Checkbox Style inside Dropdown */
+            .multiselect-container input[type="checkbox"] {
+                appearance: none;
+                -webkit-appearance: none;
+                width: 18px;
+                height: 18px;
+                border: 2px solid #2B55C4;
+                border-radius: 5px;
+                margin-right: 10px;
+                position: relative;
+                cursor: pointer;
+                vertical-align: middle;
+                margin-top: 0;
+                background-color: rgba(255, 255, 255, 0.5);
+                transition: all 0.2s ease;
+            }
+
+            @keyframes pulse-blue {
+                0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(43, 85, 196, 0.7); }
+                70% { transform: scale(1.15); box-shadow: 0 0 0 4px rgba(43, 85, 196, 0); }
+                100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(43, 85, 196, 0); }
+            }
+            
+            .multiselect-container input[type="checkbox"]:checked {
+                background-color: #2B55C4;
+                border-color: #2B55C4;
+                animation: pulse-blue 0.4s ease-out;
+            }
+            
+            .multiselect-container input[type="checkbox"]:checked::after {
+                content: '';
+                position: absolute;
+                left: 5px;
+                top: 1px;
+                width: 5px;
+                height: 10px;
+                border: solid white;
+                border-width: 0 2px 2px 0;
+                transform: rotate(45deg);
+            }
+            
+            /* Ensure label text aligns nicely with custom checkbox */
+            .multiselect-container > li > a > label {
+                display: flex !important;
+                align-items: center;
+                padding: 8px 15px !important;
+            }
+            
+            /* Invert colors for active state row */
+            .multiselect-container > li.active > a input[type="checkbox"] {
+                border-color: rgba(255, 255, 255, 0.8);
+            }
+            .multiselect-container > li.active > a input[type="checkbox"]:checked {
+                background-color: white;
+                border-color: white;
+            }
+            .multiselect-container > li.active > a input[type="checkbox"]:checked::after {
+                border-color: #2B55C4;
             }
 
             .liquid-input {
@@ -644,7 +718,7 @@
                 // Check that section field is filled
                 const selectedSections = $('#sections-checkboxes').val();
                 if (!selectedSections || selectedSections.length === 0) {
-                    alert("Please select at least one section.");
+                    showToast("Please select at least one section.", 'warning');
                     $('#sections-checkboxes').focus();
                     return false;
                 }
@@ -652,7 +726,7 @@
                 // Check that teacher field is filled
                 const selectedTeachers = $('#teacher-checkboxes').val();
                 if (!selectedTeachers || selectedTeachers.length === 0) {
-                    alert("Please select at least one teacher.");
+                    showToast("Please select at least one teacher.", 'warning');
                     return false;
                 }
 
@@ -790,7 +864,7 @@
                     contentType: false,
                     success: function(res) {
                         if (res.trim() === "success") {
-                            alert("Request submitted successfully!");
+                            showToast("Request submitted successfully!", 'success');
                             resetForm();
                             location.reload();
                         } else if (res === "conflict") {
@@ -805,7 +879,7 @@
                         }
                     },
                     error: function() {
-                        alert("Request submitted successfully");
+                        showToast("Error submitting request.", 'error');
                         console.log("Error submitting request.");
                         console.error("AJAX error:", status, error);
                         resetForm();
@@ -830,7 +904,7 @@
                 const start = $('input[name="start_time"]').val();
                 const end = $('input[name="end_time"]').val();
                 if (start && end && start >= end) {
-                    alert("End time must be later than start time.");
+                    showToast("End time must be later than start time.", 'warning');
                     $('input[name="end_time"]').val('');
                 }
             });
@@ -878,7 +952,7 @@
             // add student row
             $('#add-student-btn').click(function() {
                 const grade = $('#grade_select').val();
-                if (!grade) return alert("Please select a grade level first.");
+                if (!grade) return showToast("Please select a grade level first.", 'warning');
                 populateStudentDropdownsByGrade(grade);
                 const row = $(`
                     <tr>
@@ -896,7 +970,7 @@
             const sessionDate = "<?php echo $_SESSION['selected_date'] ?? ''; ?>";
 
             function dateInputHandler() {
-                if(currentDisabledDates.includes(this.value)) { alert('This date is unavailable for the selected venue.'); this.value=''; }
+                if(currentDisabledDates.includes(this.value)) { showToast('This date is unavailable for the selected venue.', 'warning'); this.value=''; }
             }
 
             document.addEventListener('DOMContentLoaded', function() {
@@ -910,7 +984,7 @@
 
             function loadDisabledDates(scilabName) {
                 $.post('ajax/ajax_forms.php', { action:'get_disabled_dates', scilabName }, function(dates) { currentDisabledDates = dates; }, 'json')
-                .fail((xhr,status,error) => alert('Failed to load disabled dates: '+error));
+                .fail((xhr,status,error) => showToast('Failed to load disabled dates: '+error, 'error'));
             }
         });
 

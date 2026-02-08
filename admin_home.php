@@ -252,13 +252,13 @@
                             <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
                         </div>
                         <div class="modal-body">
-                            <div class="form-group"><label>Lab Name:</label><input type="text" name="lab_name" class="form-control" required></div>
-                            <div class="form-group"><label>Location:</label><input type="text" name="lab_location" class="form-control" required></div>
-                            <div class="form-group"><label>Upload Lab Image (JPG only):</label><input type="file" name="lab_image" class="form-control" accept=".jpg,.jpeg" required></div>
+                            <div class="form-group"><label>Lab Name:</label><input type="text" name="lab_name" class="form-control liquid-input" required></div>
+                            <div class="form-group"><label>Location:</label><input type="text" name="lab_location" class="form-control liquid-input" required></div>
+                            <div class="form-group"><label>Upload Lab Image (JPG only):</label><input type="file" name="lab_image" class="form-control liquid-input" accept=".jpg,.jpeg" required></div>
                         </div>
                         <div class="modal-footer">
-                            <button class="btn btn-primary" type="submit">Add Lab</button>
-                            <button class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                            <button class="btn-liquid-success" type="submit">Add Lab</button>
+                            <button class="btn-liquid-secondary" data-dismiss="modal">Cancel</button>
                         </div>
                     </form>
                 </div>
@@ -275,8 +275,8 @@
                         <div class="modal-body">Are you sure you want to remove this science laboratory?</div>
                         <div class="modal-footer">
                             <input type="hidden" id="removeScilabId">
-                            <button class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                            <button class="btn btn-danger" onclick="confirmRemoveScilab()">Yes</button>
+                            <button class="btn-liquid-secondary" data-dismiss="modal">Cancel</button>
+                            <button class="btn-liquid-danger" onclick="confirmRemoveScilab()">Yes</button>
                         </div>
                     </div>
                 </div>
@@ -293,17 +293,17 @@
                         <div class="modal-body">
                             <input type="hidden" name="lab_id" id="editLabId">
                             <input type="hidden" name="lab_old_name" id="editLabOldName">
-                            <div class="form-group"><label>Lab Name:</label><input type="text" name="lab_name" id="editLabName" class="form-control" required></div>
-                            <div class="form-group"><label>Location:</label><input type="text" name="lab_location" id="editLabLocation" class="form-control" required></div>
+                            <div class="form-group"><label>Lab Name:</label><input type="text" name="lab_name" id="editLabName" class="form-control liquid-input" required></div>
+                            <div class="form-group"><label>Location:</label><input type="text" name="lab_location" id="editLabLocation" class="form-control liquid-input" required></div>
                             <div class="form-group">
                                 <label>Upload New Image (JPG only):</label>
-                                <input type="file" name="lab_image" id="labImage" class="form-control" accept=".jpg,.jpeg">
+                                <input type="file" name="lab_image" id="labImage" class="form-control liquid-input" accept=".jpg,.jpeg">
                                 <small class="text-muted">If uploaded, this will replace the current image.</small>
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button class="btn btn-primary" type="submit">Save</button>
-                            <button class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                            <button class="btn-liquid-success" type="submit">Save</button>
+                            <button class="btn-liquid-secondary" data-dismiss="modal">Cancel</button>
                         </div>
                     </form>
                 </div>
@@ -313,9 +313,9 @@
             <div class="modal fade" id="editGalleryModal" tabindex="-1">
                 <div class="modal-dialog modal-lg modal-dialog-centered">
                     <div class="modal-content shadow-lg rounded">
-                        <div class="modal-header bg-primary text-white">
+                        <div class="modal-header">
                             <h5 class="modal-title"><i class="fas fa-images me-2"></i>Edit Lab Gallery</h5>
-                            <button class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+                            <button class="close" data-dismiss="modal"><span>&times;</span></button>
                         </div>
                         <div class="modal-body">
                             <form id="galleryEditForm" enctype="multipart/form-data">
@@ -401,7 +401,7 @@
                 const lab = $(this).data('lab'), main = `img/labimages/${lab}.jpg`;
                 $.post('ajax/ajax_admin.php', { action: 'get_lab_images', lab }, imgs => {
                     imgs.length ? showGallery(imgs, lab) : showGallery([main], lab, true);
-                }, 'json').fail(() => alert('Failed to load gallery.'));
+                }, 'json').fail(() => showToast('Failed to load gallery.', 'error'));
             });
 
             // Gallery controls
@@ -422,19 +422,19 @@
                     lbl.text(avail ? 'Available' : 'Not Available')
                     .css('color', avail ? '#28a745' : 'red');
                 });
-            }).fail(() => alert('Failed to fetch availability data.'));
+            }).fail(() => showToast('Failed to fetch availability data.', 'error'));
         });
 
         // ===== Edit Laboratory =====
         function openEditModal(lab) {
             $.post('ajax/ajax_admin.php', { action: 'get_lab_details', lab_id: lab }, data => {
-                if (!data) return alert('Failed to fetch lab details.');
+                if (!data) return showToast('Failed to fetch lab details.', 'error');
                 $('#editLabOldName').val(lab);
                 $('#editLabName').val(data.oldName);
                 $('#editLabLocation').val(data.location);
                 $('#labImage').val('');
                 $('#editLabModal').modal('show');
-            }, 'json').fail(() => alert('Error fetching lab details.'));
+            }, 'json').fail(() => showToast('Error fetching lab details.', 'error'));
         }
         $('#editLabForm').submit(e => {
             e.preventDefault();
@@ -445,8 +445,8 @@
                 contentType: false, processData: false,
                 success: res => {
                     res = res.trim();
-                    if (res !== 'success') return alert('Update failed: ' + res);
-                    alert('Lab updated successfully!');
+                    if (res !== 'success') return showToast('Update failed: ' + res, 'error');
+                    showToast('Lab updated successfully!', 'success');
                     $('#editLabModal').modal('hide');
                     const newName = $('#editLabName').val().trim(),
                         oldName = $('#editLabOldName').val().trim(),
@@ -472,7 +472,7 @@
                 newState = chk.checked ? 'Available' : 'Not Available';
             $.post('ajax/ajax_admin.php', { scilabName: name, availability: newState }, () => {
                 label.text(newState).css('color', chk.checked ? '#28a745' : 'red');
-            }).fail(() => alert('Failed to update availability.'));
+            }).fail(() => showToast('Failed to update availability.', 'error'));
         }
 
         // ===== Add and Remove Labs =====
@@ -484,10 +484,10 @@
                 url: 'ajax/ajax_admin.php', method: 'POST', data: fd,
                 contentType: false, processData: false,
                 success: res => {
-                    alert(res.trim() === 'Success' ? 'Lab added successfully!' : res);
+                    showToast(res.trim() === 'Success' ? 'Lab added successfully!' : res, res.trim() === 'Success' ? 'success' : 'error');
                     location.reload();
                 },
-                error: () => alert('Error adding lab.')
+                error: () => showToast('Error adding lab.', 'error')
             });
         });
         function openRemoveModal(id) {
@@ -497,8 +497,8 @@
         function confirmRemoveScilab() {
             const id = $('#removeScilabId').val();
             $.post('ajax/ajax_admin.php', { action: 'remove_scilab', scilabName: id }, res => {
-                res.trim() === 'Success' ? location.reload() : alert('Failed: ' + res);
-            }).fail(() => alert('Failed to send remove request.'));
+                res.trim() === 'Success' ? location.reload() : showToast('Failed: ' + res, 'error');
+            }).fail(() => showToast('Failed to send remove request.', 'error'));
         }
 
         // ===== Edit Gallery =====
@@ -532,7 +532,7 @@
                 url: 'ajax/ajax_admin.php', method: 'POST', data: fd,
                 contentType: false, processData: false,
                 success: () => {
-                    alert('Images uploaded!');
+                    showToast('Images uploaded!', 'success');
                     $('#editGalleryModal').modal('hide');
                 }
             });
@@ -562,13 +562,13 @@
                 color: newColor
             }, res => {
                 if (res.trim() !== 'success') {
-                    alert('Failed to update color')
+                    showToast('Failed to update color', 'error')
                     picker.val(oldColor)
                 } else {
                     picker.data('old', newColor)
                 }
             }).fail(() => {
-                alert('Server error')
+                showToast('Server error', 'error')
                 picker.val(oldColor)
             })
         })
