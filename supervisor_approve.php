@@ -62,8 +62,19 @@ include('helperFiles/header.php');
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background-image: linear-gradient(rgba(0,0,0,0.45),rgba(0,0,0,0.45)),url(img/background.jpg);
+    background-position: center;
+    background-size: cover;
+    background-attachment: fixed;
+    color: #ffffff;
     min-height: 100vh;
+}
+
+/* Navbar readability */
+.navbar {
+    background: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 
 .container {
@@ -128,9 +139,11 @@ body {
     justify-content: center;
     font-size: 18px;
     font-weight: 700;
+    background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     border: 2px solid rgba(255, 255, 255, 0.3);
+    color: rgba(255, 255, 255, 0.4);
     margin-bottom: 12px;
     transition: all 0.3s ease;
 }
@@ -138,20 +151,22 @@ body {
 .step-pending .step-icon {
     background: rgba(245, 158, 11, 0.3);
     color: #fef3c7;
+    border-color: rgba(245, 158, 11, 0.5);
     box-shadow: 0 0 16px rgba(245, 158, 11, 0.3);
 }
 
 .step-approved .step-icon {
     background: rgba(34, 197, 94, 0.35);
     color: #dcfce7;
+    border-color: rgba(34, 197, 94, 0.5);
     box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
 }
 
 .step-locked .step-icon {
     background: rgba(148, 163, 184, 0.25);
     color: rgba(255, 255, 255, 0.4);
-    box-shadow: none;
     border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: none;
 }
 
 .step-label {
@@ -182,16 +197,19 @@ body {
 .step-pending .step-status {
     background: rgba(245, 158, 11, 0.2);
     color: #fef3c7;
+    border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
 .step-approved .step-status {
     background: rgba(34, 197, 94, 0.25);
     color: #dcfce7;
+    border: 1px solid rgba(34, 197, 94, 0.3);
 }
 
 .step-locked .step-status {
     background: rgba(148, 163, 184, 0.15);
     color: rgba(255, 255, 255, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .glass-card {
@@ -270,12 +288,12 @@ body {
 }
 
 .modal-content {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(30, 41, 59, 0.85);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border-radius: 24px;
     padding: 40px;
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
     max-width: 600px;
     width: 100%;
@@ -353,6 +371,7 @@ body {
 .btn-approve {
     background: rgba(34, 197, 94, 0.3);
     color: #dcfce7;
+    border-color: rgba(34, 197, 94, 0.4);
 }
 
 .btn-approve:hover:not(:disabled) {
@@ -364,6 +383,7 @@ body {
 .btn-reject {
     background: rgba(239, 68, 68, 0.3);
     color: #fee2e2;
+    border-color: rgba(239, 68, 68, 0.4);
 }
 
 .btn-reject:hover:not(:disabled) {
@@ -535,6 +555,8 @@ body {
 }
 .btn-tab:hover, .btn-tab.active {
     background: rgba(255, 255, 255, 0.3);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.4);
 }
 .btn-small {
     background: rgba(255, 255, 255, 0.2);
@@ -550,6 +572,7 @@ body {
 }
 #sigCanvas {
     touch-action: none;
+    border: none;
 }
 </style>
 
@@ -649,8 +672,8 @@ body {
             </div>
 
             <div id="sig-upload-area" style="display:none;">
-                <input type="file" id="sigUpload" accept="image/*" class="form-control liquid-input" onchange="previewSignature(this)" style="color: white;">
-                <div id="sigPreview" style="margin-top: 10px; height: 150px; background: rgba(255,255,255,0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                <input type="file" id="sigUpload" accept="image/*" class="form-control liquid-input" onchange="previewSignature(this)" style="color: white; border: 1px solid rgba(255,255,255,0.2);">
+                <div id="sigPreview" style="margin-top: 10px; height: 150px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
                     <span style="color: rgba(255,255,255,0.5);">No image selected</span>
                 </div>
             </div>
