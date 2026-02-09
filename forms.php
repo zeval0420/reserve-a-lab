@@ -890,10 +890,27 @@
                 formData.append('action', 'request_submission');
                 formData.append('mergedMaterials', JSON.stringify(Object.values(itemsMap)));
 
+                // Ensure all fields are passed (even if disabled)
+                formData.set('venue', $('#venue_select').val());
+                formData.set('grade_level', $('#grade_select').val());
+                formData.set('subject', $('#subject_select').val());
+                formData.set('topic', $('input[name="topic"]').val());
+                formData.set('unit', $('#unit-select').val());
+                formData.set('inclusive_date', $('#datepicker').val());
+                formData.set('start_time', $('input[name="start_time"]').val());
+                formData.set('end_time', $('input[name="end_time"]').val());
+
                 // Handle teacher array -> string conversion for backend compatibility
                 const teachers = $('#teacher-checkboxes').val();
                 formData.delete('teacher[]');
-                formData.append('teacher', teachers ? teachers.join(', ') : '');
+                formData.set('teacher', teachers ? teachers.join(', ') : '');
+
+                // Handle sections explicitly
+                const sections = $('#sections-checkboxes').val();
+                formData.delete('sections[]');
+                if (sections) {
+                    sections.forEach(s => formData.append('sections[]', s));
+                }
 
                 $.ajax({
                     url: 'ajax/ajax_forms.php',
@@ -912,12 +929,16 @@
                                 resetForm();
                                 location.reload();
                             } else if (res === "conflict") {
+                                console.log("Submission Error: Schedule conflict");
                                 showToast("Schedule conflict. Please choose another time.", 'error');
                             } else if (res === "invalid_scilab") {
+                                console.log("Submission Error: Invalid laboratory selected");
                                 showToast("Invalid laboratory selected.", 'error');
                             } else if (res === "session_error") {
+                                console.log("Submission Error: Session expired");
                                 showToast("Session expired. Please log in again.", 'error');
                             } else {
+                                console.log("Submission Error:", res);
                                 showToast("Error: " + res, 'error');
                             }
                         }, 500);
@@ -926,8 +947,10 @@
                         clearInterval(progressInterval);
                         $('#progressModal').modal('hide');
                         showToast("Error submitting request.", 'error');
-                        console.log("Error submitting request.");
-                        console.error("AJAX error:", status, error);
+                        console.error("Submission Failed");
+                        console.error("Status:", status);
+                        console.error("Error:", error);
+                        console.error("Response:", xhr.responseText);
                     }
                 });
             });

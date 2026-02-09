@@ -51,15 +51,17 @@
         }
 
         while ($admin = $admins->fetch_assoc()) {
-            $mail = new PHPMailer(true);
-            try {
-                $mail->isSMTP();
-                $mail->Host = 'smtp.gmail.com';
-                $mail->SMTPAuth = true;
-                $mail->Username = 'pshsircscilab@gmail.com';
-                $mail->Password = 'wxzmkkrffptfchcc';
-                $mail->SMTPSecure = 'tls';
-                $mail->Port = 587;
+           if (isset($admin['email'])) {
+                $mail = new PHPMailer(true);
+                try {
+                    $mail->isSMTP();
+                    $mail->Host = 'smtp.gmail.com';
+                    $mail->SMTPAuth = true;
+                    $mail->Username = 'pshsircscilab@gmail.com';
+                    $mail->Password = 'wxzmkkrffptfchcc';
+                    $mail->SMTPSecure = 'tls';
+                    $mail->Port = 587;
+
 
                 $mail->setFrom('pshsircscilab@gmail.com', 'SciLab Notification System');
                 $mail->addAddress($admin['email']);
@@ -72,19 +74,20 @@
             } catch (Exception $e) {
                 error_log("Admin email failed to {$admin['email']}: {$mail->ErrorInfo}");
             }
-        }
+            }
+       }
     }
     if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
-        $scilabName = $_POST['venue'];
-        $grade = $_POST['grade_level'];
-        $sections = isset($_POST['sections']) ? implode(', ', $_POST['sections']) : '';
-        $subject = $_POST['subject'];
-        $topic = $_POST['topic'];
-        $unit = $_POST['unit'];
-        $teacher = $_POST['teacher'];
-        $startDate = $_POST['inclusive_date'];
-        $startTime = $_POST['start_time'];
-        $endTime = $_POST['end_time'];
+        $scilabName = $_POST['venue'] ?? '';
+        $grade = $_POST['grade_level'] ?? '';
+        $sections = isset($_POST['sections']) && is_array($_POST['sections']) ? implode(', ', $_POST['sections']) : ($_POST['sections'] ?? '');
+        $subject = $_POST['subject'] ?? '';
+        $topic = $_POST['topic'] ?? '';
+        $unit = $_POST['unit'] ?? '';
+        $teacher = $_POST['teacher'] ?? '';
+        $startDate = $_POST['inclusive_date'] ?? '';
+        $startTime = $_POST['start_time'] ?? '';
+        $endTime = $_POST['end_time'] ?? '';
         $formattedTime = formatTime($startTime) . " to " . formatTime($endTime);
 
         $checkSciLab = $conn->prepare("SELECT 1 FROM scilab_availability WHERE scilabName = ? AND status = 'active'");
