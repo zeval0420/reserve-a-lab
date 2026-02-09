@@ -21,7 +21,29 @@ if (!$request) {
     die("Request not found.");
 }
 
-$name = $request['requesterEmployeeID'];
+$requesterID = $request['requesterEmployeeID'];
+$name = $requesterID;
+
+// Try fetching from accounts
+$stmtUser = $conn->prepare("SELECT firstname, middlename, lastname FROM accounts WHERE employeeID = ?");
+$stmtUser->bind_param("s", $requesterID);
+$stmtUser->execute();
+$resUser = $stmtUser->get_result();
+
+if ($userRow = $resUser->fetch_assoc()) {
+    $name = $userRow['firstname'] . ' ' . (empty($userRow['middlename']) ? '' : $userRow['middlename'] . ' ') . $userRow['lastname'];
+} else {
+    // Try fetching from student
+    $stmtUser = $conn->prepare("SELECT firstname, middlename, lastname FROM student WHERE LRN = ?");
+    $stmtUser->bind_param("s", $requesterID);
+    $stmtUser->execute();
+    $resUser = $stmtUser->get_result();
+    
+    if ($userRow = $resUser->fetch_assoc()) {
+        $name = $userRow['firstname'] . ' ' . (empty($userRow['middlename']) ? '' : $userRow['middlename'] . ' ') . $userRow['lastname'];
+    }
+}
+
 $grade = $request['gradeLevel'];
 $section = $request['sections'];
 $date = $request['inclusiveDate'];
