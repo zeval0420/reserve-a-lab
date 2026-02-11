@@ -130,6 +130,8 @@
 
                 <h2>My Requests</h2>
 
+                <br>
+
                 <div class="status-buttons mb-3">
                     <a href="?status=Pending" class="btn-liquid <?= $statusFilter==='Pending'?'active':'' ?>">
                         <span class="badge badge-secondary"><?= $counts['Pending'] ?></span> Pending
