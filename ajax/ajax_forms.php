@@ -77,6 +77,70 @@
             }
        }
     }
+
+    function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails, $formID) {
+        if (empty($supervisorEmails)) return;
+
+        $subjectLine = "Action Required: New SciLab Request for Approval";
+        $templatePath = __DIR__ . "/../templates/supervisor_request_email_template.html";
+
+        if (file_exists($templatePath)) {
+            $bodyTemplate = file_get_contents($templatePath);
+        } else {
+            $bodyTemplate = "A new request requires your approval. To view and approve the request, please click the button below.<br><br><a href='[ApprovalLink]' style='background-color: #4CAF50; color: white; padding: 14px 25px; text-align: center; text-decoration: none; display: inline-block;'>View Request Details</a><br><br><strong>Request Details:</strong><br>Facility: [Facility]<br>Requested By: [Requested By]<br>Date: [Start Date]<br>Time: [End Date]";
+        }
+
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
+        $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/reserve-a-lab";
+        $approvalLink = $baseURL . "/supervisor_approve.php?request_id=" . $formID;
+
+        $replacements = [
+            "[Facility]" => $data['scilabName'],
+            "[Grade Level]" => $data['gradeLevel'],
+            "[Section]" => $data['section'],
+            "[Subject]" => $data['subject'],
+            "[Concurrent Topic]" => $data['topic'],
+            "[Unit]" => $data['unit'],
+            "[Teacher Name]" => $data['teacher'],
+            "[Requested By]" => $data['requester'],
+            "[Start Date]" => $data['inclusiveDate'],
+            "[End Date]" => $data['inclusiveTime'],
+            "[Materials]" => $data['materials'],
+            "[Group Members]" => $data['students'],
+            "[ApprovalLink]" => $approvalLink,
+        ];
+
+        foreach ($replacements as $key => $val) {
+            $bodyTemplate = str_replace($key, htmlspecialchars($val), $bodyTemplate);
+        }
+
+        foreach ($supervisorEmails as $email) {
+            if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $mail = new PHPMailer(true);
+                try {
+                    $mail->isSMTP();
+                    $mail->Host = 'smtp.gmail.com';
+                    $mail->SMTPAuth = true;
+                    $mail->Username = 'pshsircscilab@gmail.com';
+                    $mail->Password = 'wxzmkkrffptfchcc';
+                    $mail->SMTPSecure = 'tls';
+                    $mail->Port = 587;
+
+                    $mail->setFrom('pshsircscilab@gmail.com', 'SciLab Notification System');
+                    $mail->addAddress($email);
+
+                    $mail->isHTML(true);
+                    $mail->Subject = $subjectLine;
+                    $mail->Body = $bodyTemplate;
+
+                    $mail->send();
+                } catch (Exception $e) {
+                    error_log("Supervisor email failed to {$email}: {$mail->ErrorInfo}");
+                }
+            }
+        }
+    }
+
     if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
         $scilabName = $_POST['venue'] ?? '';
         $grade = $_POST['grade_level'] ?? '';
@@ -84,7 +148,9 @@
         $subject = $_POST['subject'] ?? '';
         $topic = $_POST['topic'] ?? '';
         $unit = $_POST['unit'] ?? '';
-        $teacher = $_POST['teacher'] ?? '';
+        $teacher_input = $_POST['teacher'] ?? [];
+        $teachers = is_array($teacher_input) ? $teacher_input : array_filter([$teacher_input]);
+        $teacher = implode(', ', $teachers);
         $startDate = $_POST['inclusive_date'] ?? '';
         $startTime = $_POST['start_time'] ?? '';
         $endTime = $_POST['end_time'] ?? '';
@@ -182,6 +248,42 @@
             ($_SESSION['firstname'] ?? '') . ' ' .
             ($_SESSION['middlename'] ?? '') . ' ' .
             ($_SESSION['lastname'] ?? '');
+
+        if (!empty($teachers)) {
+            $teacherEmails = [];
+            // Note: Matching by CONCAT(firstname, ' ', lastname) can be fragile.
+            // Using a unique identifier like employeeID from the form would be more robust.
+            $placeholders = rtrim(str_repeat('?,', count($teachers)), ',');
+            $email_stmt = $conn->prepare("SELECT email FROM accounts WHERE CONCAT(firstname, ' ', lastname) IN ($placeholders)");
+
+            if ($email_stmt) {
+                $types = str_repeat('s', count($teachers));
+                $email_stmt->bind_param($types, ...$teachers);
+                $email_stmt->execute();
+                $result = $email_stmt->get_result();
+                while ($row = $result->fetch_assoc()) {
+                    $teacherEmails[] = $row['email'];
+                }
+                $email_stmt->close();
+            }
+
+            if (!empty($teacherEmails)) {
+                sendSubmissionNotificationToSupervisors($conn, [
+                    'scilabName' => $scilabName,
+                    'gradeLevel' => $grade,
+                    'section' => $sections,
+                    'subject' => $subject,
+                    'topic' => $topic,
+                    'unit' => $unit,
+                    'teacher' => $teacher,
+                    'inclusiveDate' => $startDate,
+                    'inclusiveTime' => $formattedTime,
+                    'materials' => implode("; ", $materials),
+                    'students' => $studentList,
+                    'requester' => $requesterName
+                ], $teacherEmails, $formID);
+            }
+        }
 
         sendSubmissionNotificationToAdmins($conn, [
             'scilabName' => $scilabName,
