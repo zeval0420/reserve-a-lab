@@ -37,8 +37,6 @@
         <?php include('helperFiles/headData.php'); ?>
 
         <style>
-            input[type="password"]::-ms-reveal,
-            input[type="password"]::-ms-clear,
             input[type="password"]::-webkit-contacts-auto-fill-button,
             input[type="password"]::-webkit-credentials-auto-fill-button {
                 display: none !important;
@@ -109,6 +107,7 @@
                 border: 1px solid rgba(255, 255, 255, 0.25);
                 border-radius: 25px;
                 background: rgba(255, 255, 255, 0.1);
+                -webkit-backdrop-filter: blur(16px);
                 backdrop-filter: blur(16px);
                 box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
                 padding: 40px;
