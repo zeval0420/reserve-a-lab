@@ -238,9 +238,16 @@
 
     <script>
         $(function () {
-
             $('#requests-table').DataTable({
-                language: { emptyTable: "No requests found." }
+                language: {
+                    emptyTable: "No requests found."
+                },
+                responsive: true,
+                pageLength: 10,
+                lengthChange: true,
+                searching: true,
+                ordering: true,
+                info: true
             });
 
             $('.view-btn').on('click', function () {
