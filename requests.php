@@ -178,7 +178,9 @@
                                 <td><?= htmlspecialchars($row['subject']) ?></td>
                                 <td><?= htmlspecialchars($row['subjectTopic']) ?></td>
                                 <td><?= htmlspecialchars($row['inclusiveDate'])." (".$row['inclusiveTime'].")" ?></td>
-                                <td><?= isset($materials[$row['id']]) ? implode('<br>', $materials[$row['id']]) : '—' ?></td>
+                                <td><?= isset($materials[$formID])
+                                    ? implode("<br>", array_map(fn($m) => "• " . $m, $materials[$formID]))
+                                    : '—'; ?></td>
                                 <td><?= !empty($row['teacherInCharge']) ? htmlspecialchars($row['teacherInCharge']) : '—' ?></td>
 
                                 <td>
