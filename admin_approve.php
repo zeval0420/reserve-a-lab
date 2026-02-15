@@ -165,7 +165,7 @@
                                             $fullName = $nameRow['firstname'].' '.$nameRow['middlename'].' '.$nameRow['lastname'];
                                         }
                                         $formID = $row['id'];
-                                        $materialText = isset($materials[$formID]) ? implode(", ", $materials[$formID]) : '—';
+                                        $materialText = isset($materials[$formID]) ? implode("<br>", $materials[$formID]) : '—';
                                         $teacherInCharge = !empty($row['teacherInCharge']) ? htmlspecialchars($row['teacherInCharge']) : '—';
                                 ?>
                                     <tr id="row-<?= $row['id'] ?>">
