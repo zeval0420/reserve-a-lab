@@ -79,7 +79,7 @@
         ");
 
         while ($m = $matQ->fetch_assoc()) {
-            $line = $m['quantity']."x ".$m['item'];
+            $line = "[".$m['quantity']."x] ".$m['item'];
             if ($m['description']) {
                 $line .= " (".$m['description'].")";
             }
@@ -266,7 +266,7 @@
                     <p><strong>Topic:</strong> ${data.subjectTopic}</p>
                     <p><strong>Date of Use:</strong> ${data.inclusiveDate} (${data.inclusiveTime})</p>
                     <p>
-                        <strong>Materials:</strong>
+                        <strong>Materials:</strong><br>
                         <span style="display:inline-block; padding-left:15px;">
                             ${materialText}
                         </span>

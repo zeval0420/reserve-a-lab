@@ -50,14 +50,20 @@
     }
 
     $materials = [];
-    if (count($formIDs) > 0) {
-        $idList = implode(",", array_map('intval', $formIDs));
-        $matResult = $conn->query("SELECT formID, quantity, item, description FROM scilab_material_requests WHERE formID IN ($idList)");
+    if ($formIDs) {
+        $ids = implode(',', array_map('intval', $formIDs));
+        $matQ = $conn->query("
+            SELECT formID, quantity, item, description
+            FROM scilab_material_requests
+            WHERE formID IN ($ids)
+        ");
 
-        while ($mat = $matResult->fetch_assoc()) {
-            $line = $mat['quantity'] . "x " . $mat['item'];
-            if (!empty($mat['description'])) $line .= " (" . $mat['description'] . ")";
-            $materials[$mat['formID']][] = $line;
+        while ($m = $matQ->fetch_assoc()) {
+            $line = "[".$m['quantity']."x] ".$m['item'];
+            if ($m['description']) {
+                $line .= " (".$m['description'].")";
+            }
+            $materials[$m['formID']][] = $line;
         }
     }
 ?>
@@ -166,6 +172,7 @@
                                         }
                                         $formID = $row['id'];
                                         $materialText = isset($materials[$formID]) ? implode("<br><br>", $materials[$formID]) : '—';
+                                        $row['materials'] = isset($materials[$formID]) ? implode("<br>", $materials[$formID]) : '—';
                                         $teacherInCharge = !empty($row['teacherInCharge']) ? htmlspecialchars($row['teacherInCharge']) : '—';
                                 ?>
                                     <tr id="row-<?= $row['id'] ?>">
@@ -177,7 +184,7 @@
                                         <td><?= htmlspecialchars($row['subject']) ?></td>
                                         <td><?= htmlspecialchars($row['subjectTopic']) ?></td>
                                         <td><?= htmlspecialchars($row['inclusiveDate']).' ('.htmlspecialchars($row['inclusiveTime']).')' ?></td>
-                                        <td><?= htmlspecialchars($materialText) ?></td>
+                                        <td><?= $materialText ?></td>
                                         <td><?= $teacherInCharge ?></td>
 
                                         <?php if ($statusFilter === 'Approved'): ?>
@@ -203,7 +210,6 @@
                                     </tr>
                                 <?php endforeach; ?>
                             <?php else: ?>
-                                
                             <?php endif; ?>
                         </tbody>
                     </table>
@@ -338,8 +344,12 @@
                     <p><strong>Topic:</strong> ${data.subjectTopic}</p>
                     <p><strong>Date of Use:</strong> ${data.inclusiveDate}</p>
                     <p><strong>Time:</strong> ${data.inclusiveTime}</p>
-
-                    <p><strong>Materials:</strong> ${data.inclusiveTime}</p>
+                    <p>
+                        <strong>Materials:</strong><br>
+                        <span style="display:inline-block; padding-left:20px;">
+                            ${data.materials}
+                        </span>
+                    </p>
                 `);
                 $('#approveModal').modal('show');
             });
@@ -370,6 +380,12 @@
                     <p><strong>Topic:</strong> ${data.subjectTopic}</p>
                     <p><strong>Date of Use:</strong> ${data.inclusiveDate}</p>
                     <p><strong>Time:</strong> ${data.inclusiveTime}</p>
+                    <p>
+                        <strong>Materials:</strong><br>
+                        <span style="display:inline-block; padding-left:20px;">
+                            ${data.materials}
+                        </span>
+                    </p>
                 `);
                 $('#confirmReject').data('id', data.id);
                 $('#rejectModal').modal('show');
