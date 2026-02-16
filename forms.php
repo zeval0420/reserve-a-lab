@@ -912,6 +912,10 @@
                     sections.forEach(s => formData.append('sections[]', s));
                 }
 
+
+//switch this to go to ajax supervisor action instead for the revised email logic
+// email the supervisor instead of the admin on submit
+// only email the admin after the subject teacher approves
                 $.ajax({
                     url: 'ajax/ajax_forms.php',
                     type: 'POST',
