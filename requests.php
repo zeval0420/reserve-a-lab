@@ -178,9 +178,7 @@
                                 <td><?= htmlspecialchars($row['subject']) ?></td>
                                 <td><?= htmlspecialchars($row['subjectTopic']) ?></td>
                                 <td><?= htmlspecialchars($row['inclusiveDate'])." (".$row['inclusiveTime'].")" ?></td>
-                                <td><?= isset($materials[$formID])
-                                    ? implode("<br>", array_map(fn($m) => "• " . $m, $materials[$formID]))
-                                    : '—'; ?></td>
+                                <td><?= isset($materials[$row['id']]) ? implode('<br><br>', $materials[$row['id']]) : '—' ?></td>
                                 <td><?= !empty($row['teacherInCharge']) ? htmlspecialchars($row['teacherInCharge']) : '—' ?></td>
 
                                 <td>
@@ -258,7 +256,7 @@
                 const materials = $(this).data('materials');
                 const status = $(this).data('status');
 
-                const materialText = materials.length ? materials.join(', ') : '—';
+                const materialText = materials.length ? materials.join('<br>') : '—';
                 const teacher = data.teacherInCharge ? data.teacherInCharge : '—';
 
                 const html = `
@@ -267,7 +265,12 @@
                     <p><strong>Subject:</strong> ${data.subject}</p>
                     <p><strong>Topic:</strong> ${data.subjectTopic}</p>
                     <p><strong>Date of Use:</strong> ${data.inclusiveDate} (${data.inclusiveTime})</p>
-                    <p><strong>Materials:</strong> ${materialText}</p>
+                    <p>
+                        <strong>Materials:</strong>
+                        <span style="display:inline-block; padding-left:15px;">
+                            ${materialText}
+                        </span>
+                    </p>
                     <p><strong>Teacher-in-Charge:</strong> ${teacher}</p>
                 `;
 
