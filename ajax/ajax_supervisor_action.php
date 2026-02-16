@@ -2,6 +2,67 @@
 include('../helperFiles/db_connection.php');
 include('../helperFiles/session_handler.php');
 
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
+require '../PHPMailer/src/Exception.php';
+require '../PHPMailer/src/PHPMailer.php';
+require '../PHPMailer/src/SMTP.php';
+
+function sendRejectionNotificationToRequester($conn, $request, $rejectionReason, $rejectedBy) {
+    $requesterID = $request['requesterEmployeeID'];
+    $requesterEmail = null;
+
+    // Try fetching email from accounts
+    $stmtEmail = $conn->prepare("SELECT email FROM accounts WHERE employeeID = ?");
+    $stmtEmail->bind_param("s", $requesterID);
+    $stmtEmail->execute();
+    $resEmail = $stmtEmail->get_result();
+    if ($row = $resEmail->fetch_assoc()) {
+        $requesterEmail = $row['email'];
+    } else {
+        // Try fetching email from student
+        $stmtEmail = $conn->prepare("SELECT email FROM student WHERE LRN = ?");
+        if ($stmtEmail) {
+            $stmtEmail->bind_param("s", $requesterID);
+            $stmtEmail->execute();
+            $resEmail = $stmtEmail->get_result();
+            if ($row = $resEmail->fetch_assoc()) {
+                $requesterEmail = $row['email'];
+            }
+        }
+    }
+    $stmtEmail->close();
+
+    if ($requesterEmail) {
+        $subjectLine = "Update on your SciLab Request: Rejected";
+        $rejectionReason = $rejectionReason ?? 'No reason provided.';
+
+        // A template file like /templates/rejection_email_template.html could be created for a richer email.
+        $body = 'Your request for ' . htmlspecialchars($request['scilabName']) . ' on ' . htmlspecialchars($request['inclusiveDate']) . ' has been rejected by the ' . htmlspecialchars($rejectedBy) . '.<br><br><strong>Reason:</strong> ' . htmlspecialchars($rejectionReason);
+
+        try {
+            $mail = new PHPMailer(true);
+            $mail->isSMTP();
+            $mail->Host = 'smtp.gmail.com';
+            $mail->SMTPAuth = true;
+            $mail->Username = 'pshsircscilab@gmail.com';
+            $mail->Password = 'wxzmkkrffptfchcc';
+            $mail->SMTPSecure = 'tls';
+            $mail->Port = 587;
+
+            $mail->setFrom('pshsircscilab@gmail.com', 'SciLab Notification System');
+            $mail->addAddress($requesterEmail);
+            $mail->isHTML(true);
+            $mail->Subject = $subjectLine;
+            $mail->Body = $body;
+            $mail->send();
+        } catch (Exception $e) {
+            error_log("Failed to send rejection email to {$requesterEmail}: " . $mail->ErrorInfo);
+        }
+    }
+}
+
 header('Content-Type: application/json');
 
 // Check if user is logged in
@@ -21,7 +82,7 @@ if (!isset($input['request_id']) || !isset($input['action'])) {
 
 $requestId = $input['request_id'];
 $action = $input['action']; // 'approve' or 'reject'
-$signatureData = $input['signature'] ?? null;
+$reason = $input['reason'] ?? null;
 
 // Fetch request to determine current stage
 $stmt = $conn->prepare("SELECT * FROM scilab_form_requests WHERE id = ?");
@@ -52,53 +113,6 @@ if (($request['supervisor_status'] ?? 'pending') === 'pending') {
     exit;
 }
 
-// Handle Signature Upload (Only for Approval)
-$signaturePath = null;
-if ($action === 'approve' && !empty($signatureData)) {
-    // Ensure directory exists
-    $targetDir = "../img/signatures/";
-    if (!file_exists($targetDir)) {
-        if (!mkdir($targetDir, 0777, true)) {
-            echo json_encode(['success' => false, 'message' => 'Failed to create signature directory']);
-            exit;
-        }
-    }
-
-    // Decode Base64
-    // Data URI scheme: "data:image/png;base64,......"
-    if (preg_match('/^data:image\/(\w+);base64,/', $signatureData, $type)) {
-        $data = substr($signatureData, strpos($signatureData, ',') + 1);
-        $type = strtolower($type[1]); // jpg, png, gif
-
-        if (!in_array($type, ['jpg', 'jpeg', 'png', 'gif'])) {
-            echo json_encode(['success' => false, 'message' => 'Invalid image type']);
-            exit;
-        }
-
-        $decoded = base64_decode($data);
-
-        if ($decoded === false) {
-            echo json_encode(['success' => false, 'message' => 'Invalid base64 data']);
-            exit;
-        }
-
-        // Generate filename
-        $safeUsername = preg_replace('/[^a-zA-Z0-9]/', '_', $username);
-        $filename = $safeUsername . "." . $type;
-        $filepath = $targetDir . $filename;
-
-        if (file_put_contents($filepath, $decoded)) {
-            $signaturePath = "img/signatures/" . $filename; // Path relative to web root
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Failed to save signature file']);
-            exit;
-        }
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Invalid signature format']);
-        exit;
-    }
-}
-
 // Update Database
 $statusColumn = $fieldPrefix . '_status';
 $newStatus = ($action === 'approve') ? 'approved' : 'rejected';
@@ -108,6 +122,12 @@ $newStatus = ($action === 'approve') ? 'approved' : 'rejected';
 $sql = "UPDATE scilab_form_requests SET $statusColumn = ?";
 $params = [$newStatus];
 $types = "s";
+
+if ($action === 'reject' && $reason !== null) {
+    $sql .= ", feedback = ?";
+    $params[] = $reason;
+    $types .= "s";
+}
 
 $sql .= " WHERE id = ?";
 $params[] = $requestId;
@@ -122,6 +142,59 @@ if (!$updateStmt) {
 $updateStmt->bind_param($types, ...$params);
 
 if ($updateStmt->execute()) {
+    // Check if this is the final approval (CID Chief)
+    if ($fieldPrefix === 'cid_chief' && $action === 'approve') {
+        $requesterID = $request['requesterEmployeeID'];
+        $requesterEmail = null;
+
+        // Try fetching email from accounts
+        $stmtEmail = $conn->prepare("SELECT email FROM accounts WHERE employeeID = ?");
+        $stmtEmail->bind_param("s", $requesterID);
+        $stmtEmail->execute();
+        $resEmail = $stmtEmail->get_result();
+        if ($row = $resEmail->fetch_assoc()) {
+            $requesterEmail = $row['email'];
+        } else {
+            // Try fetching email from student
+            $stmtEmail = $conn->prepare("SELECT email FROM student WHERE LRN = ?");
+            if ($stmtEmail) {
+                $stmtEmail->bind_param("s", $requesterID);
+                $stmtEmail->execute();
+                $resEmail = $stmtEmail->get_result();
+                if ($row = $resEmail->fetch_assoc()) {
+                    $requesterEmail = $row['email'];
+                }
+            }
+        }
+
+        if ($requesterEmail) {
+            try {
+                $mail = new PHPMailer(true);
+                $mail->isSMTP();
+                $mail->Host = 'smtp.gmail.com';
+                $mail->SMTPAuth = true;
+                $mail->Username = 'pshsircscilab@gmail.com';
+                $mail->Password = 'wxzmkkrffptfchcc';
+                $mail->SMTPSecure = 'tls';
+                $mail->Port = 587;
+
+                $mail->setFrom('pshsircscilab@gmail.com', 'SciLab Notification System');
+                $mail->addAddress($requesterEmail);
+                $mail->isHTML(true);
+                $mail->Subject = 'SciLab Request Approved';
+                $mail->Body = 'Your request for ' . htmlspecialchars($request['scilabName']) . ' on ' . htmlspecialchars($request['inclusiveDate']) . ' has been fully approved by the CID Chief.';
+
+                $mail->send();
+            } catch (Exception $e) {
+                error_log("Failed to send approval email: " . $mail->ErrorInfo);
+            }
+        }
+    } elseif ($action === 'reject') {
+        $rejectedBy = ucwords(str_replace('_', ' ', $fieldPrefix));
+        sendRejectionNotificationToRequester($conn, $request, $reason, $rejectedBy);
+        }
+    }
+
     echo json_encode(['success' => true]);
 } else {
     echo json_encode(['success' => false, 'message' => 'Database update failed: ' . $updateStmt->error]);
