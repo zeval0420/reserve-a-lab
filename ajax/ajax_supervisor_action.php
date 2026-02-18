@@ -291,7 +291,7 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
     $syResult = $conn->query("SELECT value FROM current WHERE description = 'School Year' ORDER BY id DESC LIMIT 1");
     $schoolYear = ($syResult && $syResult->num_rows > 0) ? $syResult->fetch_assoc()['value'] : 'N/A';
 
-    $requesterID = $_SESSION['employeeID'] ?? '';
+    $requesterID = $_SESSION['employeeID'] ?? $_SESSION['student_lrn'] ?? '';
     $dateRequested = date('Y-m-d H:i:s');
 
     $stmt = $conn->prepare("INSERT INTO scilab_form_requests (
@@ -344,7 +344,7 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
     if (!empty($teachers)) {
         $teacherEmails = [];
         $placeholders = rtrim(str_repeat('?,', count($teachers)), ',');
-        $email_stmt = $conn->prepare("SELECT email FROM accounts WHERE CONCAT(firstname, ' ', lastname) IN ($placeholders)");
+        $email_stmt = $conn->prepare("SELECT email FROM accounts WHERE CONCAT(lastname, ', ', firstname, ' ', IFNULL(middlename, '')) IN ($placeholders)");
         if ($email_stmt) {
             $types = str_repeat('s', count($teachers));
             $email_stmt->bind_param($types, ...$teachers);

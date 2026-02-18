@@ -5,6 +5,22 @@
     $email = $_SESSION['email'];
     $username = $_SESSION['username'];
 
+    // Determine User ID based on role
+    $userID = null;
+    if (isset($_SESSION['role']) && $_SESSION['role'] === 'student') {
+        $stmt = $conn->prepare("SELECT LRN FROM student_directory WHERE studentEmail = ?");
+        $stmt->bind_param("s", $email);
+        $stmt->execute();
+        $userID = $stmt->get_result()->fetch_assoc()['LRN'] ?? null;
+        $stmt->close();
+    } else {
+        $stmt = $conn->prepare("SELECT employeeID FROM accounts WHERE email = ?");
+        $stmt->bind_param("s", $email);
+        $stmt->execute();
+        $userID = $stmt->get_result()->fetch_assoc()['employeeID'] ?? null;
+        $stmt->close();
+    }
+
     if ($_SESSION['role'] == 'admin') {
         header("Location: index.php");
         exit();
@@ -305,7 +321,7 @@
         <div class="container">
             <div class="form-container">
                 <form method="post" action="#">
-                    <input type="hidden" name="employee_id" value="<?= htmlspecialchars($employeeID) ?>">
+                    <input type="hidden" name="employee_id" value="<?= htmlspecialchars($userID) ?>">
                     <input type="hidden" name="requestor_name" value="<?= htmlspecialchars($username) ?>">
 
                     <!-- Venue Selection -->

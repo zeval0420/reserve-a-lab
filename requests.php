@@ -14,10 +14,21 @@
         exit();
     }
 
-    // employee id  
-    $employeeQuery = $conn->query("SELECT employeeID FROM accounts WHERE email='$email' LIMIT 1");
-    $employeeID = $employeeQuery->fetch_assoc()['employeeID'] ?? null;
-    if (!$employeeID) die("Employee not found");
+    // Determine User ID based on role
+    $userID = null;
+    if (isset($_SESSION['role']) && $_SESSION['role'] === 'student') {
+        $stmt = $conn->prepare("SELECT LRN FROM student_directory WHERE studentEmail = ?");
+        $stmt->bind_param("s", $email);
+        $stmt->execute();
+        $userID = $stmt->get_result()->fetch_assoc()['LRN'] ?? null;
+    } else {
+        $stmt = $conn->prepare("SELECT employeeID FROM accounts WHERE email = ?");
+        $stmt->bind_param("s", $email);
+        $stmt->execute();
+        $userID = $stmt->get_result()->fetch_assoc()['employeeID'] ?? null;
+    }
+
+    if (!$userID) die("User ID not found");
 
     // school year
     $syQuery = $conn->query("
@@ -36,7 +47,7 @@
     $sql = "
         SELECT *
         FROM scilab_form_requests
-        WHERE requesterEmployeeID='$employeeID'
+        WHERE requesterEmployeeID='$userID'
         AND sy='$currentSY'
         AND statusScilabPersonnel='$statusFilter'
         ORDER BY dateRequested DESC
@@ -48,7 +59,7 @@
     $countQuery = $conn->query("
         SELECT statusScilabPersonnel AS status, COUNT(*) AS total
         FROM scilab_form_requests
-        WHERE requesterEmployeeID='$employeeID'
+        WHERE requesterEmployeeID='$userID'
         AND sy='$currentSY'
         GROUP BY statusScilabPersonnel
     ");
