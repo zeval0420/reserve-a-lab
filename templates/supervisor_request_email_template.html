@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Supervisor Approval Request</title>
+<style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f0f2f5;
+    margin: 0;
+    padding: 40px 20px;
+    display: flex;
+    justify-content: center;
+  }
+  
+  /* Glass Container */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 
+      0 10px 40px rgba(0, 0, 0, 0.1),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+    max-width: 600px;
+    width: 100%;
+    padding: 40px;
+    color: #333;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 30px;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    padding-bottom: 20px;
+  }
+
+  .header h2 {
+    color: #2B55C4;
+    margin: 0 0 10px 0;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+
+  .header p {
+    margin: 0;
+    color: #666;
+    font-size: 15px;
+  }
+
+  /* Details Section */
+  .details-box {
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 16px;
+    padding: 25px;
+    margin-bottom: 35px;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+  }
+
+  .info-row {
+    display: flex;
+    margin-bottom: 12px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .info-row:last-child {
+    margin-bottom: 0;
+  }
+
+  .label {
+    font-weight: 600;
+    width: 130px;
+    color: #555;
+    flex-shrink: 0;
+  }
+
+  .value {
+    color: #111;
+    flex-grow: 1;
+  }
+
+  /* Liquid Button */
+  .btn-wrapper {
+    text-align: center;
+  }
+
+  .btn-liquid {
+    display: inline-block;
+    padding: 16px 40px;
+    background: linear-gradient(135deg, #2B55C4 0%, #4a76e6 100%);
+    color: white !important;
+    text-decoration: none;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 15px;
+    box-shadow: 0 4px 15px rgba(43, 85, 196, 0.3);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .btn-liquid:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(43, 85, 196, 0.4);
+  }
+
+  .footer {
+    text-align: center;
+    margin-top: 30px;
+    font-size: 12px;
+    color: #999;
+  }
+</style>
+</head>
+<body>
+  <div class="glass-card">
+    <div class="header">
+      <h2>Action Required</h2>
+      <p>A new laboratory request is waiting for your approval.</p>
+    </div>
+
+    <div class="details-box">
+      <div class="info-row"><span class="label">Facility:</span> <span class="value">[Facility]</span></div>
+      <div class="info-row"><span class="label">Requested By:</span> <span class="value">[Requested By]</span></div>
+      <div class="info-row"><span class="label">Subject:</span> <span class="value">[Subject]</span></div>
+      <div class="info-row"><span class="label">Topic:</span> <span class="value">[Concurrent Topic]</span></div>
+      <div class="info-row"><span class="label">Date:</span> <span class="value">[Start Date]</span></div>
+      <div class="info-row"><span class="label">Time:</span> <span class="value">[End Date]</span></div>
+      <div class="info-row"><span class="label">Materials:</span> <span class="value">[Materials]</span></div>
+    </div>
+
+    <div class="btn-wrapper">
+      <a href="[ApprovalLink]" class="btn-liquid">Review Request</a>
+    </div>
+
+    <div class="footer">
+      <p>Science Laboratory Request System</p>
+    </div>
+  </div>
+</body>
+</html>

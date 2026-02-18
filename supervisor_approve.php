@@ -59,6 +59,26 @@ $cid_chief_status = $request['cid_chief_status'] ?? 'pending';
 
 $currentRole = $_SESSION['role'] ?? 'supervisor';
 
+// Check if current user is the Teacher in Charge
+$isTeacherInCharge = false;
+$loggedInEmployeeID = $_SESSION['employeeID'] ?? '';
+
+if ($loggedInEmployeeID) {
+    $stmtCheck = $conn->prepare("SELECT firstname, middlename, lastname FROM accounts WHERE employeeID = ?");
+    $stmtCheck->bind_param("s", $loggedInEmployeeID);
+    $stmtCheck->execute();
+    $resCheck = $stmtCheck->get_result();
+    if ($uRow = $resCheck->fetch_assoc()) {
+        // Match format from forms.php: lastname . ', ' . firstname . ' ' . middlename
+        $formattedName = trim($uRow['lastname'] . ', ' . $uRow['firstname'] . ' ' . $uRow['middlename']);
+        
+        if (strpos($request['teacherInCharge'], $formattedName) !== false) {
+            $isTeacherInCharge = true;
+        }
+    }
+    $stmtCheck->close();
+}
+
 include('helperFiles/headData.php');
 include('helperFiles/header.php');
 ?>
@@ -635,7 +655,7 @@ body {
         <div class="success-message" id="successMessage"></div>
         
         <div class="modal-actions" id="defaultActions">
-            <?php if ($supervisor_status === 'pending'): ?>
+            <?php if ($supervisor_status === 'pending' && $isTeacherInCharge): ?>
                 <button class="btn-action btn-approve" id="btnApprove" onclick="handleAction('approve')">Approve</button>
                 <button class="btn-action btn-reject" id="btnReject" onclick="initiateRejection()">Reject</button>
             <?php endif; ?>

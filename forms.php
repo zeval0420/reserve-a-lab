@@ -917,7 +917,7 @@
 // email the supervisor instead of the admin on submit
 // only email the admin after the subject teacher approves
                 $.ajax({
-                    url: 'ajax/ajax_forms.php',
+                    url: 'ajax/ajax_supervisor_action.php',
                     type: 'POST',
                     data: formData,
                     processData: false,
