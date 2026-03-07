@@ -77,6 +77,8 @@
             .equal-height-row > [class*='col-'] { display:flex; flex-direction:column; }
             .equal-height-row > [class*='col-'] .card { width:100%; flex:1; }
             .fixed-img { width:100%; height:210px; object-fit:cover; border-radius:10px; cursor:pointer; }
+            .skeleton { background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%); background-size: 200% 100%; animation: skeleton-shimmer 1.5s infinite; color: transparent; }
+            @keyframes skeleton-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
             .image-divider { border-top:1px solid #dcdcdc; margin:15px auto; width:85%; }
             .text-danger { font-weight:bold; font-size:14px; }
             .card.disabled { opacity:0.6; filter:grayscale(80%); pointer-events:none; }
@@ -152,7 +154,7 @@
                     ?>
                         <div class="col-md-4 col-sm-12">
                             <div class="card" data-lab="<?= htmlspecialchars($lab['scilabName']) ?>">
-                                <img src="<?= htmlspecialchars($lab['mainImagePath']) ?>" alt="<?= htmlspecialchars($lab['scilabName']) ?>" class="fixed-img gallery-launch" data-lab="<?= htmlspecialchars($lab['scilabName']) ?>">
+                                <img src="<?= htmlspecialchars($lab['mainImagePath']) ?>" alt="<?= htmlspecialchars($lab['scilabName']) ?>" class="fixed-img gallery-launch skeleton" data-lab="<?= htmlspecialchars($lab['scilabName']) ?>" onload="this.classList.remove('skeleton');" onerror="this.onerror=null; this.src='img/placeholder.svg'; this.classList.remove('skeleton');">
                                 <h4 class="scilab-name mt-2" style="background-color: <?= htmlspecialchars($lab['color']) ?>;">
                                     <?= htmlspecialchars($lab['scilabName']) ?>
                                 </h4>

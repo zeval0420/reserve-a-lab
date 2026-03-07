@@ -50,6 +50,8 @@
             .fixed-img, .lab-img {
                 width: 100%; object-fit: cover; border-radius: 10px;
             }
+            .skeleton { background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%); background-size: 200% 100%; animation: skeleton-shimmer 1.5s infinite; color: transparent; }
+            @keyframes skeleton-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
             .fixed-img { height: 210px; }
             .lab-img { height: 160px; }
             .unavailable { color: red; }
@@ -216,9 +218,11 @@
                         <div class="card fixed-card lab-card text-center" data-scilab="<?= htmlspecialchars($id) ?>">
                             <div style="width: 100%;">
                             <img id="<?= $imgId ?>" src="<?= htmlspecialchars($lab['mainImagePath']) ?>?v=<?= $imgVersion ?>"
-                                alt="Lab <?= htmlspecialchars($id) ?>" class="fixed-img gallery-launch"
+                                alt="Lab <?= htmlspecialchars($id) ?>" class="fixed-img gallery-launch skeleton"
                                 data-lab="<?= htmlspecialchars($id) ?>"
-                                style="cursor:pointer; height:200px; object-fit:cover;">
+                                style="cursor:pointer; height:200px; object-fit:cover;"
+                                onload="this.classList.remove('skeleton');"
+                                onerror="this.onerror=null; this.src='img/placeholder.svg'; this.classList.remove('skeleton');">
 
                             <h4 class="mt-3 fw-bold text-primary"><?= htmlspecialchars($id) ?></h4>
                             <hr class="image-divider">
