@@ -227,6 +227,7 @@
                                 <button type="button" class="close" data-dismiss="modal">&times;</button>
                             </div>
                             <div class="modal-body">
+                                <div id="admin-conflict-warning"></div>
                                 <div id="approveDetails"></div>
                                 <div class="form-group mt-3">
                                     <label for="controlNumber">Control Number:</label>
@@ -352,6 +353,40 @@
                         </span>
                     </p>
                 `);
+                
+                $('#admin-conflict-warning').empty();
+                $('#approveForm button[type="submit"]').prop('disabled', false);
+                
+                // Parse inclusiveTime (e.g. "09:30 to 11:30" or similar depending on AM/PM)
+                let timeParts = data.inclusiveTime.split(' to ');
+                if (timeParts.length === 2 && data.scilabName && data.inclusiveDate) {
+                    $.post('ajax/ajax_forms.php', {
+                        action: 'check_conflict',
+                        scilabName: data.scilabName,
+                        date: data.inclusiveDate,
+                        startTime: timeParts[0].trim(),
+                        endTime: timeParts[1].trim(),
+                        exclude_id: data.id
+                    }, function(res) {
+                        if (res.status === 'success') {
+                            if (res.conflict_type === 'approved') {
+                                $('#admin-conflict-warning').html(`
+                                    <div class="alert alert-danger" style="margin-bottom:15px; border-radius:8px;">
+                                        <strong><i class="glyphicon glyphicon-ban-circle"></i> Severe Conflict:</strong> An <b>approved</b> request already exists for this timeframe (${res.details.time}). Force approving this will double-book the room.
+                                    </div>
+                                `);
+                                $('#approveForm button[type="submit"]').prop('disabled', true);
+                            } else if (res.conflict_type === 'pending') {
+                                $('#admin-conflict-warning').html(`
+                                    <div class="alert alert-warning" style="margin-bottom:15px; border-radius:8px;">
+                                        <strong><i class="glyphicon glyphicon-warning-sign"></i> Pending Conflict:</strong> There is another pending request for this timeframe (${res.details.time} - ${res.details.subject}).
+                                    </div>
+                                `);
+                            }
+                        }
+                    }, 'json');
+                }
+
                 $('#approveModal').modal('show');
             });
 

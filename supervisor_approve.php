@@ -639,6 +639,8 @@ body {
             <h2 class="modal-title">Request Details</h2>
         </div>
         
+        <div id="supervisor-conflict-warning"></div>
+        
         <div class="detail-group">
             <div class="detail-label">Student Name</div>
             <div class="detail-value"><?= htmlspecialchars($name) ?></div>
@@ -778,6 +780,50 @@ async function handleAction(action, reason = null) {
         if (btnApprove) btnApprove.disabled = false;
         if (btnReject) btnReject.disabled = false;
     }
+}
+
+// Check for conflicting schedules on load
+const inclusiveTimeString = <?= json_encode($time) ?>;
+const timeParts = inclusiveTimeString.split(' to ');
+if (timeParts.length === 2) {
+    const formData = new URLSearchParams();
+    formData.append('action', 'check_conflict');
+    formData.append('scilabName', <?= json_encode($laboratoryName) ?>);
+    formData.append('date', <?= json_encode($date) ?>);
+    formData.append('startTime', timeParts[0].trim());
+    formData.append('endTime', timeParts[1].trim());
+    formData.append('exclude_id', requestId);
+
+    fetch('ajax/ajax_forms.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: formData.toString()
+    })
+    .then(response => response.json())
+    .then(res => {
+        if (res.status === 'success') {
+            const warningContainer = document.getElementById('supervisor-conflict-warning');
+            if (res.conflict_type === 'approved') {
+                warningContainer.innerHTML = `
+                    <div class="error-message show" style="margin-bottom: 24px; text-shadow: none;">
+                        <strong><i class="glyphicon glyphicon-ban-circle"></i> Severe Conflict:</strong> An <b>approved</b> request already exists for this timeframe (${res.details.time}). 
+                        Approving this request will result in a double-booked laboratory.
+                    </div>
+                `;
+                const btnApprove = document.getElementById('btnApprove');
+                if (btnApprove) btnApprove.disabled = true;
+            } else if (res.conflict_type === 'pending') {
+                warningContainer.innerHTML = `
+                    <div style="background: rgba(245, 158, 11, 0.25); border: 1px solid rgba(245, 158, 11, 0.4); color: #fef3c7; padding: 16px; border-radius: 12px; margin-bottom: 24px; font-size: 14px; text-shadow: none;">
+                        <strong><i class="glyphicon glyphicon-warning-sign"></i> Pending Conflict:</strong> There is another pending request for this timeframe (${res.details.time} - ${res.details.subject}).
+                    </div>
+                `;
+            }
+        }
+    })
+    .catch(err => console.error('Conflict check error:', err));
 }
 </script>
 <?php include('helperFiles/footer.php'); ?>

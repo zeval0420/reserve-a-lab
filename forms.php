@@ -407,6 +407,8 @@
                             <input type="time" class="form-control liquid-input" name="end_time" required>
                         </div>
                     </div>
+                    
+                    <div id="conflict-warning-container" style="display:none; margin-bottom: 20px;"></div>
                         
                     <!-- Inventory Tables -->
                     <div id="materials-container"></div>
@@ -774,92 +776,119 @@
                 if (!isValid) return false;
 
                 const form = $(this);
-                const sectionsArr = $('#sections-checkboxes').val() || [];
+                const venue = $('#venue_select').val();
+                const date = $('#datepicker').val();
+                const start = $('input[name="start_time"]').val();
+                const end = $('input[name="end_time"]').val();
 
-                let summary = `
-                    <strong>Facility:</strong> ${form.find('[name="venue"]').val()}<br>
-                    <strong>Grade Level:</strong> ${form.find('[name="grade_level"]').val()}<br>
-                    <strong>Sections:</strong> ${sectionsArr.join(", ")}<br>
-                    <strong>Subject:</strong> ${form.find('[name="subject"]').val()}<br>
-                    <strong>Topic:</strong> ${form.find('[name="topic"]').val()}<br>
-                    <strong>Unit:</strong> ${form.find('[name="unit"]').val()}<br>
-                    <strong>Teacher:</strong> ${(form.find('[name="teacher[]"]').val() || []).join(', ')}<br>
-                    <strong>Date:</strong> ${form.find('[name="inclusive_date"]').val()}<br>
-                    <strong>Time:</strong> ${form.find('[name="start_time"]').val()} to ${form.find('[name="end_time"]').val()}<br>
-                    <hr>
-                `;
+                $.post('ajax/ajax_forms.php', {
+                    action: 'check_conflict',
+                    scilabName: venue,
+                    date: date,
+                    startTime: start,
+                    endTime: end
+                }, function(res) {
+                    if (res.conflict_type === 'approved') {
+                        showToast('An approved request already exists for this timeframe. Please choose a different schedule.', 'error');
+                        return;
+                    }
+                    
+                    let conflictAlert = '';
+                    if (res.conflict_type === 'pending') {
+                        conflictAlert = `
+                            <div class="alert alert-warning" style="margin-bottom: 15px;">
+                                <strong>Pending Conflict:</strong> A pending request exists for this timeframe (${res.details.time} - ${res.details.subject}). Are you sure you want to proceed and submit?
+                            </div>
+                        `;
+                    }
 
-                // Build categorized materials summary with merging of duplicates
-                const categories = CLASSIFICATIONS.map(c => {
-                    const slug = slugify(c);
-                    return {
-                        name: c,
-                        selector: `#${slug}-table-body`
-                    };
-                });
+                    const sectionsArr = $('#sections-checkboxes').val() || [];
 
-                categories.forEach((cat, index) => {
-                    let catItems = {};
+                    let summary = conflictAlert + `
+                        <strong>Facility:</strong> ${form.find('[name="venue"]').val()}<br>
+                        <strong>Grade Level:</strong> ${form.find('[name="grade_level"]').val()}<br>
+                        <strong>Sections:</strong> ${sectionsArr.join(", ")}<br>
+                        <strong>Subject:</strong> ${form.find('[name="subject"]').val()}<br>
+                        <strong>Topic:</strong> ${form.find('[name="topic"]').val()}<br>
+                        <strong>Unit:</strong> ${form.find('[name="unit"]').val()}<br>
+                        <strong>Teacher:</strong> ${(form.find('[name="teacher[]"]').val() || []).join(', ')}<br>
+                        <strong>Date:</strong> ${form.find('[name="inclusive_date"]').val()}<br>
+                        <strong>Time:</strong> ${form.find('[name="start_time"]').val()} to ${form.find('[name="end_time"]').val()}<br>
+                        <hr>
+                    `;
 
-                    $(cat.selector + ' tr').each(function() {
-                        const $r = $(this);
-                        const itemVal = $r.find('select[name="item[]"]').val();
-                        const itemLabel = $r.find('select[name="item[]"] option:selected').text();
-                        const desc = $r.find('select[name="description[]"], input[name="description[]"]').val() || 'N/A';
-                        const qty = parseInt($r.find('input[name="quantity[]"]').val()) || 1;
-                        const unit = $r.find('.unit-input').val() || '';
-
-                        if (!itemVal) return;
-
-                        const key = `${itemVal}__${desc}`;
-                        if (!catItems[key]) {
-                            catItems[key] = { qty: 0, unit, itemLabel, desc };
-                        }
-                        catItems[key].qty += qty;
+                    // Build categorized materials summary with merging of duplicates
+                    const categories = CLASSIFICATIONS.map(c => {
+                        const slug = slugify(c);
+                        return {
+                            name: c,
+                            selector: `#${slug}-table-body`
+                        };
                     });
 
-                    // Always display category header
-                    summary += `<strong>${cat.name}:</strong><br>`;
+                    categories.forEach((cat, index) => {
+                        let catItems = {};
 
-                    // Display items or "No items selected"
-                    if (Object.keys(catItems).length > 0) {
-                        for (const key in catItems) {
-                            let { qty, unit, itemLabel, desc } = catItems[key];
+                        $(cat.selector + ' tr').each(function() {
+                            const $r = $(this);
+                            const itemVal = $r.find('select[name="item[]"]').val();
+                            const itemLabel = $r.find('select[name="item[]"] option:selected').text();
+                            const desc = $r.find('select[name="description[]"], input[name="description[]"]').val() || 'N/A';
+                            const qty = parseInt($r.find('input[name="quantity[]"]').val()) || 1;
+                            const unit = $r.find('.unit-input').val() || '';
 
-                            // Remove any "(unit)" in itemLabel
-                            if (unit) {
-                                const regex = new RegExp(`\\(${unit}\\)`, 'gi');
-                                itemLabel = itemLabel.replace(regex, '').trim();
+                            if (!itemVal) return;
+
+                            const key = `${itemVal}__${desc}`;
+                            if (!catItems[key]) {
+                                catItems[key] = { qty: 0, unit, itemLabel, desc };
                             }
+                            catItems[key].qty += qty;
+                        });
 
-                            const unitPart = unit ? ` ${unit}` : '';
-                            summary += `• ${qty}${unitPart} of ${itemLabel} (${desc})<br>`;
+                        // Always display category header
+                        summary += `<strong>${cat.name}:</strong><br>`;
+
+                        // Display items or "No items selected"
+                        if (Object.keys(catItems).length > 0) {
+                            for (const key in catItems) {
+                                let { qty, unit, itemLabel, desc } = catItems[key];
+
+                                // Remove any "(unit)" in itemLabel
+                                if (unit) {
+                                    const regex = new RegExp(`\\(${unit}\\)`, 'gi');
+                                    itemLabel = itemLabel.replace(regex, '').trim();
+                                }
+
+                                const unitPart = unit ? ` ${unit}` : '';
+                                summary += `• ${qty}${unitPart} of ${itemLabel} (${desc})<br>`;
+                            }
+                        } else {
+                            summary += `No items selected<br>`;
                         }
-                    } else {
-                        summary += `No items selected<br>`;
-                    }
 
-                    // // Add <br> only if not the last category
-                    if (index < categories.length - 1){
-                        summary += `<br>`;
-                    }
-                });
+                        // // Add <br> only if not the last category
+                        if (index < categories.length - 1){
+                            summary += `<br>`;
+                        }
+                    });
 
-                // Students
-                summary += `<hr><strong>Students:</strong><br>`;
-                let hasStudents = false;
-                $('.student-select').each((i, el) => {
-                    const val = $(el).val();
-                    if (val) {
-                        hasStudents = true;
-                        summary += `• ${val}<br>`;
-                    }
-                });
+                    // Students
+                    summary += `<hr><strong>Students:</strong><br>`;
+                    let hasStudents = false;
+                    $('.student-select').each((i, el) => {
+                        const val = $(el).val();
+                        if (val) {
+                            hasStudents = true;
+                            summary += `• ${val}<br>`;
+                        }
+                    });
 
-                if (!hasStudents) summary += `No students selected<br>`;
+                    if (!hasStudents) summary += `No students selected<br>`;
 
-                $('#summaryContent').html(summary);
-                $('#summaryModal').modal('show');
+                    $('#summaryContent').html(summary);
+                    $('#summaryModal').modal('show');
+                }, 'json');
             });
 
             // Confirm submit
@@ -948,9 +977,9 @@
                                 showToast("Request submitted successfully!", 'success');
                                 resetForm();
                                 location.reload();
-                            } else if (res === "conflict") {
+                            } else if (res === "conflict_approved" || res === "conflict") {
                                 console.log("Submission Error: Schedule conflict");
-                                showToast("Schedule conflict. Please choose another time.", 'error');
+                                showToast("Schedule conflict. An approved request exists for this timeframe.", 'error');
                             } else if (res === "invalid_scilab") {
                                 console.log("Submission Error: Invalid laboratory selected");
                                 showToast("Invalid laboratory selected.", 'error');
@@ -992,6 +1021,45 @@
                 }
             });
 
+            function checkRealtimeConflict() {
+                const venue = $('#venue_select').val();
+                const date = $('#datepicker').val();
+                let start = $('input[name="start_time"]').val();
+                let end = $('input[name="end_time"]').val();
+                
+                $('#conflict-warning-container').hide().empty();
+                
+                if (venue && date && start && end && start < end) {
+                    $.post('ajax/ajax_forms.php', {
+                        action: 'check_conflict',
+                        scilabName: venue,
+                        date: date,
+                        startTime: start,
+                        endTime: end
+                    }, function(res) {
+                        if (res.status === 'success') {
+                            if (res.conflict_type === 'approved') {
+                                $('#conflict-warning-container').html(`
+                                    <div class="alert alert-danger" style="margin-bottom:0; padding:10px; border-radius:8px;">
+                                        <strong><i class="glyphicon glyphicon-ban-circle"></i> Schedule Conflict:</strong> An <b>approved</b> request already exists for this timeframe (${res.details.time}). You cannot submit this request.
+                                    </div>
+                                `).fadeIn();
+                            } else if (res.conflict_type === 'pending') {
+                                $('#conflict-warning-container').html(`
+                                    <div class="alert alert-warning" style="margin-bottom:0; padding:10px; border-radius:8px;">
+                                        <strong><i class="glyphicon glyphicon-warning-sign"></i> Pending Request Conflict:</strong> There is a pending request for this timeframe (${res.details.time} - ${res.details.subject}). Be aware when submitting.
+                                    </div>
+                                `).fadeIn();
+                            }
+                        }
+                    }, 'json');
+                }
+            }
+
+            $('input[name="start_time"], input[name="end_time"], #venue_select, #datepicker').on('change', function() {
+                checkRealtimeConflict();
+            });
+
             // time validation
             $('input[name="start_time"], input[name="end_time"]').on('change', function() {
                 const start = $('input[name="start_time"]').val();
@@ -1003,6 +1071,7 @@
                     showToast("End time must be later than start time.", 'warning');
                     $('input[name="end_time"]').val('');
                     $('input[name="end_time"]').addClass('is-invalid');
+                    $('#conflict-warning-container').hide().empty();
                 }
             });
             

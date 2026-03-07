@@ -167,18 +167,32 @@
         }
 
 
-        $conflictStmt = $conn->prepare("SELECT * FROM scilab_form_requests 
-            WHERE scilabName = ? AND inclusiveDate = ? AND (
-                (inclusiveTime LIKE CONCAT('%', ?, '%')) OR
-                (inclusiveTime LIKE CONCAT('%', ?, '%'))
-            ) AND statusScilabPersonnel != 'Rejected'");
-
-        $conflictStmt->bind_param("ssss", $scilabName, $startDate, $startTime, $endTime);
-        $conflictStmt->execute();
-        $conflictResult = $conflictStmt->get_result();
-
-        if ($conflictResult->num_rows > 0) {
-            echo "conflict";
+        $checkStmt = $conn->prepare("SELECT statusScilabPersonnel, inclusiveTime FROM scilab_form_requests WHERE scilabName = ? AND inclusiveDate = ? AND statusScilabPersonnel != 'Rejected'");
+        $checkStmt->bind_param("ss", $scilabName, $startDate);
+        $checkStmt->execute();
+        $checkRes = $checkStmt->get_result();
+        
+        $startTs = strtotime($startTime);
+        $endTs = strtotime($endTime);
+        $approvedConflict = false;
+        
+        while ($row = $checkRes->fetch_assoc()) {
+            $timeRange = explode(' to ', $row['inclusiveTime']);
+            if (count($timeRange) == 2) {
+                $otherStart = strtotime($timeRange[0]);
+                $otherEnd = strtotime($timeRange[1]);
+                
+                if ($startTs < $otherEnd && $endTs > $otherStart) {
+                    if ($row['statusScilabPersonnel'] === 'Approved') {
+                        $approvedConflict = true;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        if ($approvedConflict) {
+            echo "conflict_approved";
             exit();
         }
 
@@ -414,6 +428,73 @@
 
         echo json_encode($students);
         exit;
+    }elseif (isset($_POST['action']) && $_POST['action'] === 'check_conflict') {
+        header('Content-Type: application/json');
+        
+        $scilabName = $_POST['scilabName'] ?? '';
+        $date = $_POST['date'] ?? '';
+        $startTime = $_POST['startTime'] ?? '';
+        $endTime = $_POST['endTime'] ?? '';
+        $exclude_id = isset($_POST['exclude_id']) ? intval($_POST['exclude_id']) : 0;
+        
+        if (!$scilabName || !$date || !$startTime || !$endTime) {
+            echo json_encode(['status' => 'error', 'message' => 'Missing parameters']);
+            exit();
+        }
+        
+        $startTs = strtotime($startTime);
+        $endTs = strtotime($endTime);
+        
+        if ($exclude_id > 0) {
+            $stmt = $conn->prepare("SELECT id, statusScilabPersonnel, inclusiveTime, requesterEmployeeID, subject, subjectTopic FROM scilab_form_requests WHERE scilabName = ? AND inclusiveDate = ? AND statusScilabPersonnel != 'Rejected' AND id != ?");
+            $stmt->bind_param("ssi", $scilabName, $date, $exclude_id);
+        } else {
+            $stmt = $conn->prepare("SELECT id, statusScilabPersonnel, inclusiveTime, requesterEmployeeID, subject, subjectTopic FROM scilab_form_requests WHERE scilabName = ? AND inclusiveDate = ? AND statusScilabPersonnel != 'Rejected'");
+            $stmt->bind_param("ss", $scilabName, $date);
+        }
+        
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        $conflicts = [];
+        while ($row = $result->fetch_assoc()) {
+            $timeRange = explode(' to ', $row['inclusiveTime']);
+            if (count($timeRange) == 2) {
+                $otherStart = strtotime($timeRange[0]);
+                $otherEnd = strtotime($timeRange[1]);
+                
+                // Check if overlapping (exact boundaries do not conflict)
+                if ($startTs < $otherEnd && $endTs > $otherStart) {
+                    $conflicts[] = [
+                        'status' => $row['statusScilabPersonnel'],
+                        'time' => $row['inclusiveTime'],
+                        'subject' => $row['subject'] . ' - ' . $row['subjectTopic']
+                    ];
+                }
+            }
+        }
+        
+        // Determine the worst conflict type
+        $conflictType = 'none';
+        $conflictDetails = null;
+        
+        foreach ($conflicts as $c) {
+            if ($c['status'] === 'Approved') {
+                $conflictType = 'approved';
+                $conflictDetails = $c;
+                break; // Approved is strict error, no need to check others
+            } elseif ($c['status'] === 'Pending') {
+                $conflictType = 'pending';
+                $conflictDetails = $c;
+            }
+        }
+        
+        echo json_encode([
+            'status' => 'success',
+            'conflict_type' => $conflictType,
+            'details' => $conflictDetails
+        ]);
+        exit();
     }
 
 
