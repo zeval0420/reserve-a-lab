@@ -10,12 +10,22 @@
     include('../helperFiles/db_connection.php');
     include('../helperFiles/session_handler.php');
 
-    // Get session data
-    $email = $_SESSION['email'];
-    $username   = $_SESSION['username'];
-
     function formatTime($time) {
         return date("g:i A", strtotime($time));
+    }
+
+    function createMailer() {
+        $mail = new PHPMailer(true);
+        $mail->isSMTP();
+        $mail->Host = 'smtp.gmail.com';
+        $mail->SMTPAuth = true;
+        $mail->Username = 'pshsircscilab@gmail.com';
+        $mail->Password = 'wxzmkkrffptfchcc';
+        $mail->SMTPSecure = 'tls';
+        $mail->Port = 587;
+        $mail->setFrom('pshsircscilab@gmail.com', 'SciLab Notification System');
+        $mail->isHTML(true);
+        return $mail;
     }
 
     function sendSubmissionNotificationToAdmins($conn, $data) {
@@ -51,31 +61,18 @@
         }
 
         while ($admin = $admins->fetch_assoc()) {
-           if (isset($admin['email'])) {
-                $mail = new PHPMailer(true);
+            if (!empty($admin['email']) && filter_var($admin['email'], FILTER_VALIDATE_EMAIL)) {
                 try {
-                    $mail->isSMTP();
-                    $mail->Host = 'smtp.gmail.com';
-                    $mail->SMTPAuth = true;
-                    $mail->Username = 'pshsircscilab@gmail.com';
-                    $mail->Password = 'wxzmkkrffptfchcc';
-                    $mail->SMTPSecure = 'tls';
-                    $mail->Port = 587;
-
-
-                $mail->setFrom('pshsircscilab@gmail.com', 'SciLab Notification System');
-                $mail->addAddress($admin['email']);
-
-                $mail->isHTML(true);
-                $mail->Subject = $subjectLine;
-                $mail->Body = $bodyTemplate;
-
-                $mail->send();
-            } catch (Exception $e) {
-                error_log("Admin email failed to {$admin['email']}: {$mail->ErrorInfo}");
+                    $mail = createMailer();
+                    $mail->addAddress($admin['email']);
+                    $mail->Subject = $subjectLine;
+                    $mail->Body = $bodyTemplate;
+                    $mail->send();
+                } catch (Exception $e) {
+                    error_log("Admin email failed to {$admin['email']}: " . $e->getMessage());
+                }
             }
-            }
-       }
+        }
     }
 
     function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails, $formID) {
@@ -116,26 +113,14 @@
 
         foreach ($supervisorEmails as $email) {
             if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $mail = new PHPMailer(true);
                 try {
-                    $mail->isSMTP();
-                    $mail->Host = 'smtp.gmail.com';
-                    $mail->SMTPAuth = true;
-                    $mail->Username = 'pshsircscilab@gmail.com';
-                    $mail->Password = 'wxzmkkrffptfchcc';
-                    $mail->SMTPSecure = 'tls';
-                    $mail->Port = 587;
-
-                    $mail->setFrom('pshsircscilab@gmail.com', 'SciLab Notification System');
+                    $mail = createMailer();
                     $mail->addAddress($email);
-
-                    $mail->isHTML(true);
                     $mail->Subject = $subjectLine;
                     $mail->Body = $bodyTemplate;
-
                     $mail->send();
                 } catch (Exception $e) {
-                    error_log("Supervisor email failed to {$email}: {$mail->ErrorInfo}");
+                    error_log("Supervisor email failed to {$email}: " . $e->getMessage());
                 }
             }
         }
@@ -201,10 +186,6 @@
 
 
         $requesterID = $_SESSION['employeeID'] ?? '';
-        $result = $conn->query("SELECT firstname FROM accounts WHERE employeeID = '$requesterID'");
-        $firstName = ($result && $result->num_rows > 0) ? $result->fetch_assoc()['firstname'] : 'User';
-
-        $email = $_SESSION['email'] ?? '';
         $dateRequested = date('Y-m-d H:i:s');
 
         $stmt = $conn->prepare("INSERT INTO scilab_form_requests (
@@ -353,14 +334,10 @@
             $stmt->execute();
             $result = $stmt->get_result();
 
-            // Output checkboxes inline
             $html = '';
             while ($row = $result->fetch_assoc()) {
                 $section = htmlspecialchars($row['section']);
                 $html .= '<option value="' . $section . '">' . $section . '</option>';
-                //$html .= '<label class="section-checkbox" style="display:inline-block; margin-right:15px;">';
-                //$html .= '<input type="checkbox" name="sections[]" value="' . $section . '"> ' . $section;
-                //$html .= '</label>';
             }
 
             echo $html;
@@ -405,7 +382,7 @@
         }
 
         // Get latest school year
-        $res = mysqli_query($conn, "SELECT value FROM current ORDER BY id DESC LIMIT 1");
+        $res = mysqli_query($conn, "SELECT value FROM current WHERE description = 'School Year' ORDER BY id DESC LIMIT 1");
         $latestBatchStr = mysqli_fetch_assoc($res)['value']; // format: "2024-2025"
         $latestStartYear = intval(explode('-', $latestBatchStr)[1]);
 

@@ -130,7 +130,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/sql/sql.min.js"></script>
 
     <style>
-        /* body { background-color: #f5f5f5; } Removed to allow global gradient */
         .dashboard-container {
             background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(12px);
@@ -150,7 +149,6 @@
             font-size: 14px;
             box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
         }
-        /* .sql-editor:focus { outline: none; border-color: #2B55C4; box-shadow: 0 0 10px rgba(43, 85, 196, 0.2); } */
         .table-container { overflow-x: auto; margin-top: 20px; border-radius: 10px; }
         .table th { background-color: #2B55C4; color: white; white-space: nowrap; }
         
@@ -286,7 +284,7 @@
     <?php include('helperFiles/header.php'); ?>
 
     <div class="dashboard-container">
-        <div class="d-flex justify-content-between align-items-center mb-4" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div class="d-flex justify-content-between align-items-center mb-4">
             <h2 class="text-primary" style="font-weight:bold; margin: 0;"><i class="bi bi-terminal-fill" style="margin-right: 10px;"></i> Controller Dashboard</h2>
             <div style="display:flex; align-items:center;">
                 <label class="dark-mode-switch">
