@@ -198,8 +198,9 @@
                                         <?php if ($statusFilter !== 'Rejected'): ?>
                                             <td>
                                                 <?php if ($statusFilter === 'Pending'): ?>
-                                                    <button class="btn-liquid-success approve-btn" style="width: 90%; margin-bottom: 10px;" data-request='<?= json_encode($row) ?>'>Approve</button>
-                                                    <button class="btn-liquid-danger reject-btn" style="width: 90%;" data-request='<?= json_encode($row) ?>'>Reject</button>
+                                                    <a href="supervisor_approve.php?id=<?= $row['id'] ?>" class="btn-liquid" style="width: 90%; margin-bottom: 10px; display:block; text-align:center; padding-left:0; padding-right:0;">Review</a>
+                                                    <button class="btn-liquid-success approve-btn" style="width: 90%; margin-bottom: 10px; padding-left:0; padding-right:0;" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>Force Approve</button>
+                                                    <button class="btn-liquid-danger reject-btn" style="width: 90%; padding-left:0; padding-right:0;" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>Reject</button>
                                                 <?php elseif ($statusFilter === 'Approved'): ?>
                                                     <a href="templates/print_template.php?id=<?= $row['id'] ?>" target="_blank" class="btn-liquid">
                                                         <i class="glyphicon glyphicon-print"></i> Print
@@ -222,7 +223,7 @@
                     <div class="modal-content">
                         <form id="approveForm">
                             <div class="modal-header">
-                                <h5 class="modal-title">Approve Request</h5>
+                                <h5 class="modal-title">Force Approve Request</h5>
                                 <button type="button" class="close" data-dismiss="modal">&times;</button>
                             </div>
                             <div class="modal-body">

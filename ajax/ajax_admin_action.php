@@ -135,7 +135,7 @@
                 exit();
             }
 
-            $stmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Approved', controlNumber = ?, feedback = ? WHERE id = ?");
+            $stmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Approved', supervisor_status = 'approved', subject_teacher_status = 'approved', lab_personnel_status = 'approved', cid_chief_status = 'approved', controlNumber = ?, feedback = ? WHERE id = ?");
             $stmt->bind_param("isi", $controlNumber, $remarks, $id);
             $stmt->execute();
 
@@ -149,7 +149,7 @@
             exit();
         }elseif ($_POST['action'] === 'reject') {
             $feedback = $_POST['feedback'] ?? '';
-            $stmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Rejected', controlNumber = NULL, feedback = ? WHERE id = ?");
+            $stmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Rejected', supervisor_status = 'rejected', subject_teacher_status = 'rejected', lab_personnel_status = 'rejected', cid_chief_status = 'rejected', controlNumber = NULL, feedback = ? WHERE id = ?");
             $stmt->bind_param("si", $feedback, $id);
 
             $stmt->execute();

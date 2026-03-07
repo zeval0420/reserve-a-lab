@@ -62,13 +62,15 @@ $currentRole = $_SESSION['role'] ?? 'supervisor';
 // Check if current user is the Teacher in Charge
 $isTeacherInCharge = false;
 $loggedInEmployeeID = $_SESSION['employeeID'] ?? '';
+$userPosition = '';
 
 if ($loggedInEmployeeID) {
-    $stmtCheck = $conn->prepare("SELECT firstname, middlename, lastname FROM accounts WHERE employeeID = ?");
+    $stmtCheck = $conn->prepare("SELECT firstname, middlename, lastname, position FROM accounts WHERE employeeID = ?");
     $stmtCheck->bind_param("s", $loggedInEmployeeID);
     $stmtCheck->execute();
     $resCheck = $stmtCheck->get_result();
     if ($uRow = $resCheck->fetch_assoc()) {
+        $userPosition = $uRow['position'] ?? '';
         // Match format from forms.php: lastname . ', ' . firstname . ' ' . middlename
         $formattedName = trim($uRow['lastname'] . ', ' . $uRow['firstname'] . ' ' . $uRow['middlename']);
         
@@ -77,6 +79,22 @@ if ($loggedInEmployeeID) {
         }
     }
     $stmtCheck->close();
+}
+
+$isSubjectTeacher = (strpos(strtolower($userPosition), 'teacher') !== false);
+$isLabPersonnel = ($userPosition === 'Sci. Res. Assist.' || $userPosition === 'Sci. Research Specialist I');
+$isCIDChief = (strpos(strtolower($userPosition), 'chief') !== false);
+
+$canApproveCurrentStep = false;
+
+if ($supervisor_status === 'pending') {
+    $canApproveCurrentStep = $isTeacherInCharge;
+} elseif ($supervisor_status === 'approved' && $subject_teacher_status === 'pending') {
+    $canApproveCurrentStep = $isSubjectTeacher;
+} elseif ($subject_teacher_status === 'approved' && $lab_personnel_status === 'pending') {
+    $canApproveCurrentStep = $isLabPersonnel;
+} elseif ($lab_personnel_status === 'approved' && $cid_chief_status === 'pending') {
+    $canApproveCurrentStep = $isCIDChief;
 }
 
 include('helperFiles/headData.php');
@@ -655,7 +673,7 @@ body {
         <div class="success-message" id="successMessage"></div>
         
         <div class="modal-actions" id="defaultActions">
-            <?php if ($supervisor_status === 'pending' && $isTeacherInCharge): ?>
+            <?php if ($canApproveCurrentStep): ?>
                 <button class="btn-action btn-approve" id="btnApprove" onclick="handleAction('approve')">Approve</button>
                 <button class="btn-action btn-reject" id="btnReject" onclick="initiateRejection()">Reject</button>
             <?php endif; ?>

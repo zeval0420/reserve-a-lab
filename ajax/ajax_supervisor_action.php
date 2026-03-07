@@ -194,6 +194,148 @@ function sendNotificationToAdmins($conn, $requestID) {
     }
 }
 
+function sendNotificationToSubjectTeacher($conn, $requestID) {
+    // Fetch request details
+    $stmt = $conn->prepare("SELECT * FROM scilab_form_requests WHERE id = ?");
+    $stmt->bind_param("i", $requestID);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $data = $res->fetch_assoc();
+    $stmt->close();
+
+    if (!$data) return;
+
+    $requesterID = $data['requesterEmployeeID'];
+    $requesterName = $requesterID;
+
+    // Fetch requester name
+    $stmtName = $conn->prepare("SELECT firstname, lastname FROM accounts WHERE employeeID = ?");
+    $stmtName->bind_param("s", $requesterID);
+    $stmtName->execute();
+    $resName = $stmtName->get_result();
+    if ($row = $resName->fetch_assoc()) {
+        $requesterName = $row['firstname'] . ' ' . $row['lastname'];
+        $stmtName->close();
+    } else {
+        $stmtName->close();
+        $stmtName = $conn->prepare("SELECT firstname, lastname FROM student WHERE LRN = ?");
+        if ($stmtName) {
+            $stmtName->bind_param("s", $requesterID);
+            $stmtName->execute();
+            $resName = $stmtName->get_result();
+            if ($row = $resName->fetch_assoc()) {
+                $requesterName = $row['firstname'] . ' ' . $row['lastname'];
+            }
+            $stmtName->close();
+        }
+    }
+
+    $subjectTeachers = $conn->query("SELECT email FROM accounts WHERE status = 'active' AND position LIKE '%Teacher%'");
+    if ($subjectTeachers->num_rows === 0) return;
+
+    $subjectLine = "Action Required: Subject Teacher Approval Needed";
+    $bodyTemplate = "A new request has been approved by the Supervisor and requires Subject Teacher approval. 
+        <br><br><strong>Facility:</strong> " . htmlspecialchars($data['scilabName']) . "
+        <br><strong>Requested By:</strong> " . htmlspecialchars($requesterName) . "
+        <br><strong>Date/Time:</strong> " . htmlspecialchars($data['inclusiveDate']) . " " . htmlspecialchars($data['inclusiveTime']) . "
+        <br><br>Please log in to the system to review and approve.";
+
+    while ($teacher = $subjectTeachers->fetch_assoc()) {
+        if (filter_var($teacher['email'], FILTER_VALIDATE_EMAIL)) {
+            $mail = new PHPMailer(true);
+            try {
+                $mail->isSMTP();
+                $mail->Host = 'smtp.gmail.com';
+                $mail->SMTPAuth = true;
+                $mail->Username = 'pshsircscilab@gmail.com';
+                $mail->Password = 'wxzmkkrffptfchcc';
+                $mail->SMTPSecure = 'tls';
+                $mail->Port = 587;
+
+                $mail->setFrom('pshsircscilab@gmail.com', 'SciLab Notification System');
+                $mail->addAddress($teacher['email']);
+                $mail->isHTML(true);
+                $mail->Subject = $subjectLine;
+                $mail->Body = $bodyTemplate;
+                $mail->send();
+            } catch (Exception $e) {
+                error_log("Subject Teacher email failed to {$teacher['email']}: {$mail->ErrorInfo}");
+            }
+        }
+    }
+}
+
+function sendNotificationToCIDChief($conn, $requestID) {
+    // Fetch request details
+    $stmt = $conn->prepare("SELECT * FROM scilab_form_requests WHERE id = ?");
+    $stmt->bind_param("i", $requestID);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $data = $res->fetch_assoc();
+    $stmt->close();
+
+    if (!$data) return;
+
+    $requesterID = $data['requesterEmployeeID'];
+    $requesterName = $requesterID;
+
+    // Fetch requester name
+    $stmtName = $conn->prepare("SELECT firstname, lastname FROM accounts WHERE employeeID = ?");
+    $stmtName->bind_param("s", $requesterID);
+    $stmtName->execute();
+    $resName = $stmtName->get_result();
+    if ($row = $resName->fetch_assoc()) {
+        $requesterName = $row['firstname'] . ' ' . $row['lastname'];
+        $stmtName->close();
+    } else {
+        $stmtName->close();
+        $stmtName = $conn->prepare("SELECT firstname, lastname FROM student WHERE LRN = ?");
+        if ($stmtName) {
+            $stmtName->bind_param("s", $requesterID);
+            $stmtName->execute();
+            $resName = $stmtName->get_result();
+            if ($row = $resName->fetch_assoc()) {
+                $requesterName = $row['firstname'] . ' ' . $row['lastname'];
+            }
+            $stmtName->close();
+        }
+    }
+
+    $cidChiefs = $conn->query("SELECT email FROM accounts WHERE status = 'active' AND position LIKE '%Chief%'");
+    if ($cidChiefs->num_rows === 0) return;
+
+    $subjectLine = "Action Required: CID Chief Final Approval Needed";
+    $bodyTemplate = "A new request has passed Lab Personnel review and requires final CID Chief approval. 
+        <br><br><strong>Facility:</strong> " . htmlspecialchars($data['scilabName']) . "
+        <br><strong>Requested By:</strong> " . htmlspecialchars($requesterName) . "
+        <br><strong>Date/Time:</strong> " . htmlspecialchars($data['inclusiveDate']) . " " . htmlspecialchars($data['inclusiveTime']) . "
+        <br><br>Please log in to the system to review and approve.";
+
+    while ($admin = $cidChiefs->fetch_assoc()) {
+        if (filter_var($admin['email'], FILTER_VALIDATE_EMAIL)) {
+            $mail = new PHPMailer(true);
+            try {
+                $mail->isSMTP();
+                $mail->Host = 'smtp.gmail.com';
+                $mail->SMTPAuth = true;
+                $mail->Username = 'pshsircscilab@gmail.com';
+                $mail->Password = 'wxzmkkrffptfchcc';
+                $mail->SMTPSecure = 'tls';
+                $mail->Port = 587;
+
+                $mail->setFrom('pshsircscilab@gmail.com', 'SciLab Notification System');
+                $mail->addAddress($admin['email']);
+                $mail->isHTML(true);
+                $mail->Subject = $subjectLine;
+                $mail->Body = $bodyTemplate;
+                $mail->send();
+            } catch (Exception $e) {
+                error_log("CID Chief email failed to {$admin['email']}: {$mail->ErrorInfo}");
+            }
+        }
+    }
+}
+
 function sendRejectionNotificationToRequester($conn, $request, $rejectionReason, $rejectedBy) {
     $requesterID = $request['requesterEmployeeID'];
     $requesterEmail = null;
@@ -417,7 +559,9 @@ if (!$request) {
 // Priority: Supervisor -> Subject Teacher -> Lab Personnel -> CID Chief
 $fieldPrefix = '';
 
-if (($request['supervisor_status'] ?? 'pending') === 'pending') {
+if ($action === 'force_approve_override') {
+    $fieldPrefix = 'force_approve';
+} elseif (($request['supervisor_status'] ?? 'pending') === 'pending') {
     $fieldPrefix = 'supervisor';
 } elseif (($request['subject_teacher_status'] ?? 'pending') === 'pending') {
     $fieldPrefix = 'subject_teacher';
@@ -430,25 +574,49 @@ if (($request['supervisor_status'] ?? 'pending') === 'pending') {
     exit;
 }
 
-// Update Database
-$statusColumn = $fieldPrefix . '_status';
-$newStatus = ($action === 'approve') ? 'approved' : 'rejected';
+// Determine which column to update based on current status flow
+if ($fieldPrefix === 'force_approve') {
+    $sql = "UPDATE scilab_form_requests SET statusScilabPersonnel = 'Approved', supervisor_status = 'approved', subject_teacher_status = 'approved', lab_personnel_status = 'approved', cid_chief_status = 'approved'";
+    $params = [];
+    $types = "";
+    
+    if ($action === 'force_approve_override' && $reason !== null) {
+        $sql .= ", feedback = ?";
+        $params[] = $reason;
+        $types .= "s";
+    }
+    
+    $sql .= " WHERE id = ?";
+    $params[] = $requestId;
+    $types .= "i";
+} else {
+    $statusColumn = $fieldPrefix . '_status';
+    $newStatus = ($action === 'approve') ? 'approved' : 'rejected';
 
-// Prepare SQL
-// We dynamically build the query to include signature update if present
-$sql = "UPDATE scilab_form_requests SET $statusColumn = ?";
-$params = [$newStatus];
-$types = "s";
+    // Prepare SQL
+    $sql = "UPDATE scilab_form_requests SET $statusColumn = ?";
+    
+    // If rejected at any stage, mark the whole request as Rejected
+    if ($action === 'reject') {
+        $sql .= ", statusScilabPersonnel = 'Rejected'";
+    } elseif ($action === 'approve' && $fieldPrefix === 'cid_chief') {
+        // If final stage approved, mark the whole request as Approved
+        $sql .= ", statusScilabPersonnel = 'Approved'";
+    }
 
-if ($action === 'reject' && $reason !== null) {
-    $sql .= ", feedback = ?";
-    $params[] = $reason;
-    $types .= "s";
+    $params = [$newStatus];
+    $types = "s";
+
+    if ($action === 'reject' && $reason !== null) {
+        $sql .= ", feedback = ?";
+        $params[] = $reason;
+        $types .= "s";
+    }
+
+    $sql .= " WHERE id = ?";
+    $params[] = $requestId;
+    $types .= "i";
 }
-
-$sql .= " WHERE id = ?";
-$params[] = $requestId;
-$types .= "i";
 
 $updateStmt = $conn->prepare($sql);
 if (!$updateStmt) {
@@ -459,8 +627,8 @@ if (!$updateStmt) {
 $updateStmt->bind_param($types, ...$params);
 
 if ($updateStmt->execute()) {
-    // Check if this is the final approval (CID Chief)
-    if ($fieldPrefix === 'cid_chief' && $action === 'approve') {
+    // Check if this is the final approval (CID Chief or Force Approve)
+    if (($fieldPrefix === 'cid_chief' && $action === 'approve') || $fieldPrefix === 'force_approve') {
         $requesterID = $request['requesterEmployeeID'];
         $requesterEmail = null;
 
@@ -499,15 +667,24 @@ if ($updateStmt->execute()) {
                 $mail->addAddress($requesterEmail);
                 $mail->isHTML(true);
                 $mail->Subject = 'SciLab Request Approved';
-                $mail->Body = 'Your request for ' . htmlspecialchars($request['scilabName']) . ' on ' . htmlspecialchars($request['inclusiveDate']) . ' has been fully approved by the CID Chief.';
+                
+                if ($fieldPrefix === 'force_approve') {
+                    $mail->Body = 'Your request for ' . htmlspecialchars($request['scilabName']) . ' on ' . htmlspecialchars($request['inclusiveDate']) . ' has been FORCE APPROVED by an Administrator.';
+                } else {
+                    $mail->Body = 'Your request for ' . htmlspecialchars($request['scilabName']) . ' on ' . htmlspecialchars($request['inclusiveDate']) . ' has been fully approved by the CID Chief.';
+                }
 
                 $mail->send();
             } catch (Exception $e) {
                 error_log("Failed to send approval email: " . $mail->ErrorInfo);
             }
         }
+    } elseif ($fieldPrefix === 'supervisor' && $action === 'approve') {
+        sendNotificationToSubjectTeacher($conn, $requestId);
     } elseif ($fieldPrefix === 'subject_teacher' && $action === 'approve') {
         sendNotificationToAdmins($conn, $requestId);
+    } elseif ($fieldPrefix === 'lab_personnel' && $action === 'approve') {
+        sendNotificationToCIDChief($conn, $requestId);
     } elseif ($action === 'reject') {
         $rejectedBy = ucwords(str_replace('_', ' ', $fieldPrefix));
         sendRejectionNotificationToRequester($conn, $request, $reason, $rejectedBy);
