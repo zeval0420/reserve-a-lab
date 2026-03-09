@@ -6,7 +6,10 @@
     require '../PHPMailer/src/PHPMailer.php';
     require '../PHPMailer/src/SMTP.php';
 
-    // centralized db_connection and session_handler
+    /* 
+     * Centralized initialization protocol: 
+     * Integrates database connectivity and ensures secure session management handling.
+     */
     include('../helperFiles/db_connection.php');
     include('../helperFiles/session_handler.php');
 
@@ -201,7 +204,10 @@
 
         $formID = $stmt->insert_id;
 
-        // Handle merged materials sent from JS
+        /* 
+         * Process laboratory material requirements sent as a merged JSON string from the client.
+         * Deserializes the array and securely inserts each requested item alongside the generated form identifier.
+         */
         $materials = [];
         $stmt2 = $conn->prepare("INSERT INTO scilab_material_requests (formID, item, quantity, unit, description) VALUES (?, ?, ?, ?, ?)");
 
@@ -227,7 +233,7 @@
         $students = $_POST['students'] ?? [];
         $studentList = implode(", ", array_filter($students));
         
-        // Insert each student into scilab_students_involved table
+        /* Insert the verified participating group members into the student involvement registry. */
         $stmt3 = $conn->prepare("INSERT INTO scilab_students_involved (formID, student_name) VALUES (?, ?)");
         foreach ($students as $student) {
             $student = trim($student);
@@ -246,8 +252,11 @@
 
         if (!empty($teachers)) {
             $teacherEmails = [];
-            // Note: Matching by CONCAT(firstname, ' ', lastname) can be fragile.
-            // Using a unique identifier like employeeID from the form would be more robust.
+            
+            /* 
+             * Resolve designated teacher accounts structure by matching full names.
+             * Consolidates addresses needed to construct supervisor email notifications.
+             */
             $placeholders = rtrim(str_repeat('?,', count($teachers)), ',');
             $email_stmt = $conn->prepare("SELECT email FROM accounts WHERE CONCAT(firstname, ' ', lastname) IN ($placeholders)");
 
@@ -440,7 +449,7 @@
                 $otherStart = strtotime($timeRange[0]);
                 $otherEnd = strtotime($timeRange[1]);
                 
-                // Check if overlapping (exact boundaries do not conflict)
+                /* Ensure time slots are fundamentally isolated. Adjacent/Touch boundaries do not establish conflict overlapping. */
                 if ($startTs < $otherEnd && $endTs > $otherStart) {
                     $conflicts[] = [
                         'status' => $row['statusScilabPersonnel'],
@@ -451,7 +460,7 @@
             }
         }
         
-        // Determine the worst conflict type
+        /* Enumerate conflicts to locate the highest severity alert. */
         $conflictType = 'none';
         $conflictDetails = null;
         
@@ -459,7 +468,8 @@
             if ($c['status'] === 'Approved') {
                 $conflictType = 'approved';
                 $conflictDetails = $c;
-                break; // Approved is strict error, no need to check others
+                /* Stop checks immediately upon detecting an overriding approval state collision. */
+                break; 
             } elseif ($c['status'] === 'Pending') {
                 $conflictType = 'pending';
                 $conflictDetails = $c;

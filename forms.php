@@ -37,7 +37,7 @@
         $venues[$row['scilabName']] = $row['scilabName'];
     }
 
-    // Grades and Sections
+    /* Pre-fetch and assemble structured grade and section allocations for selection. */
     $sectionOptions = [];
     $result = $conn->query("SELECT grade, section FROM section ORDER BY grade, section");
     while ($row = $result->fetch_assoc()) {
@@ -54,7 +54,7 @@
         $subjectOptions = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 
-    // Teachers (active only)
+    /* Query valid teacher personnel accounts to be assigned as supervisory instructors. */
     $teacherOptions = [];
     $result = $conn->query("SELECT employeeID, firstname, middlename, lastname FROM accounts WHERE status='active' ORDER BY lastname, firstname, middlename ASC");
     while ($row = $result->fetch_assoc()) {
@@ -64,14 +64,14 @@
         ];
     }
 
-    // Students grouped by grade
+    /* Establishes student directory caches grouped by matching batch logic. */
     $studentOptions = [];
     $result = $conn->query("SELECT firstname, middlename, lastname, batch FROM student ORDER BY lastname, firstname, middlename ASC");
     while ($row = $result->fetch_assoc()) {
         $studentOptions[$row['batch']][] = $row['lastname'] . ', ' . $row['firstname'] . ' ' . $row['middlename'];
     }
 
-    // Inventory items with unit, grouped by classification
+    /* Dynamically fetch laboratory inventory elements segregated by predefined classifications. */
     $CLASSIFICATIONS = [
         'Equipment',
         'Semi Expendable',
@@ -122,15 +122,13 @@
         }
     }
 
-    // CREATE NEW CLASSIFICATIONS LIST WITHOUT CHANGING THE ORIGINAL
-    $DISPLAY_CLASSIFICATIONS = ['Regular Equipment', 'Specialized Equipment']; // new classes to be displayed
+    /* Synthesize a visually consolidated classification list while retaining original logical keys. */
+    $DISPLAY_CLASSIFICATIONS = ['Regular Equipment', 'Specialized Equipment'];
 
     foreach ($CLASSIFICATIONS as $class) {
-        // skip these classes
         if ($class === 'Equipment' || $class === 'Semi Expendable') {
             continue;
         }
-        // avoid duplicates (just in case)
         if (!in_array($class, $DISPLAY_CLASSIFICATIONS)) {
             $DISPLAY_CLASSIFICATIONS[] = $class;
         }
@@ -522,14 +520,14 @@
             `);
         });
 
-        const itemDescriptions = <?= json_encode($itemOptions) ?>; // supports { item: ['desc1','desc2'] } or { item: { descriptions: [...], unit: 'pcs' } }
+        const itemDescriptions = <?= json_encode($itemOptions) ?>;
 
-        // Get items by classification
+        /* Provide mapped items corresponding to a distinct classification label. */
         function getItemsByClassification(classification) {
             return itemDescriptions[classification] || {};
         }
 
-        // Helper to build options based on classification
+        /* Generate DOM-friendly HTML options based on classified items map. */
         function buildItemOptions(itemsObj) {
             return Object.keys(itemsObj).map(item => {
                 const data = itemsObj[item];
@@ -537,7 +535,7 @@
             }).join('');
         }
 
-        // Helper to get description array for an item key within its classification
+        /* Safely extract secondary property descriptions linked to an item scope. */
         function getDescriptionsForItem(itemKey, classType) {
             if (!itemKey || !classType) return [];
             const itemsObj = itemDescriptions[classType];
@@ -548,17 +546,19 @@
             return [];
         }
 
-        // Helper to get unit for an item key
+        /* Retreive unitary types associated with an item. */
         function getUnitForItem(itemKey) {
             if (!itemKey) return '';
             const v = itemDescriptions[itemKey];
             if (!v) return '';
             if (v && typeof v.unit === 'string') return v.unit;
-            // if itemDescriptions is an array-only structure, there's no unit
             return '';
         }
 
-        // Delegated handler: when item changes, update descriptions and hidden unit input
+        /* 
+         * Delegated handler: Synchronize description lists and unit labels immediately upon 
+         * an item selection changing. Evaluates the proper classification context automatically. 
+         */
         $(document).on('change', '.item-select', function () {
             const $itemSelect = $(this);
             const selectedItem = $itemSelect.val();
@@ -568,7 +568,7 @@
             const $qty = $row.find('.quantity-input');
             const $unitInput = $row.find('.unit-input');
 
-            // Determine classification based on which table this row is in
+            /* Infer the classification by tracing the DOM ancestors up to the bound tbody. */
             const classType = $itemSelect.closest('tbody').data('classification');
 
             if (selectedItem) {
@@ -576,7 +576,7 @@
                 $unitInput.prop('disabled', false);
                 if ($descInput.length > 0) $descInput.prop('disabled', false);
 
-                // populate description dropdown (or disable) if it exists
+                /* Rebuild the valid descriptions payload dynamically inside the targeted select. */
                 if ($descSelect.length > 0) {
                     $descSelect.empty().append('<option value="">Select Description</option>');
                     const descs = getDescriptionsForItem(selectedItem, classType);
@@ -588,7 +588,7 @@
                     }
                 }
 
-                // set the unit input
+                /* Synchronize the inferred unit value. */
                 const unit = $itemSelect.find('option:selected').data('unit') || '';
                 $unitInput.val(unit);
             } else {
@@ -600,11 +600,11 @@
                 }
             }
 
-            // ensure quantity has default
+            /* Fallback minimum sanity assignment for inputs failing parser standards. */
             if (!$qty.val() || isNaN($qty.val()) || parseInt($qty.val()) < 1) $qty.val(1);
         });
 
-        // ensure initial rows have default values (quantity=1, description disabled & cleared, unit empty)
+        /* Setup generic locked initializations for UI table components upon appending to the DOM. */
         function initRowDefaults($row) {
             const $qty = $row.find('.quantity-input');
             if (!$qty.val()) $qty.val(1);
@@ -661,7 +661,7 @@
             `;
         }
 
-        // function to populate each table
+        /* Populate a parent body mapping against classification items efficiently. */
         function populateTableBody($tbody, itemsObj, classification, rowCount = 1) {
             for (let i = 0; i < rowCount; i++) {
                 const row = $(createRowHtml(itemsObj, classification));
@@ -670,13 +670,13 @@
             }
         }
 
-        // function to help table format table label display (removes spaces in between classification names)
+        /* Sanitize string spaces to create compliant DOM lookup queries natively. */
         function slugify(name) {
             return name.toLowerCase().replace(/\s+/g, '');
         }
 
         function defaultRows() {
-            // Default 1 row per classification table
+            /* Establish singular layout requirements corresponding per target category definition. */
             CLASSIFICATIONS.forEach(classification => {
                 const slug = slugify(classification);
                 const $tbody = $(`#${slug}-table-body`);
@@ -741,21 +741,19 @@
                 initRowDefaults(row);
             });
 
-            // quantity sanity
+            /* Automatic quantity input normalization upon UI entry changes. */
             $(document).on('input', '.quantity-input', function() {
                 if (parseInt(this.value) < 1 || isNaN(this.value)) this.value = 1;
             });
 
-            // Automatically fill unit when item is selected
-            $(document).on('change', '.item-select', function() {
-                // Logic handled in the main item-select change handler
-            });
-
-            // Form submit with summary modal
+            /* 
+             * Form submission lifecycle handler. Intercepts native events 
+             * to construct summary review modals before confirming POST mechanics. 
+             */
             $('form').submit(function(e) {
                 e.preventDefault();
 
-                // Reset validation visual cues
+                /* Visual reset mapping for form cues prior to running secondary validation loops. */
                 $('.is-invalid').removeClass('is-invalid');
                 let isValid = true;
 
@@ -819,7 +817,7 @@
                         <hr>
                     `;
 
-                    // Build categorized materials summary with merging of duplicates
+                    /* Build categorized materials summary natively handling duplication detection and value consolidation loops. */
                     const categories = CLASSIFICATIONS.map(c => {
                         const slug = slugify(c);
                         return {
@@ -848,15 +846,15 @@
                             catItems[key].qty += qty;
                         });
 
-                        // Always display category header
+                        /* Standardize output structures regardless of selected elements presence. */
                         summary += `<strong>${cat.name}:</strong><br>`;
 
-                        // Display items or "No items selected"
+                        /* Format string presentations natively appending mapped properties cleanly. */
                         if (Object.keys(catItems).length > 0) {
                             for (const key in catItems) {
                                 let { qty, unit, itemLabel, desc } = catItems[key];
 
-                                // Remove any "(unit)" in itemLabel
+                                /* Strip visual redundancy for cleaner output logic internally. */
                                 if (unit) {
                                     const regex = new RegExp(`\\(${unit}\\)`, 'gi');
                                     itemLabel = itemLabel.replace(regex, '').trim();
@@ -869,7 +867,7 @@
                             summary += `No items selected<br>`;
                         }
 
-                        // // Add <br> only if not the last category
+                        /* Encompass visual block structuring loops internally. */
                         if (index < categories.length - 1){
                             summary += `<br>`;
                         }
@@ -893,11 +891,14 @@
                 }, 'json');
             });
 
-            // Confirm submit
+            /* 
+             * Executable confirmed flow logic mapping the summarized content strictly into the backend processor.
+             * Dispatches secondary checks and configures asynchronous UI loader patterns.
+             */
             $('#confirmSubmit').click(function() {
                 $('#summaryModal').modal('hide');
                 
-                // Show progress modal
+                /* Deploy blocking animated structures visually overriding base screens while server synchronizes. */
                 $('#progressModal').modal('show');
                 let progress = 0;
                 const $bar = $('#submissionProgressBar');
@@ -909,7 +910,7 @@
                     $bar.css('width', progress + '%').text(Math.round(progress) + '%');
                 }, 200);
 
-                // Collect and merge duplicate materials
+                /* Iterate table content merging functionally identical properties logically prior to packaging API bodies. */
                 const itemsMap = {};
                 const bodySelectors = CLASSIFICATIONS
                     .map(c => `#${slugify(c)}-table-body tr`)
@@ -947,22 +948,21 @@
                 formData.set('start_time', $('input[name="start_time"]').val());
                 formData.set('end_time', $('input[name="end_time"]').val());
 
-                // Handle teacher array -> string conversion for backend compatibility
+                /* Transform structurally segregated elements logically encoding directly via raw array mechanics. */
                 const teachers = $('#teacher-checkboxes').val();
                 formData.delete('teacher[]');
                 formData.set('teacher', teachers ? teachers.join(', ') : '');
 
-                // Handle sections explicitly
                 const sections = $('#sections-checkboxes').val();
                 formData.delete('sections[]');
                 if (sections) {
                     sections.forEach(s => formData.append('sections[]', s));
                 }
 
-
-//switch this to go to ajax supervisor action instead for the revised email logic
-// email the supervisor instead of the admin on submit
-// only email the admin after the subject teacher approves
+                /* 
+                 * Dispatches form payload via asynchronous pipeline. 
+                 * Relies on standard JSON parsing resolving server logic responses functionally mapped against the UI.
+                 */
                 $.ajax({
                     url: 'ajax/ajax_supervisor_action.php',
                     type: 'POST',
@@ -1062,7 +1062,7 @@
                 checkRealtimeConflict();
             });
 
-            // time validation
+            /* Disallow backwards chronological alignment mechanically forcing valid scheduling paradigms globally. */
             $('input[name="start_time"], input[name="end_time"]').on('change', function() {
                 const start = $('input[name="start_time"]').val();
                 const end = $('input[name="end_time"]').val();
@@ -1081,7 +1081,7 @@
                 $(this).removeClass('is-invalid');
             });
 
-            // grade -> sections & subjects
+            /* Reconfigure available secondary property attributes inherently scaling directly against selected parent dimensions. */
             $('#grade_select').on('change', function() {
                 const grade = $(this).val();
                 populateStudentDropdownsByGrade(grade);
@@ -1101,7 +1101,6 @@
                     return;
                 }
 
-                // Sections checkboxes
                 $.get('ajax/ajax_forms.php', { action:'get_sections', grade }, data => {
                     $('#sections-checkboxes').html(data).prop('disabled', false);
                     $('#sections-checkboxes').multiselect('destroy').multiselect({
@@ -1113,7 +1112,6 @@
                     });
                 }).fail(() => $('#sections-checkboxes').html('Error loading sections').multiselect('rebuild'));
 
-                // Subjects & Units
                 $.post('ajax/ajax_forms.php', { action:'get_subjects_by_grade', grade }, function(subjects) {
                     let subjOpts = '<option value="">Select Subject</option>';
                     let seenUnits = new Set();
@@ -1130,7 +1128,7 @@
                 }, 'json').fail(() => $('#subject_select, #unit-select').html('<option value="">Error loading</option>'));
             });
 
-            // add student row
+            /* Incorporate ad-hoc participation logic via dynamically expanding UI blocks natively. */
             $('#add-student-btn').click(function() {
                 const grade = $('#grade_select').val();
                 if (!grade) return showToast("Please select a grade level first.", 'warning');
@@ -1144,7 +1142,7 @@
                 $('#student-list-table tbody').append(row);
             });
 
-            // Scilab disabled dates
+            /* Formulates dynamic lockout mechanisms querying API to restrict visually invalid form variables natively. */
             let currentDisabledDates = [];
             const today = new Date().toISOString().split('T')[0];
             const datepicker = document.getElementById('datepicker');
@@ -1192,7 +1190,7 @@
             }, 'json').fail(() => $('.student-select').html('<option value="">Error loading students</option>'));
         }
 
-        // document-level handlers for remove rows
+        /* Bind document-level event handlers targeting subsequently resolved dynamic elements securely. */
         $(document).on('click', '.remove-row-btn', function () {
             $(this).closest('tr').remove();
         });

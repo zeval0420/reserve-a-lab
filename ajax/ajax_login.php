@@ -14,7 +14,10 @@ if (isset($_POST["action"]) && $_POST["action"] === "loginUser") {
     $email = $_POST['email'];
     $password = $_POST['password'];
 
-    // 1️⃣ Try EMPLOYEE / ADMIN LOGIN FIRST
+    /* 
+     * Initial login attempt: Check if the user exists in the employee/admin accounts table.
+     * We limit the search to users with an 'active' status.
+     */
     $stmt = $conn->prepare("SELECT * FROM {$db_table_accounts} WHERE {$db_col_email} = ? AND {$db_col_status} = 'active'");
     $stmt->bind_param("s", $email);
     $stmt->execute();
@@ -27,7 +30,10 @@ if (isset($_POST["action"]) && $_POST["action"] === "loginUser") {
         if ($hashedInput !== $user[$db_col_password]) {
             echo "invalid_password";
         } else {
-            // SESSION DATA
+            /* 
+             * Authentication successful. 
+             * Populate session data with employee details for subsequent operations.
+             */
             $_SESSION[$session_employeeID] = $user[$db_col_employeeID];
             $_SESSION[$session_email] = $user[$db_col_email];
             $_SESSION[$session_firstname] = $user[$db_col_firstname];
@@ -67,9 +73,12 @@ if (isset($_POST["action"]) && $_POST["action"] === "loginUser") {
         exit();
     }
 
-    $stmt->close(); // close first query before starting another
+    $stmt->close();
 
-    // 2️⃣ TRY STUDENT LOGIN
+    /*
+     * Secondary login attempt: Fallback to checking the student directory.
+     * Maps the entered email to the internal student records via LRN.
+     */
     $stmt = $conn->prepare("
         SELECT s.*, d.studentEmail 
         FROM student_directory d 
@@ -85,7 +94,10 @@ if (isset($_POST["action"]) && $_POST["action"] === "loginUser") {
     } else {
         $student = $studentResult->fetch_assoc();
 
-        // SESSION DATA
+        /*
+         * Student authentication successful.
+         * Establish the session state utilizing the verified student information.
+         */
         $_SESSION[$session_email] = $student['studentEmail'];
         $_SESSION[$session_firstname] = $student[$db_col_firstname];
         $_SESSION[$session_middlename] = $student[$db_col_middlename];
@@ -93,7 +105,6 @@ if (isset($_POST["action"]) && $_POST["action"] === "loginUser") {
         $_SESSION[$session_role] = "student";        
         $_SESSION[$session_username] = $student['firstname'] . ' ' . substr($student['middlename'], 0, 1) . '. ' . $student['lastname'];
 
-        // $_SESSION['student_id'] = $student['id'];
         $_SESSION['student_lrn'] = $student['LRN'];
 
         echo "requester";
@@ -109,10 +120,11 @@ if (isset($_POST["action"]) && $_POST["action"] === "guestLogin") {
     $_SESSION[$session_firstname] = $_POST['name'];
     $_SESSION[$session_lastname] = '(' . $_POST['institution'] . ')';
     
-    // For requesterName mapping in forms
+    /* 
+     * Map the guest username for consistent display in views. 
+     * Assign a fallback 'Guest' employee ID to prevent relational queries from crashing.
+     */
     $_SESSION[$session_username] = $_POST['name'] . ' (' . $_POST['institution'] . ')';
-    
-    // To allow queries referencing employeeID to not break or be identifiable if necessary
     $_SESSION[$session_employeeID] = 'Guest'; 
 
     echo "guest";
@@ -122,7 +134,7 @@ if (isset($_POST["action"]) && $_POST["action"] === "guestLogin") {
 if (isset($_POST["action"]) && $_POST["action"] === "forgotPassword") {
     $email = $_POST['email'];
     
-    // Check accounts table
+    /* Locate the account in the administrative/employee accounts table. */
     $stmt = $conn->prepare("SELECT firstname, lastname, email, password FROM accounts WHERE email = ? AND status = 'active'");
     $stmt->bind_param("s", $email);
     $stmt->execute();
@@ -131,7 +143,7 @@ if (isset($_POST["action"]) && $_POST["action"] === "forgotPassword") {
     $stmt->close();
 
     if (!$user) {
-        // Check student_directory
+        /* If no employee account was found, search within the underlying student database. */
         $stmt = $conn->prepare("SELECT s.firstname, s.lastname, d.studentEmail as email FROM student_directory d JOIN student s ON d.LRN = s.LRN WHERE d.studentEmail = ?");
         $stmt->bind_param("s", $email);
         $stmt->execute();
@@ -157,7 +169,8 @@ if (isset($_POST["action"]) && $_POST["action"] === "forgotPassword") {
             $mail->isHTML(true);
             $mail->Subject = "Password Reset Request";
             $timestamp = time();
-            // Generate stateless token: md5(email + current_password_hash + secret_salt + timestamp)
+            
+            /* Construct a stateless validation token by hashing key credentials along with the timestamp. */
             $token = md5($user['email'] . $user['password'] . 'SciLabSecretSalt2025' . $timestamp);
             $link = "http://" . $_SERVER['HTTP_HOST'] . "/reserve-a-lab/reset_password.php?email=" . urlencode($user['email']) . "&token=" . $token . "&ts=" . $timestamp;
             $mail->Body = "Hello " . $user['firstname'] . ",<br><br>You requested a password reset. Click the link below to proceed:<br><a href='$link'>$link</a><br><br>If you did not request this, please ignore this email.";
