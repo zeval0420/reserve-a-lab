@@ -245,6 +245,85 @@
                 box-shadow: 0 6px 20px rgba(0, 51, 102, 0.5);
             }
 
+            /* ===== Modal Liquid Aesthetics ===== */
+            .modal-backdrop.in {
+                backdrop-filter: blur(10px) !important;
+                -webkit-backdrop-filter: blur(10px) !important;
+                opacity: 0.6 !important;
+                background-color: rgba(0, 0, 0, 0.7) !important;
+            }
+
+            .liquid-modal-content {
+                border: 1px solid rgba(255, 255, 255, 0.25);
+                border-radius: 25px;
+                background: rgba(255, 255, 255, 0.1);
+                -webkit-backdrop-filter: blur(16px);
+                backdrop-filter: blur(16px);
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+                color: white;
+                padding: 10px;
+            }
+
+            .liquid-modal-content .modal-header {
+                border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            }
+
+            .liquid-modal-content .close {
+                color: white;
+                text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+                opacity: 0.8;
+                font-size: 2rem;
+            }
+
+            .liquid-modal-content .close:hover {
+                opacity: 1;
+            }
+
+            .modal.in.flex-center {
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .modal.flex-center .modal-dialog {
+                margin: 0;
+                transform: none;
+                width: 100%;
+                max-width: 600px;
+            }
+
+            #guestLoginForm .btn-liquid-cancel {
+                background: rgba(255, 255, 255, 0.2);
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                border-radius: 15px;
+                font-weight: bold;
+                font-size: 1.2rem;
+                color: white;
+                padding: 0.6rem 1.2rem;
+                transition: all 0.3s ease;
+            }
+
+            #guestLoginForm .btn-liquid-cancel:hover {
+                background: rgba(255, 255, 255, 0.3);
+            }
+
+            #guestLoginForm .btn-liquid-proceed {
+                background: rgba(0, 51, 102, 0.8);
+                border: none;
+                border-radius: 15px;
+                font-weight: bold;
+                font-size: 1.2rem;
+                color: white;
+                padding: 0.6rem 1.5rem;
+                box-shadow: 0 4px 15px rgba(0, 51, 102, 0.3);
+                transition: all 0.3s ease;
+            }
+
+            #guestLoginForm .btn-liquid-proceed:hover {
+                background: rgba(0, 51, 102, 1);
+                box-shadow: 0 6px 20px rgba(0, 51, 102, 0.5);
+            }
+
             /* ===== Medium Screens ===== */
             @media (max-width: 992px) {
                 .system-name {
@@ -375,6 +454,33 @@
 
         <!-- Toast Container -->
         <div id="toast-container"></div>
+
+        <!-- Guest Login Modal -->
+        <div class="modal fade flex-center" id="guestLoginModal" tabindex="-1" role="dialog">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content liquid-modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" style="font-size: 1.8rem; font-weight: bold; text-align: center;">Guest Request</h5>
+                        <button type="button" class="close" data-dismiss="modal" style="position: absolute; right: 20px; top: 15px;"><span>&times;</span></button>
+                    </div>
+                    <div class="modal-body" style="padding: 30px;">
+                        <div class="alert" style="background: rgba(255, 193, 7, 0.2); border: 1px solid rgba(255, 193, 7, 0.4); color: white; border-radius: 12px; margin-bottom: 25px; padding: 15px;">
+                            <strong>Note:</strong> You will not be able to track the request process but will still receive the automated email upon approval.
+                        </div>
+                        <form id="guestLoginForm" class="login-container">
+                            <input type="text" name="guest_name" class="form-control" placeholder="Full Name" required>
+                            <input type="email" name="guest_email" class="form-control" placeholder="Email Address" required>
+                            <input type="text" name="guest_institution" class="form-control" placeholder="Institution" required>
+                            
+                            <div style="text-align: right; margin-top: 25px;">
+                                <button type="button" class="btn btn-liquid-cancel" data-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-liquid-proceed">Proceed</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Forgot Password Modal -->
         <div class="modal fade" id="forgotPasswordModal" tabindex="-1" role="dialog">
@@ -532,8 +638,29 @@
                 });
             }
 
+            // Guest Login Submission
+            $('#guestLoginForm').submit(function(e) {
+                e.preventDefault();
+                const name = $(this).find('input[name="guest_name"]').val();
+                const email = $(this).find('input[name="guest_email"]').val();
+                const institution = $(this).find('input[name="guest_institution"]').val();
+                
+                $.post('ajax/ajax_login.php', { 
+                    action: 'guestLogin', 
+                    name: name, 
+                    email: email, 
+                    institution: institution 
+                }, function(res) {
+                    if (res.trim() === 'guest') {
+                        window.location.href = "forms.php";
+                    } else {
+                        showToast("An error occurred during guest login.", "error");
+                    }
+                }).fail(function() { showToast("Server error.", "error"); });
+            });
+
             function guestLogin() {
-                showToast("Guest login functionality is currently under development.", 'info');
+                $('#guestLoginModal').modal('show');
             }
 
             function showToast(message, type = 'info', duration = 3000) {

@@ -103,6 +103,22 @@ if (isset($_POST["action"]) && $_POST["action"] === "loginUser") {
     $conn->close();
 }
 
+if (isset($_POST["action"]) && $_POST["action"] === "guestLogin") {
+    $_SESSION[$session_role] = "guest";
+    $_SESSION[$session_email] = $_POST['email'];
+    $_SESSION[$session_firstname] = $_POST['name'];
+    $_SESSION[$session_lastname] = '(' . $_POST['institution'] . ')';
+    
+    // For requesterName mapping in forms
+    $_SESSION[$session_username] = $_POST['name'] . ' (' . $_POST['institution'] . ')';
+    
+    // To allow queries referencing employeeID to not break or be identifiable if necessary
+    $_SESSION[$session_employeeID] = 'Guest'; 
+
+    echo "guest";
+    exit();
+}
+
 if (isset($_POST["action"]) && $_POST["action"] === "forgotPassword") {
     $email = $_POST['email'];
     

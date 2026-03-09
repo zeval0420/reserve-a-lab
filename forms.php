@@ -13,6 +13,8 @@
         $stmt->execute();
         $userID = $stmt->get_result()->fetch_assoc()['LRN'] ?? null;
         $stmt->close();
+    } elseif (isset($_SESSION['role']) && $_SESSION['role'] === 'guest') {
+        $userID = 'Guest';
     } else {
         $stmt = $conn->prepare("SELECT employeeID FROM accounts WHERE email = ?");
         $stmt->bind_param("s", $email);
