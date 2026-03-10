@@ -951,7 +951,9 @@
                 /* Transform structurally segregated elements logically encoding directly via raw array mechanics. */
                 const teachers = $('#teacher-checkboxes').val();
                 formData.delete('teacher[]');
-                formData.set('teacher', teachers ? teachers.join(', ') : '');
+                if (teachers) {
+                    teachers.forEach(t => formData.append('teacher[]', t));
+                }
 
                 const sections = $('#sections-checkboxes').val();
                 formData.delete('sections[]');

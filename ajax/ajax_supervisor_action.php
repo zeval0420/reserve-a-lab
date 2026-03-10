@@ -27,7 +27,7 @@ function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails
 
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
     $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/reserve-a-lab";
-    $approvalLink = $baseURL . "/supervisor_approve.php?request_id=" . $formID;
+    $approvalLink = $baseURL . "/supervisor_approve.php?id=" . $formID;
 
     $replacements = [
         "[Facility]" => $data['scilabName'],
@@ -230,15 +230,65 @@ function sendNotificationToSubjectTeacher($conn, $requestID) {
         }
     }
 
+    // Fetch materials
+    $matStmt = $conn->prepare("SELECT quantity, unit, item, description FROM scilab_material_requests WHERE formID = ?");
+    $matStmt->bind_param("i", $requestID);
+    $matStmt->execute();
+    $matRes = $matStmt->get_result();
+    $materials = [];
+    while ($row = $matRes->fetch_assoc()) {
+        $materials[] = "{$row['quantity']} {$row['unit']} of {$row['item']} ({$row['description']})";
+    }
+    $materialsStr = implode("; ", $materials);
+    $matStmt->close();
+
+    // Fetch students
+    $studStmt = $conn->prepare("SELECT student_name FROM scilab_students_involved WHERE formID = ?");
+    $studStmt->bind_param("i", $requestID);
+    $studStmt->execute();
+    $studRes = $studStmt->get_result();
+    $students = [];
+    while ($row = $studRes->fetch_assoc()) {
+        $students[] = $row['student_name'];
+    }
+    $studentsStr = implode(", ", $students);
+    $studStmt->close();
+
     $subjectTeachers = $conn->query("SELECT email FROM accounts WHERE status = 'active' AND position LIKE '%Teacher%'");
     if ($subjectTeachers->num_rows === 0) return;
 
     $subjectLine = "Action Required: Subject Teacher Approval Needed";
-    $bodyTemplate = "A new request has been approved by the Supervisor and requires Subject Teacher approval. 
-        <br><br><strong>Facility:</strong> " . htmlspecialchars($data['scilabName']) . "
-        <br><strong>Requested By:</strong> " . htmlspecialchars($requesterName) . "
-        <br><strong>Date/Time:</strong> " . htmlspecialchars($data['inclusiveDate']) . " " . htmlspecialchars($data['inclusiveTime']) . "
-        <br><br>Please log in to the system to review and approve.";
+    $templatePath = __DIR__ . "/../templates/supervisor_request_email_template.html";
+
+    if (file_exists($templatePath)) {
+        $bodyTemplate = file_get_contents($templatePath);
+    } else {
+        $bodyTemplate = "A new request has been approved by the Supervisor and requires your approval. To view and approve the request, please click the button below.<br><br><a href='[ApprovalLink]' style='background-color: #4CAF50; color: white; padding: 14px 25px; text-align: center; text-decoration: none; display: inline-block;'>View Request Details</a><br><br><strong>Request Details:</strong><br>Facility: [Facility]<br>Requested By: [Requested By]<br>Date: [Start Date]<br>Time: [End Date]";
+    }
+
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
+    $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/reserve-a-lab";
+    $approvalLink = $baseURL . "/subject_teacher_approve.php?id=" . $requestID;
+
+    $replacements = [
+        "[Facility]"         => $data['scilabName'],
+        "[Grade Level]"      => $data['gradeLevel'],
+        "[Section]"          => $data['sections'],
+        "[Subject]"          => $data['subject'],
+        "[Concurrent Topic]" => $data['subjectTopic'],
+        "[Unit]"             => "N/A",
+        "[Teacher Name]"     => $data['teacherInCharge'],
+        "[Requested By]"     => $requesterName,
+        "[Start Date]"       => $data['inclusiveDate'],
+        "[End Date]"         => $data['inclusiveTime'],
+        "[Materials]"        => $materialsStr,
+        "[Group Members]"    => $studentsStr,
+        "[ApprovalLink]"     => $approvalLink,
+    ];
+
+    foreach ($replacements as $key => $val) {
+        $bodyTemplate = str_replace($key, htmlspecialchars($val), $bodyTemplate);
+    }
 
     while ($teacher = $subjectTeachers->fetch_assoc()) {
         if (filter_var($teacher['email'], FILTER_VALIDATE_EMAIL)) {
@@ -397,7 +447,7 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
     $subject = $_POST['subject'] ?? '';
     $topic = $_POST['topic'] ?? '';
     $unit = $_POST['unit'] ?? '';
-    $teacher_input = $_POST['teacher'] ?? [];
+    $teacher_input = $_POST['teacher[]'] ?? $_POST['teacher'] ?? [];
     $teachers = is_array($teacher_input) ? $teacher_input : array_filter([$teacher_input]);
     $teacher = implode(', ', $teachers);
     $startDate = $_POST['inclusive_date'] ?? '';
