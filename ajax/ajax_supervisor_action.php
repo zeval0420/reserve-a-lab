@@ -268,7 +268,7 @@ function sendNotificationToSubjectTeacher($conn, $requestID) {
 
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
     $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/reserve-a-lab";
-    $approvalLink = $baseURL . "/subject_teacher_approve.php?id=" . $requestID;
+    $approvalLink = $baseURL . "/supervisor_approve.php?id=" . $requestID;
 
     $replacements = [
         "[Facility]"         => $data['scilabName'],
