@@ -42,6 +42,35 @@ if (isset($_POST['action']) && $_POST['action'] == 'add_inventory') {
     exit;
 }
 
+// STOCK IN INVENTORY ITEM
+if (isset($_POST['action']) && $_POST['action'] == 'stock_in_inventory') {
+    $id = $_POST['id'];
+    $quantityToAdd = intval($_POST['quantity']);
+
+    // Check if item exists and status is not Removed
+    $checkStmt = $conn->prepare("SELECT quantity FROM scilab_inventory WHERE id = ? AND (status IS NULL OR status != 'Removed')");
+    $checkStmt->bind_param("i", $id);
+    $checkStmt->execute();
+    $result = $checkStmt->get_result();
+
+    if ($result->num_rows > 0) {
+        // Proceed with update
+        $stmt = $conn->prepare("UPDATE scilab_inventory SET quantity = quantity + ? WHERE id = ?");
+        $stmt->bind_param("ii", $quantityToAdd, $id);
+
+        if ($stmt->execute()) echo "success";
+        else echo "error";
+
+        $stmt->close();
+    } else {
+        echo "not_found";
+    }
+    
+    $checkStmt->close();
+    $conn->close();
+    exit;
+}
+
 // UPDATE INVENTORY ITEM
 if (isset($_POST['action']) && $_POST['action'] == 'update_inventory') {
     $id = $_POST['id'];

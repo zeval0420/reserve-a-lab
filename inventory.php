@@ -166,6 +166,7 @@
                     <h2>Inventory Management</h2>
                     <div>
                         <button id="scanBarcodeBtn" class="btn-liquid">Scan Barcode</button>
+                        <button id="stockInBtn" class="btn-liquid-info" style="background-color: #17a2b8;">Stock In</button>
                         <button id="bulkImportBtn" class="btn-liquid-info">Bulk Import</button>
                         <button id="editModeBtn" class="btn-liquid-warning">Edit Mode</button>
                         <button id="cancelEditBtn" class="btn-liquid-danger" style="display:none;">Cancel</button>
@@ -244,6 +245,75 @@
                     <div class="modal-footer">
                         <button type="button" class="btn-liquid-secondary" data-dismiss="modal">Cancel</button>
                         <button type="button" class="btn-liquid-success" id="saveProductBtn">Add</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>
+
+        <!-- Stock In Modal -->
+        <div class="modal fade" id="stockInModal" tabindex="-1" role="dialog">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Stock In Item</h5>
+                        <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Navigation tabs for Manual vs CSV -->
+                        <ul class="nav nav-tabs mb-3" id="stockInTabs" role="tablist">
+                            <li class="nav-item" style="flex:1; text-align:center;">
+                                <a class="nav-link active" id="manual-tab" data-toggle="tab" href="#manualStockIn" role="tab" style="color:#2B55C4; font-weight:bold;">Manual Add</a>
+                            </li>
+                            <li class="nav-item" style="flex:1; text-align:center;">
+                                <a class="nav-link" id="csv-tab" data-toggle="tab" href="#csvStockIn" role="tab" style="color:#2B55C4; font-weight:bold;">CSV Import</a>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content">
+                            <!-- Manual Stock In Form -->
+                            <div class="tab-pane fade show active" id="manualStockIn" role="tabpanel">
+                                <form id="stockInForm">
+                                    <div class="form-group">
+                                        <label>Search Item</label>
+                                        <select class="form-control liquid-input" id="stockInItemSelect" required>
+                                            <option value="">Select an Item...</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Description</label>
+                                        <select class="form-control liquid-input" id="stockInDescSelect" disabled required>
+                                            <option value="">Select Item First</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Quantity to Add</label>
+                                        <input type="number" class="form-control liquid-input" id="stockInQuantity" min="1" required>
+                                    </div>
+                                </form>
+                                <div class="text-right mt-3">
+                                    <button type="button" class="btn-liquid-success" id="saveStockInBtn">Stock In</button>
+                                </div>
+                            </div>
+                            <!-- CSV Stock In -->
+                            <div class="tab-pane fade" id="csvStockIn" role="tabpanel">
+                                <p>Upload a CSV file with headers: <code>classification, item, productID, description, quantity, unit, status</code></p>
+                                <p class="text-muted small">Matches on <b>Item Name + Description</b>. Only existing items will be updated (quantities will be added).</p>
+                                <input type="file" id="csvStockInFile" accept=".csv" class="form-control-file mb-3">
+                                <div id="stockInImportProgress" style="display:none;">
+                                    <div class="progress mb-2">
+                                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-info" role="progressbar" style="width: 0%">0%</div>
+                                    </div>
+                                    <small id="stockInImportStatusText" class="text-muted">Processing...</small>
+                                </div>
+                                <div class="text-right mt-3">
+                                    <button type="button" class="btn-liquid-info" id="processStockInCsvBtn">Start CSV Stock In</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-liquid-secondary" data-dismiss="modal">Close</button>
                     </div>
                 </div>
             </div>
@@ -495,6 +565,131 @@
                     } else showToast('Failed to add product', 'error');
                 });
             });
+            // Stock In Logic
+            $('#stockInBtn').click(function() {
+                // Populate Item Select
+                const itemSelect = $('#stockInItemSelect');
+                itemSelect.empty().append('<option value="">Select an Item...</option>');
+                
+                // Get unique item names across all classifications
+                const uniqueItems = [...new Set(Object.values(allInventory).flat().filter(i => i.status !== 'Removed').map(i => i.item))];
+                uniqueItems.sort().forEach(item => {
+                    itemSelect.append(`<option value="${item}">${item}</option>`);
+                });
+                
+                $('#stockInDescSelect').empty().append('<option value="">Select Item First</option>').prop('disabled', true);
+                $('#stockInQuantity').val('');
+                $('#stockInImportProgress').hide();
+                $('#csvStockInFile').val('');
+                $('#stockInModal .progress-bar').css('width', '0%').text('0%');
+                $('#processStockInCsvBtn').prop('disabled', false);
+                
+                $('#stockInModal').modal('show');
+            });
+
+            $('#stockInItemSelect').change(function() {
+                const selectedItem = $(this).val();
+                const descSelect = $('#stockInDescSelect');
+                
+                if (!selectedItem) {
+                    descSelect.empty().append('<option value="">Select Item First</option>').prop('disabled', true);
+                    return;
+                }
+                
+                descSelect.empty().append('<option value="">Select Description...</option>');
+                const matches = Object.values(allInventory).flat().filter(i => i.item === selectedItem && i.status !== 'Removed');
+                matches.forEach(m => {
+                    const descText = m.description ? m.description : 'No Description';
+                    descSelect.append(`<option value="${m.id}">${descText} (Current Qty: ${m.quantity} ${m.unit})</option>`);
+                });
+                descSelect.prop('disabled', false);
+            });
+
+            $('#saveStockInBtn').click(function() {
+                const id = $('#stockInDescSelect').val();
+                const qty = parseInt($('#stockInQuantity').val());
+                
+                if (!id || isNaN(qty) || qty <= 0) {
+                    showToast('Please select a valid item, description, and enter a quantity greater than 0.', 'warning');
+                    return;
+                }
+
+                $.post('ajax/ajax_inventory.php', { action: 'stock_in_inventory', id: id, quantity: qty }, function(res) {
+                    if (res.trim() === 'success') {
+                        showToast('Stock In successful!', 'success');
+                        location.reload();
+                    } else if (res.trim() === 'not_found') {
+                        showToast('Item not found or has been removed.', 'error');
+                    } else {
+                        showToast('Failed to process Stock In.', 'error');
+                    }
+                });
+            });
+
+            $('#processStockInCsvBtn').click(function() {
+                const fileInput = document.getElementById('csvStockInFile');
+                if (!fileInput.files.length) {
+                    showToast('Please select a CSV file.', 'warning');
+                    return;
+                }
+
+                const file = fileInput.files[0];
+                const reader = new FileReader();
+
+                reader.onload = function (e) {
+                    const text = e.target.result;
+                    const rows = parseCSV(text);
+                    if (rows.length === 0) {
+                        showToast('No valid data found or empty file.', 'warning');
+                        return;
+                    }
+                    processStockInBulkData(rows);
+                };
+                reader.readAsText(file);
+            });
+
+            async function processStockInBulkData(rows) {
+                $('#stockInImportProgress').show();
+                $('#processStockInCsvBtn').prop('disabled', true);
+                const flatInventory = Object.values(allInventory).flat().filter(i => i.status !== 'Removed');
+                let success = 0, failed = 0, skipped = 0;
+
+                for (let i = 0; i < rows.length; i++) {
+                    const row = rows[i];
+                    const rowQty = parseInt(row.quantity);
+                    
+                    if (isNaN(rowQty) || rowQty <= 0) {
+                        skipped++;
+                        continue;
+                    }
+
+                    const existing = flatInventory.find(item => 
+                        (item.item || '').trim().toLowerCase() === (row.item || '').trim().toLowerCase() && 
+                        (item.description || '').trim().toLowerCase() === (row.description || '').trim().toLowerCase()
+                    );
+                    
+                    if (existing) {
+                        try {
+                            await new Promise(resolve => $.post('ajax/ajax_inventory.php', {
+                                action: 'stock_in_inventory',
+                                id: existing.id,
+                                quantity: rowQty
+                            }, res => {
+                                if (res.trim() === 'success') success++; else failed++;
+                                resolve();
+                            }));
+                        } catch (e) { failed++; }
+                    } else {
+                        skipped++; // Item doesn't exist, we don't create it in Stock In mode
+                    }
+
+                    const pct = Math.round(((i + 1) / rows.length) * 100);
+                    $('#stockInModal .progress-bar').css('width', pct + '%').text(pct + '%');
+                }
+
+                showToast(`Stock In Complete. Success: ${success}, Failed: ${failed}, Skipped/Not Found: ${skipped}`, 'info', 5000);
+                location.reload();
+            }
 
             // Edit
             $(document).on('click', '.edit-btn', function () {
