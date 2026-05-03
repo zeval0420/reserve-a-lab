@@ -178,14 +178,19 @@
                     mr.item, 
                     mr.description,
                     si.unit,
-                    SUM(mr.quantity) as total_quantity
+                    mr.quantity,
+                    a.firstname,
+                    a.middlename,
+                    a.lastname,
+                    fr.inclusiveDate,
+                    fr.inclusiveTime
                 FROM scilab_material_requests mr
                 JOIN scilab_form_requests fr ON mr.formID = fr.id
                 LEFT JOIN scilab_inventory si ON mr.item = si.item
+                LEFT JOIN accounts a ON fr.requesterEmployeeID = a.employeeID
                 WHERE fr.statusScilabPersonnel = 'Approved'
                 AND fr.inclusiveDate BETWEEN ? AND ?
-                GROUP BY COALESCE(si.classification, 'Uncategorized'), mr.item, mr.description, si.unit
-                ORDER BY COALESCE(si.classification, 'Uncategorized') ASC, mr.item ASC, mr.description ASC
+                ORDER BY COALESCE(si.classification, 'Uncategorized') ASC, mr.item ASC, fr.inclusiveDate ASC
             ");
 
             if ($stmt === false) {
@@ -204,8 +209,19 @@
                 if (!isset($categorizedItems[$classification])) {
                     $categorizedItems[$classification] = [];
                 }
+                
+                $requestorName = trim($row['firstname'] . ' ' . $row['middlename'] . ' ' . $row['lastname']);
+                
                 // Add the item to its category
-                $categorizedItems[$classification][] = ['item' => $row['item'], 'description' => $row['description'], 'total_quantity' => $row['total_quantity'], 'unit' => $row['unit']];
+                $categorizedItems[$classification][] = [
+                    'item' => $row['item'], 
+                    'description' => $row['description'], 
+                    'quantity' => $row['quantity'], 
+                    'unit' => $row['unit'],
+                    'requestor' => $requestorName,
+                    'date' => $row['inclusiveDate'],
+                    'time' => $row['inclusiveTime']
+                ];
             }
 
             echo json_encode(['success' => true, 'items' => $categorizedItems]);

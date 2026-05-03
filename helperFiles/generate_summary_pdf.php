@@ -20,14 +20,19 @@ $stmt = $conn->prepare("
         mr.item, 
         mr.description,
         si.unit,
-        SUM(mr.quantity) as total_quantity
+        mr.quantity,
+        a.firstname,
+        a.middlename,
+        a.lastname,
+        fr.inclusiveDate,
+        fr.inclusiveTime
     FROM scilab_material_requests mr
     JOIN scilab_form_requests fr ON mr.formID = fr.id
     LEFT JOIN scilab_inventory si ON mr.item = si.item
+    LEFT JOIN accounts a ON fr.requesterEmployeeID = a.employeeID
     WHERE fr.statusScilabPersonnel = 'Approved'
     AND fr.inclusiveDate BETWEEN ? AND ?
-    GROUP BY COALESCE(si.classification, 'Uncategorized'), mr.item, mr.description, si.unit
-    ORDER BY classification ASC, mr.item ASC
+    ORDER BY COALESCE(si.classification, 'Uncategorized') ASC, mr.item ASC, fr.inclusiveDate ASC
 ");
 
 if ($stmt === false) {
@@ -181,19 +186,24 @@ if (empty($categorizedItems)) {
             <tr>
                 <th>Item</th>
                 <th>Description</th>
-                <th>Total Quantity Used</th>
+                <th>Quantity Used</th>
+                <th>Requestor</th>
+                <th>Date of Use</th>
             </tr>
         ";
 
         foreach ($items as $item) {
             $description = $item['description'] ? htmlspecialchars($item['description']) : 'N/A';
             $unit = $item['unit'] ? ' ' . htmlspecialchars($item['unit']) : '';
+            $requestorName = trim($item['firstname'] . ' ' . $item['middlename'] . ' ' . $item['lastname']);
 
             $html .= "
             <tr>
                 <td>" . htmlspecialchars($item['item']) . "</td>
                 <td>" . $description . "</td>
-                <td>" . $item['total_quantity'] . $unit . "</td>
+                <td>" . $item['quantity'] . $unit . "</td>
+                <td>" . htmlspecialchars($requestorName) . "</td>
+                <td>" . htmlspecialchars($item['inclusiveDate'] . ' (' . $item['inclusiveTime'] . ')') . "</td>
             </tr>
             ";
         }

@@ -529,11 +529,11 @@
                             if (response.items.hasOwnProperty(classification) && response.items[classification].length > 0) {
                                 hasItems = true;
                                 content += `<h4>${classification}</h4>`;
-                                content += '<table class="table table-bordered table-striped mt-2 mb-4"><thead><tr><th>Item</th><th>Description</th><th>Total Quantity Used</th></tr></thead><tbody>';
+                                content += '<table class="table table-bordered table-striped mt-2 mb-4"><thead><tr><th>Item</th><th>Description</th><th>Quantity Used</th><th>Requestor</th><th>Date of Use</th></tr></thead><tbody>';
                                 response.items[classification].forEach(i => {
                                     const description = i.description || 'N/A';
                                     const unit = i.unit || ''; // Fallback for items with no unit
-                                    content += `<tr><td>${i.item}</td><td>${description}</td><td>${i.total_quantity} ${unit}</td></tr>`;
+                                    content += `<tr><td>${i.item}</td><td>${description}</td><td>${i.quantity} ${unit}</td><td>${i.requestor}</td><td>${i.date} (${i.time})</td></tr>`;
                                 });
                                 content += '</tbody></table>';
                             }
