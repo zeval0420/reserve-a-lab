@@ -26,7 +26,7 @@ function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails
     }
 
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
-    $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/scilab";
+    $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/reserve-a-lab";
     $approvalLink = $baseURL . "/supervisor_approve.php?id=" . $formID;
 
     $replacements = [
@@ -267,7 +267,7 @@ function sendNotificationToSubjectTeacher($conn, $requestID) {
     }
 
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
-    $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/scilab";
+    $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/reserve-a-lab";
     $approvalLink = $baseURL . "/supervisor_approve.php?id=" . $requestID;
 
     $replacements = [
