@@ -308,6 +308,13 @@
                 .form-container { padding: 15px; margin: 10px 0 30px; }
                 .container { padding-left: 10px; padding-right: 10px; }
             }
+
+            .required::after {
+                content: " *";
+                color: #dc3545;
+                font-weight: bold;
+                font-size: 1.2em;
+            }
         </style>
     </head>
 
@@ -326,7 +333,7 @@
 
                     <!-- Venue Selection -->
                     <div class="form-group">
-                        <label>Facility:</label>
+                        <label class="required">Facility:</label>
                         <select id="venue_select" class="form-control liquid-input" name="venue" required>
                             <?php foreach ($venues as $name => $label): ?>
                                 <option value="<?= htmlspecialchars($name) ?>" <?= $name == $defaultVenue ? 'selected' : '' ?>>
@@ -339,7 +346,7 @@
                     <!-- Grade and Section -->
                     <div class="form-row row">
                         <div class="form-group col-md-6">
-                            <label>Grade Level:</label>
+                            <label class="required">Grade Level:</label>
                             <select id="grade_select" name="grade_level" class="form-control liquid-input" required>
                                 <option value="">Select Grade</option>
                                 <?php ksort($sectionOptions); foreach ($sectionOptions as $grade => $sections): ?>
@@ -348,7 +355,7 @@
                             </select>
                         </div>
                         <div class="form-group col-md-6">
-                            <label>Section:</label>
+                            <label class="required">Section:</label>
                             <select id="sections-checkboxes" name="sections[]" multiple="multiple" disabled>
                             </select>
                             <div id="section-checkboxes" class="checkbox-list"></div>
@@ -358,13 +365,13 @@
                     <!-- Subject and Topic -->
                     <div class="form-row row">
                         <div class="form-group col-md-6">
-                            <label>Subject:</label>
+                            <label class="required">Subject:</label>
                             <select id="subject_select" name="subject" class="form-control liquid-input" required disabled>
                                 <option value="">Select Grade First</option>
                             </select>
                         </div>
                         <div class="form-group col-md-6">
-                            <label>Concurrent Topic:</label>
+                            <label class="required">Concurrent Topic:</label>
                             <input type="text" class="form-control liquid-input" name="topic" required>
                         </div>
                     </div>
@@ -372,7 +379,7 @@
                     <!-- Unit and Teacher -->
                     <div class="form-row row">
                         <div class="form-group col-md-6">
-                            <label>Academic Unit:</label>
+                            <label class="required">Academic Unit:</label>
                             <select class="form-control liquid-input" name="unit" id="unit-select" required disabled>
                                 <option value="">Select Grade First</option>
                                 <?php $units = array_unique(array_column($subjectOptions, 'subjectAcademicUnit'));
@@ -382,7 +389,7 @@
                             </select>
                         </div>
                         <div class="form-group col-md-6">
-                            <label>Teacher In-Charge:</label>
+                            <label class="required">Teacher In-Charge:</label>
                             <select id="teacher-checkboxes" class="form-control" name="teacher[]" multiple="multiple" required>
                                 <?php foreach ($teacherOptions as $t): ?>
                                     <option value="<?= htmlspecialchars($t['name']) ?>"><?= htmlspecialchars($t['name']) ?></option>
@@ -394,16 +401,16 @@
                     <!-- Schedule -->
                     <div class="form-row row">
                         <div class="form-group col-md-4">
-                            <label>Date:</label>
+                            <label class="required">Date:</label>
                             <input id="datepicker" type="date" class="form-control liquid-input" name="inclusive_date" required
                                 value="<?= htmlspecialchars($_SESSION['selected_date'] ?? '') ?>">
                         </div>
                         <div class="form-group col-md-4">
-                            <label>Start Time:</label>
+                            <label class="required">Start Time:</label>
                             <input type="time" class="form-control liquid-input" name="start_time" required>
                         </div>
                         <div class="form-group col-md-4">
-                            <label>End Time:</label>
+                            <label class="required">End Time:</label>
                             <input type="time" class="form-control liquid-input" name="end_time" required>
                         </div>
                     </div>
