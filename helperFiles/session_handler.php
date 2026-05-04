@@ -9,10 +9,5 @@
         header("Location: index.php");
         exit();
     }
-    if (!isset($_SESSION['role'])) {
-        header("Location: index.php");
-        exit();
-    }
-
     $_SESSION['last_activity'] = time();
 ?>
