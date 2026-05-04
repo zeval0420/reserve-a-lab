@@ -81,8 +81,11 @@
     }
 
     $materials = [];
+    $materialsDetailed = [];
+
     if ($formIDs) {
         $ids = implode(',', array_map('intval', $formIDs));
+
         $matQ = $conn->query("
             SELECT formID, quantity, item, description
             FROM scilab_material_requests
@@ -90,11 +93,28 @@
         ");
 
         while ($m = $matQ->fetch_assoc()) {
-            $line = "[".$m['quantity']."x] ".$m['item'];
-            if ($m['description']) {
-                $line .= " (".$m['description'].")";
-            }
-            $materials[$m['formID']][] = $line;
+
+            $item = htmlspecialchars($m['item']);
+            $desc = !empty($m['description']) ? htmlspecialchars($m['description']) : '';
+            $qty = $m['quantity'];
+
+            // ✅ TABLE VERSION (simple)
+            $materials[$m['formID']][] = "
+                <div class='material-line'>
+                    <span class='bullet'>•</span>
+                    <span class='material-text'>{$item}</span>
+                </div>
+            ";
+
+            // ✅ MODAL VERSION (detailed)
+            $materialsDetailed[$m['formID']][] = "
+                <div class='material-line-detailed'>
+                    <span class='material-qty'>[{$qty}x]</span>
+                    <span class='material-text'>
+                        {$item}" . ($desc ? " ({$desc})" : "") . "
+                    </span>
+                </div>
+            ";
         }
     }
 ?>
@@ -130,6 +150,39 @@
 
             @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
             .spin { animation: spin 1s linear infinite; display: inline-block; }
+            .material-line {
+                display: flex;
+                align-items: flex-start;
+                gap: 4px;
+                margin-bottom: 4px;
+            }
+
+            .bullet {
+                width: 14px; /* fixed width so all align */
+                flex-shrink: 0;
+                font-size: 16px;
+                line-height: 1.4;
+            }
+
+            .material-text {
+                flex: 1;
+                line-height: 1.4;
+            }
+            .material-line-detailed {
+                display: flex;
+                align-items: flex-start;
+                margin-bottom: 6px;
+            }
+
+            .material-qty {
+                min-width: 30px;
+                font-weight: 600;
+            }
+
+            .material-line-detailed .material-text {
+                flex: 1;
+                line-height: 1.4;
+            }
         </style>
     </head>
 
@@ -170,7 +223,7 @@
                                 <th>Subject</th>
                                 <th>Topic</th>
                                 <th>Date of Use</th>
-                                <th>Materials</th>
+                                <th>Requested Materials</th>
                                 <th>Teacher-in-Charge</th>
                                 <th>Action</th>
                             </tr>
@@ -189,7 +242,16 @@
                                 <td><?= htmlspecialchars($row['subject']) ?></td>
                                 <td><?= htmlspecialchars($row['subjectTopic']) ?></td>
                                 <td><?= htmlspecialchars($row['inclusiveDate'])." (".$row['inclusiveTime'].")" ?></td>
-                                <td><?= isset($materials[$row['id']]) ? implode('<br><br>', $materials[$row['id']]) : '—' ?></td>
+                                <?php
+                                    $materialText = isset($materials[$row['id']]) 
+                                        ? implode("", $materials[$row['id']]) 
+                                        : '—';
+
+                                    $materialsDetailedText = isset($materialsDetailed[$row['id']]) 
+                                        ? implode("", $materialsDetailed[$row['id']]) 
+                                        : '—';
+                                ?>
+                                <td><?= $materialText ?></td>
                                 <td><?= !empty($row['teacherInCharge']) ? htmlspecialchars($row['teacherInCharge']) : '—' ?></td>
 
                                 <td>
@@ -197,7 +259,7 @@
                                         class="btn-liquid view-btn"
                                         data-status="<?= $statusFilter ?>"
                                         data-request='<?= json_encode($row) ?>'
-                                        data-materials='<?= json_encode($materials[$row['id']] ?? []) ?>'
+                                        data-materials-detailed='<?= htmlspecialchars($materialsDetailedText, ENT_QUOTES, 'UTF-8') ?>'
                                     >
                                         View
                                     </button>
@@ -264,10 +326,9 @@
             $('.view-btn').on('click', function () {
 
                 const data = $(this).data('request');
-                const materials = $(this).data('materials');
                 const status = $(this).data('status');
 
-                const materialText = materials.length ? materials.join('<br>') : '—';
+                const materialText = $(this).data('materials-detailed') || '—';
                 const teacher = data.teacherInCharge ? data.teacherInCharge : '—';
 
                 const html = `
@@ -277,10 +338,8 @@
                     <p><strong>Topic:</strong> ${data.subjectTopic}</p>
                     <p><strong>Date of Use:</strong> ${data.inclusiveDate} (${data.inclusiveTime})</p>
                     <p>
-                        <strong>Materials:</strong><br>
-                        <span style="display:inline-block; padding-left:15px;">
-                            ${materialText}
-                        </span>
+                        <strong>Requested Materials:</strong><br>
+                        ${materialText}
                     </p>
                     <p><strong>Teacher-in-Charge:</strong> ${teacher}</p>
                 `;

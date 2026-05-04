@@ -97,6 +97,33 @@ if ($supervisor_status === 'pending') {
     $canApproveCurrentStep = $isCIDChief;
 }
 
+$materials = [];
+
+$stmtMat = $conn->prepare("
+    SELECT quantity, item, description 
+    FROM scilab_material_requests 
+    WHERE formID = ?
+");
+$stmtMat->bind_param("i", $requestId);
+$stmtMat->execute();
+$resMat = $stmtMat->get_result();
+
+while ($m = $resMat->fetch_assoc()) {
+    $itemText = $m['item'];
+    if (!empty($m['description'])) {
+        $itemText .= " (".$m['description'].")";
+    }
+
+    $materials[] = "
+    <div class='material-line'>
+        <span class='material-qty'>[".$m['quantity']."x]</span>
+        <span class='material-text'>".$itemText."</span>
+    </div>
+    ";  
+}
+
+$materialsText = !empty($materials) ? implode("", $materials) : '—';
+
 include('helperFiles/headData.php');
 include('helperFiles/header.php');
 ?>
@@ -589,6 +616,22 @@ body {
         padding: 24px;
     }
 }
+.material-line {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.material-qty {
+    min-width: 30px; /* fixed width for alignment */
+    font-weight: 600;
+}
+
+.material-text {
+    flex: 1;
+    line-height: 1.5;
+}
 
 </style>
 
@@ -669,6 +712,11 @@ body {
         <div class="detail-group">
             <div class="detail-label">Teacher-in-Charge</div>
             <div class="detail-value"><?= htmlspecialchars($teacherInCharge) ?></div>
+        </div>
+
+        <div class="detail-group">
+            <div class="detail-label">Requested Materials</div>
+            <div class="detail-value"><?= $materialsText ?></div>
         </div>
         
         <div class="error-message" id="errorMessage"></div>

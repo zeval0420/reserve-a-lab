@@ -50,8 +50,11 @@
     }
 
     $materials = [];
+    $materialsDetailed = [];
+
     if ($formIDs) {
         $ids = implode(',', array_map('intval', $formIDs));
+
         $matQ = $conn->query("
             SELECT formID, quantity, item, description
             FROM scilab_material_requests
@@ -59,11 +62,28 @@
         ");
 
         while ($m = $matQ->fetch_assoc()) {
-            $line = "[".$m['quantity']."x] ".$m['item'];
-            if ($m['description']) {
-                $line .= " (".$m['description'].")";
-            }
-            $materials[$m['formID']][] = $line;
+
+            $item = htmlspecialchars($m['item']);
+            $desc = !empty($m['description']) ? htmlspecialchars($m['description']) : '';
+            $qty = $m['quantity'];
+
+            // TABLE VERSION (ONLY ITEM)
+            $materials[$m['formID']][] = "
+                <div class='material-line'>
+                    <span class='bullet'>•</span>
+                    <span class='material-text'>{$item}</span>
+                </div>
+            ";
+
+            // DETAILED VERSION (QTY + ITEM + DESCRIPTION)
+            $materialsDetailed[$m['formID']][] = "
+                <div class='material-line-detailed'>
+                    <span class='material-qty'>[{$qty}x]</span>
+                    <span class='material-text'>
+                        {$item}" . ($desc ? " ({$desc})" : "") . "
+                    </span>
+                </div>
+            ";
         }
     }
 ?>
@@ -112,6 +132,40 @@
 
             @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
             .spin { animation: spin 1s linear infinite; display: inline-block; }
+
+            .material-line {
+                display: flex;
+                align-items: flex-start;
+                gap: 4px;
+                margin-bottom: 4px;
+            }
+
+            .bullet {
+                width: 14px; /* fixed width so all align */
+                flex-shrink: 0;
+                font-size: 16px;
+                line-height: 1.4;
+            }
+
+            .material-text {
+                flex: 1;
+                line-height: 1.4;
+            }
+            .material-line-detailed {
+                display: flex;
+                align-items: flex-start;
+                margin-bottom: 6px;
+            }
+
+            .material-qty {
+                min-width: 30px;
+                font-weight: 600;
+            }
+
+            .material-line-detailed .material-text {
+                flex: 1;
+                line-height: 1.4;
+            }
         </style>
     </head>
     <body>
@@ -152,7 +206,7 @@
                                 <th>Subject</th>
                                 <th>Topic</th>
                                 <th>Date of Use</th>
-                                <th>Materials</th>
+                                <th>Requested Materials</th>
                                 <th>Teacher-in-Charge</th>
                                 <?php if ($statusFilter === 'Approved'): ?><th>Remarks</th><?php endif; ?>
                                 <?php if ($statusFilter === 'Rejected'): ?><th>Feedback</th><?php endif; ?>
@@ -171,8 +225,8 @@
                                             $fullName = $nameRow['firstname'].' '.$nameRow['middlename'].' '.$nameRow['lastname'];
                                         }
                                         $formID = $row['id'];
-                                        $materialText = isset($materials[$formID]) ? implode("<br><br>", $materials[$formID]) : '—';
-                                        $row['materials'] = isset($materials[$formID]) ? implode("<br>", $materials[$formID]) : '—';
+                                        $materialText = isset($materials[$formID]) ? implode("", $materials[$formID]) : '—';
+                                        $row['materialsDetailed'] = isset($materialsDetailed[$formID]) ? implode("", $materialsDetailed[$formID]) : '—';
                                         $teacherInCharge = !empty($row['teacherInCharge']) ? htmlspecialchars($row['teacherInCharge']) : '—';
                                 ?>
                                     <tr id="row-<?= $row['id'] ?>">
@@ -347,10 +401,8 @@
                     <p><strong>Date of Use:</strong> ${data.inclusiveDate}</p>
                     <p><strong>Time:</strong> ${data.inclusiveTime}</p>
                     <p>
-                        <strong>Materials:</strong><br>
-                        <span style="display:inline-block; padding-left:20px;">
-                            ${data.materials}
-                        </span>
+                        <strong>Requested Materials:</strong><br>
+                        ${data.materialsDetailed}
                     </p>
                 `);
                 
@@ -417,10 +469,8 @@
                     <p><strong>Date of Use:</strong> ${data.inclusiveDate}</p>
                     <p><strong>Time:</strong> ${data.inclusiveTime}</p>
                     <p>
-                        <strong>Materials:</strong><br>
-                        <span style="display:inline-block; padding-left:20px;">
-                            ${data.materials}
-                        </span>
+                        <strong>Requested Materials:</strong><br>
+                        ${data.materialsDetailed}
                     </p>
                 `);
                 $('#confirmReject').data('id', data.id);
