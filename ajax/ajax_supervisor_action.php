@@ -442,7 +442,7 @@ function sendRejectionNotificationToRequester($conn, $request, $rejectionReason,
 
 if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
     $scilabName = $_POST['venue'] ?? '';
-    $grade = $_POST['grade_level'] ?? '';
+    $grade = intval($_POST['grade_level'] ?? 0);
     $sections = isset($_POST['sections']) && is_array($_POST['sections']) ? implode(', ', $_POST['sections']) : ($_POST['sections'] ?? '');
     $subject = $_POST['subject'] ?? '';
     $topic = $_POST['topic'] ?? '';
@@ -539,7 +539,11 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
         $email_stmt = $conn->prepare("SELECT email FROM accounts WHERE CONCAT(lastname, ', ', firstname, ' ', IFNULL(middlename, '')) IN ($placeholders)");
         if ($email_stmt) {
             $types = str_repeat('s', count($teachers));
-            $email_stmt->bind_param($types, ...$teachers);
+            $bindParams = [$types];
+            for ($i = 0; $i < count($teachers); $i++) {
+                $bindParams[] = &$teachers[$i];
+            }
+            call_user_func_array([$email_stmt, 'bind_param'], $bindParams);
             $email_stmt->execute();
             $result = $email_stmt->get_result();
             while ($row = $result->fetch_assoc()) {
@@ -674,7 +678,11 @@ if (!$updateStmt) {
     exit;
 }
 
-$updateStmt->bind_param($types, ...$params);
+$bindParams = [$types];
+for ($i = 0; $i < count($params); $i++) {
+    $bindParams[] = &$params[$i];
+}
+call_user_func_array([$updateStmt, 'bind_param'], $bindParams);
 
 if ($updateStmt->execute()) {
     // Check if this is the final approval (CID Chief or Force Approve)
