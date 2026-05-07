@@ -1,4 +1,26 @@
 <?php
+    // Catch fatal errors and throw them as JSON responses instead of crashing
+    ini_set('display_errors', 0);
+    error_reporting(E_ALL);
+
+    set_exception_handler(function($e) {
+        http_response_code(500);
+        echo json_encode([
+            'status' => 'error', 
+            'message' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine()
+        ]);
+        exit();
+    });
+
+    set_error_handler(function($severity, $message, $file, $line) {
+        if (!(error_reporting() & $severity)) {
+            return;
+        }
+        throw new ErrorException($message, 0, $severity, $file, $line);
+    });
+
     use PHPMailer\PHPMailer\PHPMailer;
     use PHPMailer\PHPMailer\Exception;
 
@@ -131,7 +153,7 @@
 
     if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
         $scilabName = $_POST['venue'] ?? '';
-        $grade = $_POST['grade_level'] ?? '';
+        $grade = intval($_POST['grade_level'] ?? 0);
         $sections = isset($_POST['sections']) && is_array($_POST['sections']) ? implode(', ', $_POST['sections']) : ($_POST['sections'] ?? '');
         $subject = $_POST['subject'] ?? '';
         $topic = $_POST['topic'] ?? '';
@@ -192,8 +214,8 @@
         $dateRequested = date('Y-m-d H:i:s');
 
         $stmt = $conn->prepare("INSERT INTO scilab_form_requests (
-            scilabName, gradeLevel, sections, subject, subjectTopic, inclusiveDate, inclusiveTime, dateRequested, requesterEmployeeID, sy, teacherInCharge) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            scilabName, gradeLevel, sections, subject, subjectTopic, inclusiveDate, inclusiveTime, dateRequested, requesterEmployeeID, sy, teacherInCharge, statusScilabPersonnel, supervisor_status, subject_teacher_status, lab_personnel_status, cid_chief_status) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', 'pending', 'pending', 'pending', 'pending')");
 
         $stmt->bind_param("sisssssssss", $scilabName, $grade, $sections, $subject, $topic, $startDate, $formattedTime, $dateRequested, $requesterID, $schoolYear, $teacher);
         
@@ -262,7 +284,11 @@
 
             if ($email_stmt) {
                 $types = str_repeat('s', count($teachers));
-                $email_stmt->bind_param($types, ...$teachers);
+                $bindParams = [$types];
+                for ($i = 0; $i < count($teachers); $i++) {
+                    $bindParams[] = &$teachers[$i];
+                }
+                call_user_func_array([$email_stmt, 'bind_param'], $bindParams);
                 $email_stmt->execute();
                 $result = $email_stmt->get_result();
                 while ($row = $result->fetch_assoc()) {

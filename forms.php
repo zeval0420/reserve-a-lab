@@ -1005,11 +1005,22 @@
                     },
                     error: function(xhr, status, error) {
                         clearInterval(progressInterval);
+                        $bar.css('width', '100%').text('100%');
                         $('#progressModal').modal('hide');
-                        showToast("Error submitting request.", 'error');
-                        console.error("Submission Failed");
-                        console.error("Status:", status);
-                        console.error("Error:", error);
+                        
+                        let errorMsg = "Failed to submit request due to server error.";
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            errorMsg = "Server Error: " + (response.message || errorMsg);
+                            if (response.file) {
+                                console.error(`Error in ${response.file} on line ${response.line}`);
+                            }
+                        } catch (e) {
+                            errorMsg = "Server Error: " + xhr.statusText;
+                        }
+                        
+                        showToast(errorMsg, 'error');
+                        console.error("Submission Failed:", error);
                         console.error("Response:", xhr.responseText);
                     }
                 });
