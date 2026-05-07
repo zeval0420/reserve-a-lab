@@ -3,7 +3,7 @@
      * Load foundational resources:
      * Establishes database connections and handles session persistence automatically.
      */
-    include('helperFiles/db_connection.php');
+    include('../scilab/helperFiles/db_connection.php');
     include('helperFiles/session_handler.php');
 
     if (isset($_POST['local_login']) && $_POST['local_login'] === 'true') {
