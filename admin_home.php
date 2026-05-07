@@ -1,5 +1,5 @@
 <?php
-    include('helperFiles/db_connection.php');
+    include('../scilab/helperFiles/db_connection.php');
     include('helperFiles/session_handler.php');
 
     if (!isset($_SESSION['role'])) {

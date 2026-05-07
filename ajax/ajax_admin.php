@@ -1,6 +1,6 @@
 <?php
     // centralized db_connection and session_handler
-    include('../helperFiles/db_connection.php');
+    include('../scilab/../helperFiles/db_connection.php');
     include('../helperFiles/session_handler.php');
     include('../helperFiles/variableDeclarations.php');
 
