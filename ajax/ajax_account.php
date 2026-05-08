@@ -1,5 +1,5 @@
 <?php
-include('../scilab/../helperFiles/db_connection.php');
+include('../../scilab/helperFiles/db_connection.php');
 include('../helperFiles/session_handler.php');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'change_password') {

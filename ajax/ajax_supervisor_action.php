@@ -21,7 +21,7 @@ set_error_handler(function($severity, $message, $file, $line) {
     throw new ErrorException($message, 0, $severity, $file, $line);
 });
 
-include('../scilab/../helperFiles/db_connection.php');
+include('../../scilab/helperFiles/db_connection.php');
 include('../helperFiles/session_handler.php');
 
 use PHPMailer\PHPMailer\PHPMailer;

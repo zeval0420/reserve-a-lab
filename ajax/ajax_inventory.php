@@ -1,6 +1,6 @@
 <?php
 // Centralized DB connection and session handler
-include('../scilab/../helperFiles/db_connection.php');
+include('../../scilab/helperFiles/db_connection.php');
 include('../helperFiles/session_handler.php');
 
 // REMOVE INVENTORY ITEM (mark as Removed and clear status)

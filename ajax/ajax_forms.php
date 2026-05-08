@@ -32,7 +32,7 @@
      * Centralized initialization protocol: 
      * Integrates database connectivity and ensures secure session management handling.
      */
-    include('../scilab/../helperFiles/db_connection.php');
+    include('../../scilab/helperFiles/db_connection.php');
     include('../helperFiles/session_handler.php');
 
     function formatTime($time) {
