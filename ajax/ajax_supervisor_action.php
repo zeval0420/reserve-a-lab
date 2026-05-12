@@ -489,8 +489,8 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
 
     $conflictStmt = $conn->prepare("SELECT * FROM scilab_form_requests 
         WHERE scilabName = ? AND inclusiveDate = ? AND (
-            (inclusiveTime LIKE CONCAT('%', ?, '%')) OR
-            (inclusiveTime LIKE CONCAT('%', ?, '%'))
+            (inclusiveTime COLLATE utf8mb4_bin LIKE CONCAT('%', ?, '%')) OR
+            (inclusiveTime COLLATE utf8mb4_bin LIKE CONCAT('%', ?, '%'))
         ) AND statusScilabPersonnel != 'Rejected'");
 
     $conflictStmt->bind_param("ssss", $scilabName, $startDate, $startTime, $endTime);
