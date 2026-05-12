@@ -1,704 +1,1316 @@
 <?php
-    /* 
-     * Load foundational resources:
-     * Establishes database connections and handles session persistence automatically.
-     */
-    include('../scilab/helperFiles/db_connection.php');
-    include('helperFiles/session_handler.php');
+/* 
+ * Load foundational resources:
+ * Establishes database connections and handles session persistence automatically.
+ */
+include('../scilab/helperFiles/db_connection.php');
+include('helperFiles/session_handler.php');
 
-    if (isset($_POST['local_login']) && $_POST['local_login'] === 'true') {
-        $u = $_POST['username'] ?? '';
-        $p = $_POST['password'] ?? '';
-        if ($u === 'admin.controller' && md5($p) === 'e63ff18bb1478deb7059c5bec3aeaa39') {
-            $_SESSION['role'] = 'admin';
-            $_SESSION['username'] = 'Admin Controller';
-            $_SESSION['email'] = 'admin.controller@local';
-            echo 'success';
-        } else {
-            echo 'fail';
-        }
+if (isset($_POST['local_login']) && $_POST['local_login'] === 'true') {
+    $u = $_POST['username'] ?? '';
+    $p = $_POST['password'] ?? '';
+    if ($u === 'admin.controller' && md5($p) === 'e63ff18bb1478deb7059c5bec3aeaa39') {
+        $_SESSION['role'] = 'admin';
+        $_SESSION['username'] = 'Admin Controller';
+        $_SESSION['email'] = 'admin.controller@local';
+        echo 'success';
+    } else {
+        echo 'fail';
+    }
+    exit();
+}
+
+/* 
+ * Autologin logic: 
+ * Detects existing valid sessions and routes the returning user to their respective dashboard instead of showing the login display.
+ */
+$sessionRedirectScript = "";
+if (isset($_SESSION['role'])) {
+    if ($_SESSION['role'] === 'admin') {
+        header("Location: admin_home.php");
+        exit();
+    } elseif ($_SESSION['role'] === 'requester' || $_SESSION['role'] === 'teacher') {
+        header("Location: requester_home.php");
         exit();
     }
-
-    /* 
-     * Autologin logic: 
-     * Detects existing valid sessions and routes the returning user to their respective dashboard instead of showing the login display.
-     */
-    $sessionRedirectScript = "";
-    if (isset($_SESSION['role'])) {
-        if ($_SESSION['role'] === 'admin') {
-            header("Location: admin_home.php");
-            exit();
-        } elseif ($_SESSION['role'] === 'requester' || $_SESSION['role'] === 'teacher') {
-            header("Location: requester_home.php");
-            exit();
-        }
-    }
+}
 ?>
 <!DOCTYPE html>
-<html>
-    <head>
-        <title>Request-A-Lab Login</title>
-        
-        <?php include('helperFiles/headData.php'); ?>
+<html lang="en">
 
-        <style>
-            input[type="password"]::-webkit-contacts-auto-fill-button,
-            input[type="password"]::-webkit-credentials-auto-fill-button {
-                display: none !important;
-                pointer-events: none;
-                height: 0;
-                width: 0;
-                visibility: hidden;
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reserve-a-Lab · PSHS-IRC</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap"
+        rel="stylesheet" />
+    <style>
+        /* ─────────────────────────────────────────
+       DESIGN TOKENS & SYSTEM VARIABLES
+    ───────────────────────────────────────── */
+        :root {
+            --primary: #0B1B62;
+            --primary-light: #152985;
+            --secondary: #4F73D9;
+            --secondary-glow: rgba(79, 115, 217, 0.25);
+            --bg-page: #EBF0FA;
+            --bg-card: rgba(255, 255, 255, 0.9);
+            --bg-modal: #FFFFFF;
+            --text-primary: #0B1B62;
+            --text-secondary: #5E6E88;
+            --input-bg: #F8FAFC;
+            --border: #E2E8F0;
+            --error: #DC2626;
+            --error-bg: #FEF2F2;
+            --error-border: #FECACA;
+            --success: #16A34A;
+            --success-bg: #F0FDF4;
+            --success-border: #BBF7D0;
+            --radius-card: 16px;
+            --radius-input: 10px;
+            --shadow-card: 0 20px 40px rgba(11, 27, 98, 0.08), 0 1px 3px rgba(11, 27, 98, 0.04);
+            --shadow-panel: 0 30px 60px rgba(11, 27, 98, 0.15);
+            --shadow-modal: 0 30px 60px rgba(11, 27, 98, 0.2);
+            --transition: cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* ─────────────────────────────────────────
+       RESET & BASE RESILIENCE
+    ───────────────────────────────────────── */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            height: 100%;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg-page);
+            color: var(--text-primary);
+            -webkit-font-smoothing: antialiased;
+            overflow: hidden;
+        }
+
+        /* ─────────────────────────────────────────
+       LAYOUT SYSTEM (MOBILE DEFAULT)
+    ───────────────────────────────────────── */
+        .page-wrapper {
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: linear-gradient(135deg, #F0F4FC 0%, #EBF0FA 100%);
+            overflow: hidden;
+        }
+
+        /* Micro-pattern grid overlay */
+        .page-wrapper::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: linear-gradient(rgba(11, 27, 98, 0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(11, 27, 98, 0.02) 1px, transparent 1px);
+            background-size: 24px 24px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Split-screen wrapper container */
+        .split-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+        }
+
+        /* Card container wrapper for isolated adaptive scaling */
+        .card-pane {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem 1rem;
+            overflow-y: auto;
+        }
+
+        /* Visual Illustration Sidebar Panel (Hidden on Mobile) */
+        .visual-pane {
+            display: none;
+        }
+
+        /* ─────────────────────────────────────────
+       TABLET / DESKTOP SPLIT VIEW ENHANCEMENTS
+    ───────────────────────────────────────── */
+        @media (min-width: 992px) {
+            .split-container {
+                width: 92vw;
+                max-width: 1200px;
+                height: 85vh;
+                max-height: 780px;
+                gap: 2.5rem;
             }
 
-            body {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                box-sizing: border-box;
-                min-height: 100vh;
-                font-family: "Raleway", sans-serif;
-                background-image: linear-gradient(rgba(0,0,0,0.45),rgba(0,0,0,0.45)),url(img/background.jpg);
-                background-position: center;
-                background-size: cover;
+            .card-pane {
+                flex: 1;
+                width: auto;
+                height: 100%;
+                padding: 0;
+                justify-content: flex-end;
+                overflow-y: visible;
             }
 
-            .system-name {
-                position: absolute;
-                top: 25%;
-                left: 50%;
-                transform: translate(-50%, -125%);
-                padding: 20px;
-
-                line-height: 1;
-                font-size: 3rem;
-                color: white;
-                text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
-                font-weight: bold;
-                text-align: center;
-            }
-
-            .system-name span:first-child {
-                font-size: 2rem;
-            }
-
-            .system-name span:last-child {
-                font-size: 5rem;
-            }
-
-            #banner img {
-                height: 70px;
-                margin-right: 20px;
-            }
-            #banner div {
-                font-size: 20px;
-            }
-
-            @keyframes fadeInUp {
-                0% {
-                    opacity: 0;
-                    transform: translateY(30px);
-                }
-                100% {
-                    opacity: 1;
-                    transform: translateY(0);
-                }
-            }
-
-            .login-box {
-                animation: fadeInUp 0.8s ease forwards;
-
-                box-sizing: border-box;
-                border: 1px solid rgba(255, 255, 255, 0.25);
-                border-radius: 25px;
-                background: rgba(255, 255, 255, 0.1);
-                -webkit-backdrop-filter: blur(16px);
-                backdrop-filter: blur(16px);
-                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-                padding: 40px;
-                width: 100%;
-                max-width: 620px;
-                transition: box-shadow 0.4s ease;
-            }
-
-            .login-container input {
-                /*width: 100%;*/
-                padding: 1rem 1.5rem;
-                margin: 1rem 0;
-                border: none;
-                border-radius: 24.5px;
-                background: rgba(255, 255, 255, 0.2);
-                backdrop-filter: blur(6px);
-                color: white;
-                font-size: 1.3rem;
-                transition: all 0.3s ease;
-                box-shadow: inset 0 0 4px rgba(255, 255, 255, 0.3);
-            }
-
-            .login-container input::placeholder {
-                color: rgba(255, 255, 255, 0.7);
-            }
-
-            .login-container input:focus {
-                outline: none;
-                background: rgba(255, 255, 255, 0.25);
-                box-shadow: 0 0 10px rgba(0, 100, 255, 0.4);
-            }
-
-            .login-container > button {
-                width: 100%;
-                padding: 0.9rem;
-                margin-top: 1rem;
-                background: rgba(0, 51, 102, 0.8);
-                border: none;
-                border-radius: 15px;
-                font-weight: bold;
-                font-size: 1.4rem;
-                color: white;
-                cursor: pointer;
-                box-shadow: 0 4px 15px rgba(0, 51, 102, 0.3);
-                backdrop-filter: blur(6px);
-                transition: all 0.3s ease;
-            }
-
-            .login-container > button:hover {
-                background: rgba(0, 51, 102, 1);
-                transform: scale(1.02);
-                box-shadow: 0 6px 20px rgba(0, 51, 102, 0.5);
-            }
-
-            .password-wrapper {
-                position: relative;
-            }
-
-            .toggle-button {
-                display: inline-flex;
-                position: absolute;
-                top: 50%;
-                transform: translateY(-50%);
-                left: unset;
-                right: 12px;
-                cursor: pointer;
-            }
-
-            .eye-icon {
-                width: 20px;
-                height: 20px;
-            }
-
-            #banner {
-                margin-bottom: 30px;
-            }
-
-            .alert {
-                backdrop-filter: blur(6px);
-                background: rgba(255, 0, 0, 0.2);
-                color: white;
-                border: 1px solid rgba(255, 0, 0, 0.4);
-            }
-
-            .close {
-                background: none;
-                border: none;
-                font-size: 2.2rem;
-                color: #842029;
-                opacity: 0.7;
-                padding: 0 10px;
-                cursor: pointer;
-            }
-
-            .close:hover {
-                opacity: 1;
-            }
-
-            #chartab th{
-                color: white;
-            }
-
-            .form-control {
+            .visual-pane {
                 display: block;
-                font-size: 15px;
-                padding: 10px;
-                border-radius: 8px;
-                margin-bottom: 15px;
-                height: 45px;
+                flex: 1.1;
+                height: 100%;
+                position: relative;
+                border-radius: var(--radius-card);
+                overflow: hidden;
+                box-shadow: var(--shadow-panel);
+                animation: panel-entrance 0.7s var(--transition) both;
             }
 
-            .guest-login-btn {
-                position: fixed;
-                bottom: 30px;
-                left: 30px;
-                padding: 0.9rem 1.5rem;
-                background: rgba(0, 51, 102, 0.8);
-                border: none;
-                border-radius: 15px;
-                font-weight: bold;
-                font-size: 1.2rem;
-                color: white;
-                cursor: pointer;
-                box-shadow: 0 4px 15px rgba(0, 51, 102, 0.3);
-                backdrop-filter: blur(6px);
-                transition: all 0.3s ease;
-                z-index: 1000;
-                opacity: 0;
-                animation: fadeInUp 0.8s ease forwards 0.5s;
+            @keyframes panel-entrance {
+                from {
+                    opacity: 0;
+                    transform: translateX(30px) scale(0.98);
+                }
+
+                to {
+                    opacity: 1;
+                    transform: translateX(0) scale(1);
+                }
             }
 
-            .guest-login-btn:hover {
-                background: rgba(0, 51, 102, 1);
-                transform: scale(1.05);
-                box-shadow: 0 6px 20px rgba(0, 51, 102, 0.5);
-            }
-
-            /* ===== Modal Liquid Aesthetics ===== */
-            .modal-backdrop.in {
-                backdrop-filter: blur(10px) !important;
-                -webkit-backdrop-filter: blur(10px) !important;
-                opacity: 0.6 !important;
-                background-color: rgba(0, 0, 0, 0.7) !important;
-            }
-
-            .liquid-modal-content {
-                border: 1px solid rgba(255, 255, 255, 0.25);
-                border-radius: 25px;
-                background: rgba(255, 255, 255, 0.1);
-                -webkit-backdrop-filter: blur(16px);
-                backdrop-filter: blur(16px);
-                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-                color: white;
-                padding: 10px;
-            }
-
-            .liquid-modal-content .modal-header {
-                border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-            }
-
-            .liquid-modal-content .close {
-                color: white;
-                text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-                opacity: 0.8;
-                font-size: 2rem;
-            }
-
-            .liquid-modal-content .close:hover {
-                opacity: 1;
-            }
-
-            .modal.in.flex-center {
-                display: flex !important;
-                align-items: center;
-                justify-content: center;
-            }
-
-            .modal.flex-center .modal-dialog {
-                margin: 0;
-                transform: none;
+            /* Responsive landscape structural layout placeholder element using pure code styling architecture */
+            .visual-panel-img {
                 width: 100%;
-                max-width: 600px;
+                height: 100%;
+                object-fit: cover;
+                background-color: var(--primary);
+                background-image:
+                    radial-gradient(circle at 80% 20%, rgba(79, 115, 217, 0.4) 0%, transparent 50%),
+                    radial-gradient(circle at 20% 80%, rgba(11, 27, 98, 0.6) 0%, transparent 70%),
+                    url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><g stroke="%23ffffff" stroke-width="0.5" stroke-opacity="0.1"><circle cx="50" cy="50" r="40" fill="none"/><circle cx="50" cy="50" r="25" fill="none"/><line x1="10" y1="50" x2="90" y2="50"/><line x1="50" y1="10" x2="50" y2="90"/></g></svg>');
+                background-size: cover, cover, 180px 180px;
+                border-radius: var(--radius-card);
+                transition: transform 4s ease;
             }
 
-            #guestLoginForm .btn-liquid-cancel {
-                background: rgba(255, 255, 255, 0.2);
-                border: 1px solid rgba(255, 255, 255, 0.3);
-                border-radius: 15px;
-                font-weight: bold;
-                font-size: 1.2rem;
-                color: white;
-                padding: 0.6rem 1.2rem;
-                transition: all 0.3s ease;
+            .visual-pane:hover .visual-panel-img {
+                transform: scale(1.03);
             }
 
-            #guestLoginForm .btn-liquid-cancel:hover {
-                background: rgba(255, 255, 255, 0.3);
+            /* Gradient and brand content decorative overlay */
+            .visual-overlay {
+                position: absolute;
+                inset: 0;
+                background: linear-gradient(to top, rgba(11, 27, 98, 0.85) 0%, rgba(11, 27, 98, 0.2) 60%, transparent 100%);
+                padding: 3rem;
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-end;
+                color: #FFFFFF;
+                pointer-events: none;
             }
 
-            #guestLoginForm .btn-liquid-proceed {
-                background: rgba(0, 51, 102, 0.8);
-                border: none;
-                border-radius: 15px;
-                font-weight: bold;
-                font-size: 1.2rem;
-                color: white;
-                padding: 0.6rem 1.5rem;
-                box-shadow: 0 4px 15px rgba(0, 51, 102, 0.3);
-                transition: all 0.3s ease;
+            .visual-overlay h2 {
+                font-family: 'Playfair Display', Georgia, serif;
+                font-size: 2.2rem;
+                font-weight: 700;
+                margin-bottom: 0.75rem;
+                line-height: 1.2;
+                text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
             }
 
-            #guestLoginForm .btn-liquid-proceed:hover {
-                background: rgba(0, 51, 102, 1);
-                box-shadow: 0 6px 20px rgba(0, 51, 102, 0.5);
+            .visual-overlay p {
+                font-size: 0.95rem;
+                color: rgba(255, 255, 255, 0.85);
+                max-width: 440px;
+                line-height: 1.5;
+                text-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
+            }
+        }
+
+        /* ─────────────────────────────────────────
+       CARD ARCHITECTURE & INTERACTIVES
+    ───────────────────────────────────────── */
+        .card {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: var(--radius-card);
+            box-shadow: var(--shadow-card);
+            width: 100%;
+            max-width: 440px;
+            overflow: hidden;
+            animation: card-entrance 0.6s var(--transition) both;
+        }
+
+        @keyframes card-entrance {
+            from {
+                opacity: 0;
+                transform: translateY(20px) scale(0.98);
             }
 
-            /* ===== Medium Screens ===== */
-            @media (max-width: 992px) {
-                .system-name {
-                    margin-bottom: 35px;
-                }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
 
-                .system-name span:first-child {
-                    font-size: 1.67rem;
-                }
+        .card-header-band {
+            background: var(--primary);
+            padding: 1.75rem 2rem;
+            text-align: center;
+            position: relative;
+        }
 
-                .system-name span:last-child {
-                    font-size: 4.4rem;
-                }
+        .card-header-band::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--primary));
+        }
 
-                .login-box {
-                    max-width: 600px;
-                }
+        .card-header-band .system-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 0.3rem;
+        }
 
-                .login-container input {
-                    font-size: 1.3rem;
-                    padding: 1.1rem 1.5rem;
-                }
+        .card-header-band h1 {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: #FFFFFF;
+            line-height: 1.25;
+        }
+
+        .card-body {
+            padding: 2.25rem 2.25rem 1.75rem;
+        }
+
+        /* ─────────────────────────────────────────
+       INSTITUTION PROFILE COMPONENT
+    ───────────────────────────────────────── */
+        .institution {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .logo-circle {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #FFFFFF;
+            border: 1.5px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(11, 27, 98, 0.04);
+        }
+
+        .logo-circle svg {
+            width: 36px;
+            height: 36px;
+        }
+
+        .institution-text {
+            line-height: 1.4;
+        }
+
+        .inst-line1 {
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .inst-line2 {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--secondary);
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+
+        .inst-line3 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .divider {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 0 0 1.75rem;
+        }
+
+        /* ─────────────────────────────────────────
+       ALERTS & NOTIFICATIONS
+    ───────────────────────────────────────── */
+        #alert-area {
+            margin-bottom: 1.25rem;
+        }
+
+        .alert {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 0.85rem 1rem;
+            border-radius: var(--radius-input);
+            font-size: 0.82rem;
+            font-weight: 500;
+            animation: alert-fade-in 0.25s ease both;
+        }
+
+        @keyframes alert-fade-in {
+            from {
+                opacity: 0;
+                transform: translateY(-8px);
             }
 
-            /* ===== Small Screens ===== */
-            @media (max-width: 768px) {
-                body {
-                    padding: 50px;
-                }
-
-                .system-name {
-                    margin-bottom: 15px;
-                }
-
-                .system-name span:first-child {
-                    font-size: 1.4rem;
-                }
-
-                .system-name span:last-child {
-                    font-size: 2.6rem;
-                }
-
-                .login-box {
-                    max-width: 100%;
-                }
-
-                #banner img {
-                    display: block;
-                    margin-right: 10px;
-                    float: none;
-                    height: 50px;
-                }
-
-                #banner div {
-                    font-size: 13.5px;
-                }
-
-                .login-container input {
-                    font-size: 1.1rem;
-                    padding: 0.8rem 1.2rem;
-                }
-
-                .login-container > button {
-                    font-size: 1.2rem;
-                    padding: 0.9rem;
-                }
-
-                .guest-login-btn {
-                    bottom: 20px;
-                    left: 20px;
-                    font-size: 1rem;
-                    padding: 0.8rem 1.2rem;
-                }
+            to {
+                opacity: 1;
+                transform: translateY(0);
             }
-        </style>
-    </head>
+        }
 
-    <body>
-        <div class="system-name">
-            <span style="display: block;">WELCOME TO</span>
-            <span style="display: block; font-weight: bold; margin-top: 0px;">RESERVE-A-LAB</span>
-        </div>
+        .alert-error {
+            background: var(--error-bg);
+            border: 1px solid var(--error-border);
+            color: var(--error);
+        }
 
-        <div class="login-box">
-            <div id="banner" style="margin-bottom: 30px; color: white; overflow: hidden;">
-                <img src="img/logo.png" alt="PSHS Logo" style="float: left">
-                <div style="line-height: 1.2; overflow: hidden;">
-                    <div >Department of Science and Technology</div>
-                    <div style="font-weight: bold;">ILOCOS REGION CAMPUS</div>
-                    <div style="font-weight: bold;">PHILIPPINE SCIENCE HIGH SCHOOL</div>
+        .alert-success {
+            background: var(--success-bg);
+            border: 1px solid var(--success-border);
+            color: var(--success);
+        }
+
+        .alert-icon {
+            flex-shrink: 0;
+            margin-top: 0.05rem;
+        }
+
+        .alert-close {
+            margin-left: auto;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: inherit;
+            opacity: 0.6;
+            font-size: 1rem;
+            padding-left: 0.5rem;
+            line-height: 1;
+        }
+
+        .alert-close:hover {
+            opacity: 1;
+        }
+
+        /* ─────────────────────────────────────────
+       FORM STYLING & FIELD TOKEN SETS
+    ───────────────────────────────────────── */
+        .field {
+            margin-bottom: 1.25rem;
+            position: relative;
+        }
+
+        .field label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.4rem;
+        }
+
+        .input-wrap {
+            position: relative;
+        }
+
+        .input-wrap .field-icon {
+            position: absolute;
+            left: 0.95rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            pointer-events: none;
+            transition: color 0.2s ease;
+        }
+
+        .field input,
+        .field select {
+            width: 100%;
+            height: 46px;
+            padding: 0 1rem 0 2.6rem;
+            background: var(--input-bg);
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-input);
+            font-family: inherit;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            outline: none;
+            transition: border-color 0.2s var(--transition), box-shadow 0.2s var(--transition), background-color 0.2s ease;
+        }
+
+        .field input::placeholder {
+            color: #A0AEC0;
+        }
+
+        .field input:focus,
+        .field select:focus {
+            background-color: #FFFFFF;
+            border-color: var(--secondary);
+            box-shadow: 0 0 0 4px var(--secondary-glow);
+        }
+
+        .field input:focus+.field-icon {
+            color: var(--secondary);
+        }
+
+        .field input.is-invalid,
+        .field select.is-invalid {
+            border-color: var(--error) !important;
+            box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.15) !important;
+        }
+
+        .field input.is-valid,
+        .field select.is-valid {
+            border-color: var(--success) !important;
+            box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.15) !important;
+        }
+
+        .inline-feedback {
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-top: 0.35rem;
+            display: none;
+        }
+
+        .field input.is-invalid~.inline-feedback {
+            color: var(--error);
+            display: block;
+        }
+
+        .field input.is-valid~.inline-feedback {
+            color: var(--success);
+            display: block;
+        }
+
+        .field .input-wrap-password input {
+            padding-right: 2.8rem;
+        }
+
+        .pw-toggle {
+            position: absolute;
+            right: 0.95rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-secondary);
+            padding: 0.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: color 0.2s ease;
+        }
+
+        .pw-toggle:hover {
+            color: var(--primary);
+        }
+
+        .field input:disabled {
+            background: #EDF2F7;
+            color: #718096;
+            cursor: not-allowed;
+            border-color: var(--border);
+        }
+
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: -0.5rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .checkbox-row input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--secondary);
+            cursor: pointer;
+        }
+
+        .checkbox-row label {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        /* ─────────────────────────────────────────
+       BUTTON ARCHITECTURE
+    ───────────────────────────────────────── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            width: 100%;
+            height: 46px;
+            border: none;
+            border-radius: var(--radius-input);
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.1s var(--transition), background-color 0.2s var(--transition), box-shadow 0.2s var(--transition);
+            letter-spacing: 0.01em;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #FFFFFF;
+            box-shadow: 0 4px 12px rgba(11, 27, 98, 0.15);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-light);
+            box-shadow: 0 6px 20px rgba(11, 27, 98, 0.25);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--secondary);
+            border: 1.5px solid var(--secondary);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(79, 115, 217, 0.06);
+            box-shadow: 0 4px 12px rgba(79, 115, 217, 0.1);
+        }
+
+        .btn-ghost {
+            background: none;
+            border: none;
+            color: var(--secondary);
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 0;
+            font-family: inherit;
+            transition: color 0.2s ease;
+            text-decoration: none;
+        }
+
+        .btn-ghost:hover {
+            color: var(--primary);
+            text-decoration: underline;
+        }
+
+        .forgot-row {
+            text-align: right;
+            margin-top: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .guest-section {
+            padding: 1.25rem 2.25rem 1.75rem;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            background: rgba(11, 27, 98, 0.01);
+        }
+
+        .guest-section p {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.85rem;
+        }
+
+        /* ─────────────────────────────────────────
+       MODAL ARCHITECTURE
+    ───────────────────────────────────────── */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(11, 27, 98, 0.4);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem 1rem;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+            overflow-y: auto;
+        }
+
+        .modal-overlay.open {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal {
+            background: var(--bg-modal);
+            border-radius: var(--radius-card);
+            box-shadow: var(--shadow-modal);
+            width: 100%;
+            max-width: 480px;
+            padding: 2rem;
+            transform: scale(0.94) translateY(10px);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            margin: auto;
+        }
+
+        .modal-overlay.open .modal {
+            transform: scale(1) translateY(0);
+        }
+
+        .modal-title {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.35rem;
+        }
+
+        .modal-desc {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1.75rem;
+        }
+
+        .modal-actions .btn {
+            height: 44px;
+        }
+
+        /* ─────────────────────────────────────────
+       RESPONSIVE ADAPTATIONS (MOBILE BOUNDS)
+    ───────────────────────────────────────── */
+        @media (max-width: 480px) {
+            .card-body {
+                padding: 1.75rem 1.5rem 1.5rem;
+            }
+
+            .guest-section {
+                padding: 1.25rem 1.5rem 1.5rem;
+            }
+
+            .modal {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="page-wrapper">
+        <div class="split-container">
+
+            <div class="card-pane">
+                <div class="card" role="main">
+
+                    <div class="card-header-band">
+                        <p class="system-label">Laboratory Management</p>
+                        <h1>Welcome to Reserve-a-Lab</h1>
+                    </div>
+
+                    <div class="card-body">
+
+                        <div class="institution" aria-label="Institution Profile">
+                            <div class="logo-circle" aria-hidden="true">
+                                <img src="img/logo.png" alt="Philippine Science High School Logo"
+                                    style="width: 100%; height: 100%; object-fit: contain;">
+                            </div>
+                            <div class="institution-text">
+                                <p class="inst-line1">Department of Science and Technology</p>
+                                <p class="inst-line2">Ilocos Region Campus</p>
+                                <p class="inst-line3">Philippine Science High School</p>
+                            </div>
+                        </div>
+
+                        <hr class="divider" />
+
+                        <div id="alert-area" role="alert" aria-live="polite"></div>
+
+                        <form id="login-form" novalidate>
+
+                            <div class="field">
+                                <label for="username">Email or Username</label>
+                                <div class="input-wrap">
+                                    <svg class="field-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" aria-hidden="true">
+                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                        <circle cx="12" cy="7" r="4" />
+                                    </svg>
+                                    <input type="text" id="username" name="username" placeholder="you@pshs.edu.ph"
+                                        autocomplete="username" />
+                                    <div class="inline-feedback"></div>
+                                </div>
+                            </div>
+
+                            <div class="field">
+                                <label for="password">Password</label>
+                                <div class="input-wrap input-wrap-password">
+                                    <svg class="field-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" aria-hidden="true">
+                                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                                    </svg>
+                                    <input type="password" id="password" name="password" placeholder="••••••••"
+                                        autocomplete="current-password" />
+                                    <button type="button" class="pw-toggle" id="pw-toggle"
+                                        aria-label="Toggle password visibility">
+                                        <svg id="eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                            <circle cx="12" cy="12" r="3" />
+                                        </svg>
+                                    </button>
+                                    <div class="inline-feedback"></div>
+                                </div>
+                            </div>
+
+                            <div class="forgot-row">
+                                <button type="button" class="btn-ghost" id="open-forgot">Forgot password?</button>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"
+                                    aria-hidden="true">
+                                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                                    <polyline points="10 17 15 12 10 7" />
+                                    <line x1="15" y1="12" x2="3" y2="12" />
+                                </svg>
+                                Login
+                            </button>
+
+                        </form>
+                    </div>
+
+                    <div class="guest-section">
+                        <p>Don't have an account?</p>
+                        <button type="button" class="btn btn-secondary" id="open-register">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                <circle cx="8.5" cy="7" r="4" />
+                                <line x1="20" y1="8" x2="20" y2="14" />
+                                <line x1="23" y1="11" x2="17" y2="11" />
+                            </svg>
+                            Create an Account
+                        </button>
+                    </div>
+
                 </div>
             </div>
 
-            <?php if (isset($_SESSION['session_expired'])): ?>
-                <div class="alert alert-danger alert-dismissible fade in" role="alert">
-                    Your session has timed out. Please log in again.
-                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
+            <div class="visual-pane">
+                <div class="visual-panel-img"></div>
+                <div class="visual-overlay">
+                    <h2>Empowering Scientific Discovery</h2>
+                    <p>Access and reserve advanced campus research infrastructure, scientific laboratories, and
+                        precision instruments across the Ilocos Region Campus network.</p>
                 </div>
-                <?php unset($_SESSION['session_expired']); ?>
-            <?php endif; ?>
+            </div>
 
-            <form id="practiceForm" class="login-container" onsubmit="loginUser(); return false;">
-                <input type="text" class="form-control" id="username" name="username" placeholder="Email or Username" required>
+        </div>
+    </div>
 
-                <div class="password-wrapper">
-                    <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
-                    <div class="toggle-button">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="eye-icon">
-                            <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" />
-                            <path fill-rule="evenodd" d="M1.323 11.447C2.811 6.976 7.028 3.75 12.001 3.75c4.97 0 9.185 3.223 10.675 7.69.12.362.12.752 0 1.113-1.487 4.471-5.705 7.697-10.677 7.697-4.97 0-9.186-3.223-10.675-7.69a1.762 1.762 0 010-1.113zM17.25 12a5.25 5.25 0 11-10.5 0 5.25 5.25 0 0110.5 0z" clip-rule="evenodd" />
+
+    <div class="modal-overlay" id="modal-forgot" role="dialog" aria-modal="true" aria-labelledby="forgot-title">
+        <div class="modal">
+            <p class="modal-title" id="forgot-title">Reset Password</p>
+            <p class="modal-desc">Enter your registered email address and we'll send you password reset instructions.
+            </p>
+            <div class="field">
+                <label for="reset-email">Email Address</label>
+                <div class="input-wrap">
+                    <svg class="field-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                        <polyline points="22,6 12,13 2,6" />
+                    </svg>
+                    <input type="email" id="reset-email" placeholder="you@pshs.edu.ph" autocomplete="email" />
+                    <div class="inline-feedback"></div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="close-forgot">Cancel</button>
+                <button type="button" class="btn btn-primary" id="submit-reset">Send Instructions</button>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="modal-overlay" id="modal-register" role="dialog" aria-modal="true" aria-labelledby="register-title">
+        <div class="modal">
+            <p class="modal-title" id="register-title">Create an Account</p>
+            <p class="modal-desc">Join the Reserve-a-Lab system to manage and coordinate your laboratory reservations
+                efficiently.</p>
+
+            <form id="register-form" novalidate>
+                <div class="field">
+                    <label for="reg-username">Username</label>
+                    <div class="input-wrap">
+                        <svg class="field-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            aria-hidden="true">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                            <circle cx="12" cy="7" r="4" />
                         </svg>
-                  </div>
+                        <input type="text" id="reg-username" placeholder="Choose a secure username" />
+                        <div class="inline-feedback"></div>
+                    </div>
                 </div>
-  
-                <button type="submit" class="btn btn-primary">Log in</button>
 
-                <div style="text-align: right; margin-top: 15px;">
-                    <a href="#" onclick="$('#forgotPasswordModal').modal('show'); return false;" style="color: white; text-decoration: none; font-size: 1.2rem; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">
-                        Forgot Password?
-                    </a>
+                <div class="field">
+                    <label for="reg-email">Email Address</label>
+                    <div class="input-wrap">
+                        <svg class="field-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            aria-hidden="true">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                            <polyline points="22,6 12,13 2,6" />
+                        </svg>
+                        <input type="email" id="reg-email" placeholder="you@pshs.edu.ph" />
+                        <div class="inline-feedback"></div>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label for="reg-password">Create Password</label>
+                    <div class="input-wrap input-wrap-password">
+                        <svg class="field-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            aria-hidden="true">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                        <input type="password" id="reg-password" placeholder="Min. 8 characters" />
+                        <button type="button" class="pw-toggle" id="reg-pw-toggle"
+                            aria-label="Toggle password visibility">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                        </button>
+                        <div class="inline-feedback"></div>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label for="reg-confirm-password">Confirm Password</label>
+                    <div class="input-wrap input-wrap-password">
+                        <svg class="field-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            aria-hidden="true">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                        <input type="password" id="reg-confirm-password" placeholder="Re-enter password" />
+                        <button type="button" class="pw-toggle" id="reg-confirm-pw-toggle"
+                            aria-label="Toggle password visibility">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                        </button>
+                        <div class="inline-feedback"></div>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label for="reg-institution">Institution</label>
+                    <div class="input-wrap">
+                        <svg class="field-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            aria-hidden="true">
+                            <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+                            <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" />
+                        </svg>
+                        <input type="text" id="reg-institution"
+                            value="Philippine Science High School - Ilocos Region Campus" disabled />
+                        <div class="inline-feedback"></div>
+                    </div>
+                </div>
+
+                <div class="checkbox-row">
+                    <input type="checkbox" id="not-pshs" />
+                    <label for="not-pshs">Not from PSHS-IRC?</label>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="close-register">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="submit-register">Create Account</button>
                 </div>
             </form>
         </div>
+    </div>
 
-        <button class="guest-login-btn" onclick="guestLogin()">Guest Login</button>
 
-        <!-- Toast Container -->
-        <div id="toast-container"></div>
+    <script>
+        const $ = id => document.getElementById(id);
 
-        <!-- Guest Login Modal -->
-        <div class="modal fade flex-center" id="guestLoginModal" tabindex="-1" role="dialog">
-            <div class="modal-dialog" role="document">
-                <div class="modal-content liquid-modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" style="font-size: 1.8rem; font-weight: bold; text-align: center;">Guest Request</h5>
-                        <button type="button" class="close" data-dismiss="modal" style="position: absolute; right: 20px; top: 15px;"><span>&times;</span></button>
-                    </div>
-                    <div class="modal-body" style="padding: 30px;">
-                        <div class="alert" style="background: rgba(255, 193, 7, 0.2); border: 1px solid rgba(255, 193, 7, 0.4); color: white; border-radius: 12px; margin-bottom: 25px; padding: 15px;">
-                            <strong>Note:</strong> You will not be able to track the request process but will still receive the automated email upon approval.
-                        </div>
-                        <form id="guestLoginForm" class="login-container">
-                            <input type="text" name="guest_name" class="form-control" placeholder="Full Name" required>
-                            <input type="email" name="guest_email" class="form-control" placeholder="Email Address" required>
-                            <input type="text" name="guest_institution" class="form-control" placeholder="Institution" required>
-                            
-                            <div style="text-align: right; margin-top: 25px;">
-                                <button type="button" class="btn btn-liquid-cancel" data-dismiss="modal">Cancel</button>
-                                <button type="submit" class="btn btn-liquid-proceed">Proceed</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
+        /* ── Modal Automation Logic ── */
+        function openModal(id) {
+            $(id).classList.add('open');
+            const firstInput = $(id).querySelector('input');
+            if (firstInput && !firstInput.disabled) setTimeout(() => firstInput.focus(), 260);
+        }
 
-        <!-- Forgot Password Modal -->
-        <div class="modal fade" id="forgotPasswordModal" tabindex="-1" role="dialog">
-            <div class="modal-dialog modal-sm" role="document">
-                <div class="modal-content" style="color: #333;">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Reset Password</h5>
-                        <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
-                    </div>
-                    <div class="modal-body">
-                        <p>Enter your email address to receive a password reset link.</p>
-                        <form id="forgotPasswordForm">
-                            <div class="form-group">
-                                <input type="email" name="reset_email" class="form-control liquid-input" placeholder="Email Address" required>
-                            </div>
-                            <div class="text-right">
-                                <button type="button" class="btn-liquid-secondary" data-dismiss="modal">Cancel</button>
-                                <button type="submit" class="btn-liquid-success">Send Link</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <script>
-            $(document).ready(function () {
-                /*
-                 * Presentation initialization:
-                 * Staggers the entrance animations for the primary interactive elements.
-                 */
-                $(".login-container input[type='email'], .login-container button, .password-wrapper").each(function (i) {
-                    const $el = $(this);
-                    $el.css({
-                        opacity: 0,
-                        transform: "translateY(30px)"
-                    });
-                    setTimeout(function () {
-                        $el.css({
-                            transition: "all 0.6s ease",
-                            opacity: 1,
-                            transform: "translateY(0)"
-                        });
-                    }, 300 + i * 150);
+        function closeModal(id) {
+            $(id).classList.remove('open');
+            const form = $(id).querySelector('form');
+            if (form) {
+                form.reset();
+                const inputs = form.querySelectorAll('input');
+                inputs.forEach(input => {
+                    input.classList.remove('is-invalid', 'is-valid');
                 });
+                if ($('reg-institution')) $('reg-institution').disabled = true;
+            }
+        }
 
-                /* Toggle resources for visually indicating password visibility state. */
-                const eyeIcons = {
-                    open: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="eye-icon" style="width: 20px; height: 20px;"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" /><path fill-rule="evenodd" d="M1.323 11.447C2.811 6.976 7.028 3.75 12.001 3.75c4.97 0 9.185 3.223 10.675 7.69.12.362.12.752 0 1.113-1.487 4.471-5.705 7.697-10.677 7.697-4.97 0-9.186-3.223-10.675-7.69a1.762 1.762 0 010-1.113zM17.25 12a5.25 5.25 0 11-10.5 0 5.25 5.25 0 0110.5 0z" clip-rule="evenodd" /></svg>`,
-                    closed: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="eye-icon" style="width: 20px; height: 20px;"><path d="M3.53 2.47a.75.75 0 00-1.06 1.06l18 18a.75.75 0 101.06-1.06l-18-18zM22.676 12.553a11.249 11.249 0 01-2.631 4.31l-3.099-3.099a5.25 5.25 0 00-6.71-6.71L7.759 4.577a11.217 11.217 0 014.242-.827c4.97 0 9.185 3.223 10.675 7.69.12.362.12.752 0 1.113z" /><path d="M15.75 12c0 .18-.013.357-.037.53l-4.244-4.243A3.75 3.75 0 0115.75 12zM12.53 15.713l-4.243-4.244a3.75 3.75 0 004.243 4.243z" /><path d="M6.75 12c0-.619.107-1.213.304-1.764l-3.1-3.1a11.25 11.25 0 00-2.63 4.31c-.12.362-.12.752 0 1.114 1.489 4.467 5.704 7.69 10.675 7.69 1.5 0 2.933-.294 4.242-.827l-2.477-2.477A5.25 5.25 0 016.75 12z" /></svg>`
+        /* Dismiss listeners */
+        ['modal-forgot', 'modal-register'].forEach(id => {
+            if ($(id)) {
+                $(id).addEventListener('click', e => {
+                    if (e.target === $(id)) closeModal(id);
+                });
+            }
+        });
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') {
+                closeModal('modal-forgot');
+                closeModal('modal-register');
+            }
+        });
+
+        if ($('open-forgot')) $('open-forgot').addEventListener('click', () => openModal('modal-forgot'));
+        if ($('close-forgot')) $('close-forgot').addEventListener('click', () => closeModal('modal-forgot'));
+        if ($('open-register')) $('open-register').addEventListener('click', () => openModal('modal-register'));
+        if ($('close-register')) $('close-register').addEventListener('click', () => closeModal('modal-register'));
+
+        /* ── Visual State Controls ── */
+        function setValidationState(element, state, message = '') {
+            const feedback = element.parentElement.querySelector('.inline-feedback');
+            if (state === 'invalid') {
+                element.classList.remove('is-valid');
+                element.classList.add('is-invalid');
+                if (feedback) feedback.textContent = message;
+            } else if (state === 'valid') {
+                element.classList.remove('is-invalid');
+                element.classList.add('is-valid');
+                if (feedback) feedback.textContent = '';
+            } else {
+                element.classList.remove('is-invalid', 'is-valid');
+                if (feedback) feedback.textContent = '';
+            }
+        }
+
+        /* ── Password Visibility Toggles ── */
+        function setupPasswordToggle(toggleId, inputId) {
+            if (!$(toggleId) || !$(inputId)) return;
+            $(toggleId).addEventListener('click', function () {
+                const targetInput = $(inputId);
+                const isHidden = targetInput.type === 'password';
+                targetInput.type = isHidden ? 'text' : 'password';
+
+                const valLength = targetInput.value.length;
+                targetInput.setSelectionRange(valLength, valLength);
+                targetInput.focus();
+
+                this.innerHTML = isHidden
+                    ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`
+                    : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+            });
+        }
+        setupPasswordToggle('pw-toggle', 'password');
+        setupPasswordToggle('reg-pw-toggle', 'reg-password');
+        setupPasswordToggle('reg-confirm-pw-toggle', 'reg-confirm-password');
+
+        /* ── Institution External Toggle Handler ── */
+        if ($('not-pshs')) {
+            $('not-pshs').addEventListener('change', function () {
+                const instInput = $('reg-institution');
+                if (this.checked) {
+                    instInput.disabled = false;
+                    instInput.value = '';
+                    instInput.placeholder = 'Enter external school or affiliation corporate name';
+                    instInput.focus();
+                } else {
+                    instInput.disabled = true;
+                    instInput.value = 'Philippine Science High School - Ilocos Region Campus';
+                    instInput.placeholder = '';
+                    setValidationState(instInput, 'neutral');
+                }
+            });
+        }
+
+        /* ── Real Backend Interaction Handlers ── */
+
+        // Centralized intercept for password reset flow initiating a token request via email.
+        if ($('submit-reset')) {
+            $('submit-reset').addEventListener('click', () => {
+                const email = $('reset-email');
+                const emailVal = email.value.trim();
+                if (!emailVal || !/\S+@\S+\.\S+/.test(emailVal)) {
+                    setValidationState(email, 'invalid', 'Please provide a valid standard email layout.');
+                    email.focus();
+                    return;
+                }
+                setValidationState(email, 'neutral');
+
+                // Native AJAX implementation mapping to the real application layer endpoints
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', 'ajax/ajax_login.php', true);
+                xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                xhr.onload = function () {
+                    if (xhr.status === 200) {
+                        if (xhr.responseText.trim() === 'success') {
+                            closeModal('modal-forgot');
+                            showAlert('Reset link sent to your email.', 'success');
+                        } else {
+                            showAlert(xhr.responseText, 'error');
+                        }
+                    } else {
+                        showAlert('Server error. Please try again.', 'error');
+                    }
+                };
+                xhr.send('action=forgotPassword&email=' + encodeURIComponent(emailVal));
+            });
+        }
+
+        // Initialize registration account creation pathway, processing fields through the dedicated register modal
+        if ($('register-form')) {
+            $('register-form').addEventListener('submit', function (e) {
+                e.preventDefault();
+                let isFormValid = true;
+
+                const username = $('reg-username');
+                const email = $('reg-email');
+                const password = $('reg-password');
+                const confirmPass = $('reg-confirm-password');
+                const institution = $('reg-institution');
+
+                if (username.value.trim().length < 4) {
+                    setValidationState(username, 'invalid', 'Username must span at least 4 text strings.');
+                    isFormValid = false;
+                } else {
+                    setValidationState(username, 'valid');
+                }
+
+                if (!/\S+@\S+\.\S+/.test(email.value.trim())) {
+                    setValidationState(email, 'invalid', 'Please enter a valid structure email account profile.');
+                    isFormValid = false;
+                } else {
+                    setValidationState(email, 'valid');
+                }
+
+                if (password.value.length < 8) {
+                    setValidationState(password, 'invalid', 'Weak password. Minimum threshold requires 8 characters.');
+                    isFormValid = false;
+                } else {
+                    setValidationState(password, 'valid');
+                }
+
+                if (confirmPass.value.length === 0) {
+                    setValidationState(confirmPass, 'invalid', 'Please retype your credential security phrase.');
+                    isFormValid = false;
+                } else if (password.value !== confirmPass.value) {
+                    setValidationState(confirmPass, 'invalid', 'Mismatch detected. Passwords must align perfectly.');
+                    isFormValid = false;
+                } else {
+                    setValidationState(confirmPass, 'valid');
+                }
+
+                if (!institution.disabled && institution.value.trim().length === 0) {
+                    setValidationState(institution, 'invalid', 'Affiliated entity specification cannot remain blank.');
+                    isFormValid = false;
+                } else if (!institution.disabled) {
+                    setValidationState(institution, 'valid');
+                }
+
+                if (!isFormValid) return;
+
+                // Submit values to guest access framework route endpoint
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', 'ajax/ajax_login.php', true);
+                xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                xhr.onload = function () {
+                    if (xhr.status === 200) {
+                        if (xhr.responseText.trim() === 'guest') {
+                            closeModal('modal-register');
+                            window.location.href = "forms.php";
+                        } else {
+                            showAlert('An error occurred during account login assignment.', 'error');
+                        }
+                    } else {
+                        showAlert('Server response error.', 'error');
+                    }
                 };
 
-                /* Set default visibility representation. */
-                $(".toggle-button").html(eyeIcons.open);
-
-                /* Attach listener to toggle input type and icon on click. */
-                $(".toggle-button").on("click", function () {
-                    const $button = $(this);
-                    const $password = $("#password");
-                    const isOpen = $button.hasClass("open");
-
-                    $button.toggleClass("open");
-                    $button.html(isOpen ? eyeIcons.open : eyeIcons.closed);
-                    $password.attr("type", isOpen ? "password" : "text");
-                });
-
-                /* Centralized intercept for password reset flow initiating a token request via email. */
-                $('#forgotPasswordForm').submit(function(e) {
-                    e.preventDefault();
-                    const email = $(this).find('input[name="reset_email"]').val();
-                    
-                    $.post('ajax/ajax_login.php', { action: 'forgotPassword', email: email }, function(res) {
-                        if (res.trim() === 'success') {
-                            showToast("Reset link sent to your email.", "success");
-                            $('#forgotPasswordModal').modal('hide');
-                        } else {
-                            showToast(res, "error");
-                        }
-                    }).fail(function() { showToast("Server error.", "error"); });
-                });
+                const payload = 'action=guestLogin' +
+                    '&name=' + encodeURIComponent(username.value.trim()) +
+                    '&email=' + encodeURIComponent(email.value.trim()) +
+                    '&institution=' + encodeURIComponent(institution.value.trim());
+                xhr.send(payload);
             });
-            function loginUser() {
-                var email = $("#username").val();
-                var password = $("#password").val();
+        }
 
-                if (email === 'admin.controller') {
-                    $.post('index.php', {
-                        local_login: 'true',
-                        username: email,
-                        password: password
-                    }, function(res) {
-                        if (res.trim() === 'success') {
-                            window.location.href = "controller_dashboard.php";
-                        } else {
-                            $(".alert").remove();
-                            var alertBox = `
-                            <div class="alert alert-danger alert-dismissible fade in" role="alert">
-                                Incorrect password.
-                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                    <span aria-hidden="true">&times;</span>
-                                </button>
-                            </div>
-                        `;
-                        $("#banner").after(alertBox);
-                        }
-                    });
+        // Login system action request processing logic pipeline
+        if ($('login-form')) {
+            $('login-form').addEventListener('submit', function (e) {
+                e.preventDefault();
+                clearAlerts();
+
+                const usernameField = $('username');
+                const passwordField = $('password');
+                let formValid = true;
+
+                let email = usernameField.value.trim();
+                const password = passwordField.value;
+
+                if (!email) {
+                    setValidationState(usernameField, 'invalid', 'Identity field missing context requirement.');
+                    formValid = false;
+                } else {
+                    setValidationState(usernameField, 'neutral');
+                }
+
+                if (!password) {
+                    setValidationState(passwordField, 'invalid', 'Security code entry required.');
+                    formValid = false;
+                } else {
+                    setValidationState(passwordField, 'neutral');
+                }
+
+                if (!formValid) {
+                    showAlert('Please fill out all active fields correctly before submission.', 'error');
                     return;
                 }
 
-                if (!email.match(/@.+/)) {
-                    email = email + "@irc.pshs.edu.ph"
+                // Route processing configuration block handling admin.controller local login values
+                if (email === 'admin.controller') {
+                    const xhrLocal = new XMLHttpRequest();
+                    xhrLocal.open('POST', 'index.php', true);
+                    xhrLocal.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                    xhrLocal.onload = function () {
+                        if (xhrLocal.status === 200 && xhrLocal.responseText.trim() === 'success') {
+                            window.location.href = "controller_dashboard.php";
+                        } else {
+                            setValidationState(passwordField, 'invalid');
+                            showAlert('Incorrect password.', 'error');
+                        }
+                    };
+                    xhrLocal.send('local_login=true&username=' + encodeURIComponent(email) + '&password=' + encodeURIComponent(password));
+                    return;
                 }
-                var password = $("#password").val();
 
-                $.ajax({
-                    url: 'ajax/ajax_login.php',
-                    type: 'POST',
-                    data: {
-                        action: 'loginUser',
-                        email: email,
-                        password: password
-                    },
-                    success: function (response) {
-                        $(".alert").remove();
+                // Institutional email domain sanitation logic rule checks
+                if (!email.match(/@.+/)) {
+                    email = email + "@irc.pshs.edu.ph";
+                }
+
+                // Real validation submission process mapping to main dynamic application modules
+                const xhrAuth = new XMLHttpRequest();
+                xhrAuth.open('POST', 'ajax/ajax_login.php', true);
+                xhrAuth.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                xhrAuth.onload = function () {
+                    if (xhrAuth.status === 200) {
+                        const response = xhrAuth.responseText.trim();
                         if (response === "invalid_email") {
-                            var alertBox = `
-                            <div class="alert alert-danger alert-dismissible fade in" role="alert">
-                                Email or Username not found.
-                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                    <span aria-hidden="true">&times;</span>
-                                </button>
-                            </div>
-                        `;
-                        $("#banner").after(alertBox);
+                            setValidationState(usernameField, 'invalid');
+                            showAlert('Email or Username not found.', 'error');
                         } else if (response === "invalid_password") {
-                            var alertBox = `
-                            <div class="alert alert-danger alert-dismissible fade in" role="alert">
-                                Incorrect password.
-                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                    <span aria-hidden="true">&times;</span>
-                                </button>
-                            </div>
-                        `;
-                        $("#banner").after(alertBox);
+                            setValidationState(passwordField, 'invalid');
+                            showAlert('Incorrect password.', 'error');
                         } else if (response === "admin") {
                             window.location.href = "admin_home.php";
                         } else if (response === "requester" || response === "teacher") {
                             window.location.href = "requester_home.php";
                         } else {
-                            showToast("Unexpected response: " + response, 'error');
+                            showAlert('Unexpected response: ' + response, 'error');
                         }
-                    },
-                    error: function () {
-                        showToast("An error occurred. Please try again.", 'error');
-                    }
-                });
-            }
-
-            /* Initialize anonymous guest access pathway, intercepting credentials through the dedicated modal. */
-            $('#guestLoginForm').submit(function(e) {
-                e.preventDefault();
-                const name = $(this).find('input[name="guest_name"]').val();
-                const email = $(this).find('input[name="guest_email"]').val();
-                const institution = $(this).find('input[name="guest_institution"]').val();
-                
-                $.post('ajax/ajax_login.php', { 
-                    action: 'guestLogin', 
-                    name: name, 
-                    email: email, 
-                    institution: institution 
-                }, function(res) {
-                    if (res.trim() === 'guest') {
-                        window.location.href = "forms.php";
                     } else {
-                        showToast("An error occurred during guest login.", "error");
+                        showAlert('An error occurred. Please try again.', 'error');
                     }
-                }).fail(function() { showToast("Server error.", "error"); });
+                };
+                xhrAuth.send('action=loginUser&email=' + encodeURIComponent(email) + '&password=' + encodeURIComponent(password));
             });
+        }
 
-            function guestLogin() {
-                $('#guestLoginModal').modal('show');
-            }
+        function clearAlerts() {
+            if ($('alert-area')) $('alert-area').innerHTML = '';
+        }
 
-            function showToast(message, type = 'info', duration = 3000) {
-                const container = document.getElementById('toast-container');
-                if (!container) return;
-                const toast = document.createElement('div');
-                toast.className = `toast-notification ${type}`;
-                
-                let icon = '';
-                switch(type) {
-                    case 'success': icon = '<i class="bi bi-check-circle-fill" style="color:#28a745; margin-right:10px;"></i>'; break;
-                    case 'error': icon = '<i class="bi bi-exclamation-circle-fill" style="color:#dc3545; margin-right:10px;"></i>'; break;
-                    case 'warning': icon = '<i class="bi bi-exclamation-triangle-fill" style="color:#ffc107; margin-right:10px;"></i>'; break;
-                    default: icon = '<i class="bi bi-info-circle-fill" style="color:#17a2b8; margin-right:10px;"></i>';
-                }
+        function showAlert(message, type = 'error') {
+            clearAlerts();
+            if (!$('alert-area')) return;
 
-                toast.innerHTML = `
-                    <div style="display:flex; align-items:center;">
-                        ${icon}
-                        <span>${message}</span>
-                    </div>
-                    <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>
-                `;
+            const vectors = {
+                error: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`,
+                success: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`
+            };
 
-                container.appendChild(toast);
+            const block = document.createElement('div');
+            block.className = `alert alert-${type}`;
+            block.innerHTML = `
+            <span class="alert-icon">${vectors[type] || ''}</span>
+            <span>${message}</span>
+            <button class="alert-close" type="button" aria-label="Dismiss Alert" onclick="this.parentElement.remove()">✕</button>
+        `;
+            $('alert-area').appendChild(block);
+        }
+    </script>
+</body>
 
-                setTimeout(() => {
-                    toast.classList.add('hide');
-                    toast.addEventListener('animationend', () => toast.remove());
-                }, duration);
-            }
-        </script>
-    </body>
 </html>
