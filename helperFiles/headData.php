@@ -2,7 +2,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <!-- Local Header and Footer CSS -->
-<link rel="stylesheet" href="helperFiles/HeadFoot.css">
+<link rel="stylesheet" href="css/universal.css">
+<link rel="stylesheet" href="css/header.css">
+<link rel="stylesheet" href="css/footer.css">
 
 <!-- Favicon -->
 <link rel="icon" type="image/x-icon" href="img/logo.png">
@@ -40,8 +42,10 @@
 <script src="https://cdn.datatables.net/select/1.6.2/js/dataTables.select.min.js"></script>
 
 <!-- Bootstrap Multiselect -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.13/css/bootstrap-multiselect.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.13/js/bootstrap-multiselect.min.js"></script>
+<link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.13/css/bootstrap-multiselect.min.css">
+<script
+    src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.13/js/bootstrap-multiselect.min.js"></script>
 
 <!-- Barcode Generator + Scanner -->
 <script src="https://unpkg.com/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>

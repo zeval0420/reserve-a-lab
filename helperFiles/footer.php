@@ -4,18 +4,20 @@
             <!-- Column 1: School Name and Campus -->
             <div class="col-12 col-md-5 mb-5 mb-md-0 text-left" style="padding-left: 50px;">
                 <div class="col-12 col-md-8">
-                    <br/>
+                    <br />
                     <h5 class="mb-1" style="font-weight: bold; font-size: 20px;">PHILIPPINE SCIENCE HIGH SCHOOL</h5>
                     <h5 class="mb-2" style="font-weight: bold; font-size: 20px;">ILOCOS REGION CAMPUS</h5>
-                    <p class="mb-0" style="margin-top: 5px;"><i class="bi bi-geo-alt-fill"></i>Poblacion East, San Ildefonso 2728, Ilocos Sur</p>
+                    <p class="mb-0" style="margin-top: 5px;"><i class="bi bi-geo-alt-fill"></i>Poblacion East, San
+                        Ildefonso 2728, Ilocos Sur</p>
                 </div>
-                
+
                 <div class="mb-2 col-12 col-md-4 text-center">
-                    <br/>
-                    <br/>
+                    <br />
+                    <br />
                     <p class="mt-2 mb-1 font-weight-bold">About the</p>
-                    <p class="mt-2 mb-1 font-weight-bold" style="font-size: 16px; font-weight: bold;"><a href="about.php">DEVELOPERS</a></p>
-                    
+                    <p class="mt-2 mb-1 font-weight-bold" style="font-size: 16px; font-weight: bold;"><a
+                            href="about.php">DEVELOPERS</a></p>
+
                 </div>
             </div>
 
@@ -28,7 +30,7 @@
             <div class="col-12 col-md-5 text-md-right text-center">
                 <div class="mb-2 col-12 col-md-6">
                     <p class="mb-1 font-weight-bold">Developed by:</p>
-                    <br/>
+                    <br />
 
                     <p class="mt-2 mb-1 font-weight-bold">Gabriel James Valdez</p>
                     <p class="mt-2 mb-1 font-weight-bold">Zyx Leiabe A. Barangan</p>
@@ -36,11 +38,13 @@
 
                 </div>
                 <div class="mb-2 col-12 col-md-6 ">
-                    <br/>
-                    <p class="mt-2 mb-1 font-weight-bold" style="font-size: 16px; font-weight: bold;">RESEARCH PROJECT</p>
+                    <br />
+                    <p class="mt-2 mb-1 font-weight-bold" style="font-size: 16px; font-weight: bold;">RESEARCH PROJECT
+                    </p>
                     <p class="mt-2 mb-1 font-weight-bold">Grade 11</p>
-                    <br/>
-                    <p class="mt-2 mb-1 font-weight-bold" style="font-size: 16px; font-weight: bold;">Adviser: June Leonel Ngayaan</p>
+                    <br />
+                    <p class="mt-2 mb-1 font-weight-bold" style="font-size: 16px; font-weight: bold;">Adviser: June
+                        Leonel Ngayaan</p>
                     <p class="mt-2 mb-1 font-weight-bold">School Year: 2025-2026</p>
                 </div>
             </div>
@@ -72,9 +76,9 @@
         if (!container) return;
         const toast = document.createElement('div');
         toast.className = `toast-notification ${type}`;
-        
+
         let icon = '';
-        switch(type) {
+        switch (type) {
             case 'success': icon = '<i class="bi bi-check-circle-fill" style="color:#28a745; margin-right:10px;"></i>'; break;
             case 'error': icon = '<i class="bi bi-exclamation-circle-fill" style="color:#dc3545; margin-right:10px;"></i>'; break;
             case 'warning': icon = '<i class="bi bi-exclamation-triangle-fill" style="color:#ffc107; margin-right:10px;"></i>'; break;
@@ -130,14 +134,14 @@
     function addToNotificationHistory(message, type) {
         const history = JSON.parse(localStorage.getItem('notificationHistory') || '[]');
         const timestamp = new Date().toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true, month: 'short', day: 'numeric' });
-        
+
         history.unshift({ message, type, timestamp });
-        
+
         // Keep last 50
         if (history.length > 50) history.pop();
-        
+
         localStorage.setItem('notificationHistory', JSON.stringify(history));
-        
+
         // If sidebar is open, re-render
         const sidebar = document.getElementById('notification-sidebar');
         if (sidebar && sidebar.classList.contains('open')) {
@@ -148,9 +152,9 @@
     async function renderNotificationHistory() {
         const container = document.getElementById('ns-content');
         if (!container) return;
-        
+
         const history = JSON.parse(localStorage.getItem('notificationHistory') || '[]');
-        let displayItems = history.map(item => ({...item, source: 'local'}));
+        let displayItems = history.map(item => ({ ...item, source: 'local' }));
 
         // If admin, fetch pending requests from server
         if (typeof userRole !== 'undefined' && userRole === 'admin') {
@@ -160,7 +164,7 @@
                     data: { action: 'notification_feed' },
                     dataType: 'json'
                 });
-                
+
                 if (response && response.items) {
                     const serverItems = response.items.map(item => ({
                         type: 'warning',
@@ -175,14 +179,14 @@
                 console.error("Failed to load pending requests", e);
             }
         }
-        
+
         const filtered = currentFilter === 'all' ? displayItems : displayItems.filter(item => item.type === currentFilter);
 
         if (filtered.length === 0) {
             container.innerHTML = '<div style="text-align:center; padding: 40px 20px; color: #999; font-style: italic;">No notifications found</div>';
             return;
         }
-        
+
         container.innerHTML = filtered.map(item => {
             const viewLink = item.link ? `<div style="margin-top:8px; text-align:right;"><a href="${item.link}" style="font-weight:600; text-decoration:none; color:inherit; font-size:12px; border-bottom:1px dotted currentColor;">Review Request &rarr;</a></div>` : '';
             return `
@@ -197,7 +201,7 @@
     }
 
     function clearNotifications() {
-        if(confirm('Clear all notification history?')) {
+        if (confirm('Clear all notification history?')) {
             localStorage.removeItem('notificationHistory');
             renderNotificationHistory();
         }
@@ -205,14 +209,14 @@
 
     // Notification Badge Logic (Pending Requests)
     const userRole = "<?php echo $_SESSION['role'] ?? ''; ?>";
-    
+
     function updateNotificationBadge() {
         if (userRole !== 'admin') return;
 
-        $.get('ajax/ajax_admin.php?action=get_pending_count', function(data) {
+        $.get('ajax/ajax_admin.php?action=get_pending_count', function (data) {
             const serverCount = parseInt(data) || 0;
             const lastReadCount = parseInt(localStorage.getItem('notif_last_read_count') || '0');
-            
+
             // If server count dropped (e.g. items approved), reset read count to avoid negative badge
             let effectiveReadCount = lastReadCount;
             if (serverCount < lastReadCount) {
@@ -222,7 +226,7 @@
 
             const unreadCount = serverCount - effectiveReadCount;
             const badge = document.getElementById('notif-badge');
-            
+
             if (badge) {
                 if (unreadCount > 0) {
                     badge.innerText = unreadCount > 99 ? '99+' : unreadCount;
@@ -237,14 +241,14 @@
     function markNotificationsAsRead() {
         if (userRole !== 'admin') return;
         // Fetch current count to set as read
-        $.get('ajax/ajax_admin.php?action=get_pending_count', function(data) {
+        $.get('ajax/ajax_admin.php?action=get_pending_count', function (data) {
             localStorage.setItem('notif_last_read_count', parseInt(data) || 0);
             updateNotificationBadge();
         });
     }
 
     // Check for notifications on load and every 30 seconds
-    $(document).ready(function() {
+    $(document).ready(function () {
         updateNotificationBadge();
         setInterval(updateNotificationBadge, 30000);
     });
