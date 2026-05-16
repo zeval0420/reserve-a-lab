@@ -11,15 +11,19 @@ require '../PHPMailer/src/PHPMailer.php';
 require '../PHPMailer/src/SMTP.php';
 
 if (isset($_POST["action"]) && $_POST["action"] === "loginUser") {
-    $email = $_POST['email'];
+    $input_identity = $_POST['email']; // This field handles both email and username
     $password = $_POST['password'];
+
+    // Detect input type
+    $is_email = (strpos($input_identity, '@') !== false);
+    $email_query = $is_email ? $input_identity : $input_identity . '@irc.pshs.edu.ph';
 
     /* 
      * Initial login attempt: Check if the user exists in the employee/admin accounts table.
      * We limit the search to users with an 'active' status.
      */
     $stmt = $conn->prepare("SELECT * FROM {$db_table_accounts} WHERE {$db_col_email} = ? AND {$db_col_status} = 'active'");
-    $stmt->bind_param("s", $email);
+    $stmt->bind_param("s", $email_query);
     $stmt->execute();
     $result = $stmt->get_result();
 
@@ -85,13 +89,11 @@ if (isset($_POST["action"]) && $_POST["action"] === "loginUser") {
         INNER JOIN student s ON s.LRN = d.LRN 
         WHERE d.studentEmail = ?
     ");
-    $stmt->bind_param("s", $email);
+    $stmt->bind_param("s", $email_query);
     $stmt->execute();
     $studentResult = $stmt->get_result();
 
-    if ($studentResult->num_rows === 0) {
-        echo "invalid_email";
-    } else {
+    if ($studentResult->num_rows > 0) {
         $student = $studentResult->fetch_assoc();
 
         /*
@@ -108,26 +110,94 @@ if (isset($_POST["action"]) && $_POST["action"] === "loginUser") {
         $_SESSION['student_lrn'] = $student['LRN'];
 
         echo "requester";
+        $stmt->close();
+        $conn->close();
+        exit();
+    }
+    
+    $stmt->close();
+    
+    /*
+     * Tertiary login attempt: Fallback to checking the scilab_new_accounts table.
+     */
+    $stmt = $conn->prepare("SELECT * FROM {$db_table_new_accounts} WHERE username = ?");
+    $stmt->bind_param("s", $input_identity);
+    $stmt->execute();
+    $newAccountsResult = $stmt->get_result();
+
+    if ($newAccountsResult->num_rows > 0) {
+        $new_user = $newAccountsResult->fetch_assoc();
+        $hashedInput = md5($password);
+
+        if ($hashedInput !== $new_user['password']) {
+            echo "invalid_password";
+        } else {
+            $_SESSION[$session_role] = "guest";
+            $_SESSION[$session_email] = strpos($new_user['username'], '@') !== false ? $new_user['username'] : ''; 
+            $_SESSION[$session_firstname] = $new_user['firstname'];
+            $_SESSION[$session_middlename] = $new_user['middlename'];
+            $_SESSION[$session_lastname] = $new_user['lastname'];
+            
+            $_SESSION[$session_username] = $new_user['firstname'] . ' ' . $new_user['lastname'] . ' (' . $new_user['institution'] . ')';
+            $_SESSION[$session_employeeID] = !empty($new_user['userID']) ? $new_user['userID'] : 'Guest';
+            
+            echo "guest";
+        }
+        $stmt->close();
+        $conn->close();
+        exit();
     }
 
     $stmt->close();
     $conn->close();
+
+    // If none of the attempts succeed
+    echo "prompt_create_account";
 }
 
 if (isset($_POST["action"]) && $_POST["action"] === "guestLogin") {
-    $_SESSION[$session_role] = "guest";
-    $_SESSION[$session_email] = $_POST['email'];
-    $_SESSION[$session_firstname] = $_POST['name'];
-    $_SESSION[$session_lastname] = '(' . $_POST['institution'] . ')';
+    $email = $_POST['email']; // Note: mapped from reg-email
+    $username = $_POST['username'];
+    $password = md5($_POST['password']);
+    $firstname = $_POST['firstname'];
+    $middlename = isset($_POST['middlename']) ? $_POST['middlename'] : '';
+    $lastname = $_POST['lastname'];
+    $institution = $_POST['institution'];
+    $studentid = isset($_POST['studentid']) ? $_POST['studentid'] : '';
 
-    /* 
-     * Map the guest username for consistent display in views. 
-     * Assign a fallback 'Guest' employee ID to prevent relational queries from crashing.
-     */
-    $_SESSION[$session_username] = $_POST['name'] . ' (' . $_POST['institution'] . ')';
-    $_SESSION[$session_employeeID] = 'Guest';
+    // Check if username already exists in scilab_new_accounts
+    $stmt = $conn->prepare("SELECT id FROM {$db_table_new_accounts} WHERE username = ?");
+    $stmt->bind_param("s", $username);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    if ($res->num_rows > 0) {
+        echo "Username already exists.";
+        $stmt->close();
+        exit();
+    }
+    $stmt->close();
+    
+    // Insert into scilab_new_accounts
+    $userID = !empty($studentid) ? $studentid : ('GUEST-' . time());
+    
+    $stmt = $conn->prepare("INSERT INTO {$db_table_new_accounts} (userID, firstname, middlename, lastname, username, password, institution) VALUES (?, ?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("sssssss", $userID, $firstname, $middlename, $lastname, $username, $password, $institution);
+    
+    if ($stmt->execute()) {
+        $_SESSION[$session_role] = "guest";
+        $_SESSION[$session_email] = $email;
+        $_SESSION[$session_firstname] = $firstname;
+        $_SESSION[$session_middlename] = $middlename;
+        $_SESSION[$session_lastname] = $lastname;
 
-    echo "guest";
+        $_SESSION[$session_username] = $firstname . ' ' . $lastname . ' (' . $institution . ')';
+        $_SESSION[$session_employeeID] = $userID;
+
+        echo "success";
+    } else {
+        echo "Error creating account.";
+    }
+    $stmt->close();
     exit();
 }
 

@@ -44,6 +44,7 @@ $db_table_materials = "scilab_material_requests";
 $db_table_involved_students = "scilab_students_involved";
 $db_table_availability = "scilab_availability";
 $db_table_sy = "current";
+$db_table_new_accounts = "scilab_new_accounts";
 
 // DATABASE COLUMN NAMES
 $col_id = "id";

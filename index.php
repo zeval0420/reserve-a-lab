@@ -574,6 +574,25 @@ if (isset($_SESSION['role'])) {
             user-select: none;
         }
 
+        .name-row {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .name-row .field {
+            margin-bottom: 0;
+            flex: 1;
+        }
+
+        .name-row .field input {
+            padding: 0 0.75rem;
+        }
+
+        .name-row .field .inline-feedback {
+            font-size: 0.65rem;
+        }
+
         /* ─────────────────────────────────────────
        BUTTON ARCHITECTURE
     ───────────────────────────────────────── */
@@ -894,6 +913,43 @@ if (isset($_SESSION['role'])) {
                 efficiently.</p>
 
             <form id="register-form" novalidate>
+                <div class="name-row">
+                    <div class="field">
+                        <label for="reg-firstname">First Name</label>
+                        <div class="input-wrap">
+                            <input type="text" id="reg-firstname" placeholder="First Name" />
+                            <div class="inline-feedback"></div>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for="reg-middlename">Middle Name</label>
+                        <div class="input-wrap">
+                            <input type="text" id="reg-middlename" placeholder="Middle Name" />
+                            <div class="inline-feedback"></div>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for="reg-lastname">Last Name</label>
+                        <div class="input-wrap">
+                            <input type="text" id="reg-lastname" placeholder="Last Name" />
+                            <div class="inline-feedback"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="field" id="field-studentid">
+                    <label for="reg-studentid">Student ID</label>
+                    <div class="input-wrap">
+                        <svg class="field-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            aria-hidden="true">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                        </svg>
+                        <input type="text" id="reg-studentid" placeholder="Your Student ID" />
+                        <div class="inline-feedback"></div>
+                    </div>
+                </div>
+
                 <div class="field">
                     <label for="reg-username">Username</label>
                     <div class="input-wrap">
@@ -1081,16 +1137,22 @@ if (isset($_SESSION['role'])) {
         if ($('not-pshs')) {
             $('not-pshs').addEventListener('change', function () {
                 const instInput = $('reg-institution');
+                const studentIdField = $('field-studentid');
+                const studentIdInput = $('reg-studentid');
+
                 if (this.checked) {
                     instInput.disabled = false;
                     instInput.value = '';
                     instInput.placeholder = 'Enter external school or affiliation corporate name';
                     instInput.focus();
+                    studentIdField.style.display = 'none';
+                    studentIdInput.value = '';
                 } else {
                     instInput.disabled = true;
                     instInput.value = 'Philippine Science High School - Ilocos Region Campus';
                     instInput.placeholder = '';
                     setValidationState(instInput, 'neutral');
+                    studentIdField.style.display = 'block';
                 }
             });
         }
@@ -1140,6 +1202,28 @@ if (isset($_SESSION['role'])) {
                 const password = $('reg-password');
                 const confirmPass = $('reg-confirm-password');
                 const institution = $('reg-institution');
+                const firstname = $('reg-firstname');
+                const middlename = $('reg-middlename');
+                const lastname = $('reg-lastname');
+                const studentid = $('reg-studentid');
+                const isNotPshs = $('not-pshs').checked;
+
+                if (firstname.value.trim().length === 0) {
+                    setValidationState(firstname, 'invalid', 'Required');
+                    isFormValid = false;
+                } else setValidationState(firstname, 'valid');
+
+                if (lastname.value.trim().length === 0) {
+                    setValidationState(lastname, 'invalid', 'Required');
+                    isFormValid = false;
+                } else setValidationState(lastname, 'valid');
+
+                if (!isNotPshs && studentid.value.trim().length === 0) {
+                    setValidationState(studentid, 'invalid', 'Student ID is required for PSHS.');
+                    isFormValid = false;
+                } else if (!isNotPshs) {
+                    setValidationState(studentid, 'valid');
+                }
 
                 if (username.value.trim().length < 4) {
                     setValidationState(username, 'invalid', 'Username must span at least 4 text strings.');
@@ -1187,11 +1271,11 @@ if (isset($_SESSION['role'])) {
                 xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
                 xhr.onload = function () {
                     if (xhr.status === 200) {
-                        if (xhr.responseText.trim() === 'guest') {
+                        if (xhr.responseText.trim() === 'success') {
                             closeModal('modal-register');
-                            window.location.href = "forms.php";
+                            showAlert('Account created successfully. You can now log in.', 'success');
                         } else {
-                            showAlert('An error occurred during account login assignment.', 'error');
+                            showAlert(xhr.responseText.trim(), 'error');
                         }
                     } else {
                         showAlert('Server response error.', 'error');
@@ -1199,8 +1283,13 @@ if (isset($_SESSION['role'])) {
                 };
 
                 const payload = 'action=guestLogin' +
-                    '&name=' + encodeURIComponent(username.value.trim()) +
+                    '&username=' + encodeURIComponent(username.value.trim()) +
                     '&email=' + encodeURIComponent(email.value.trim()) +
+                    '&password=' + encodeURIComponent(password.value) +
+                    '&firstname=' + encodeURIComponent(firstname.value.trim()) +
+                    '&middlename=' + encodeURIComponent(middlename.value.trim()) +
+                    '&lastname=' + encodeURIComponent(lastname.value.trim()) +
+                    '&studentid=' + encodeURIComponent(studentid.value.trim()) +
                     '&institution=' + encodeURIComponent(institution.value.trim());
                 xhr.send(payload);
             });
@@ -1255,10 +1344,8 @@ if (isset($_SESSION['role'])) {
                     return;
                 }
 
-                // Institutional email domain sanitation logic rule checks
-                if (!email.match(/@.+/)) {
-                    email = email + "@irc.pshs.edu.ph";
-                }
+                // Routing check for login submission
+                // Appending @irc.pshs.edu.ph logic removed as requested. Input is passed raw.
 
                 // Real validation submission process mapping to main dynamic application modules
                 const xhrAuth = new XMLHttpRequest();
@@ -1270,13 +1357,18 @@ if (isset($_SESSION['role'])) {
                         if (response === "invalid_email") {
                             setValidationState(usernameField, 'invalid');
                             showAlert('Email or Username not found.', 'error');
+                        } else if (response === "prompt_create_account") {
+                            setValidationState(usernameField, 'invalid');
+                            showAlert('Account not found. Please create an account.', 'error');
+                            // optionally open the register modal
+                            openModal('modal-register');
                         } else if (response === "invalid_password") {
                             setValidationState(passwordField, 'invalid');
                             showAlert('Incorrect password.', 'error');
                         } else if (response === "admin") {
                             window.location.href = "admin_home.php";
-                        } else if (response === "requester" || response === "teacher") {
-                            window.location.href = "requester_home.php";
+                        } else if (response === "requester" || response === "teacher" || response === "guest") {
+                            window.location.href = "requester_home.php"; // Redirect guest/requester properly
                         } else {
                             showAlert('Unexpected response: ' + response, 'error');
                         }
