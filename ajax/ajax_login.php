@@ -97,6 +97,43 @@ if (isset($_POST["action"]) && $_POST["action"] === "loginUser") {
         $student = $studentResult->fetch_assoc();
 
         /*
+         * Check if the student has registered an account in scilab_new_accounts.
+         */
+        $stmt_new = $conn->prepare("SELECT * FROM {$db_table_new_accounts} WHERE username = ? OR username = ? OR userID = ?");
+        $stmt_new->bind_param("sss", $input_identity, $email_query, $student['LRN']);
+        $stmt_new->execute();
+        $newAccountsResult = $stmt_new->get_result();
+
+        if ($newAccountsResult->num_rows === 0) {
+            $username_suggested = str_replace('@irc.pshs.edu.ph', '', $student['studentEmail']);
+            echo json_encode([
+                "status" => "prompt_create_account",
+                "firstname" => $student['firstname'],
+                "middlename" => $student['middlename'],
+                "lastname" => $student['lastname'],
+                "username" => $username_suggested,
+                "email" => $student['studentEmail'],
+                "studentid" => $student['LRN']
+            ]);
+            $stmt_new->close();
+            $stmt->close();
+            $conn->close();
+            exit();
+        }
+
+        $new_user = $newAccountsResult->fetch_assoc();
+        $stmt_new->close();
+
+        // Verify using MD5 to match login system
+        $hashedInput = md5($password);
+        if ($hashedInput !== $new_user['password']) {
+            echo "invalid_password";
+            $stmt->close();
+            $conn->close();
+            exit();
+        }
+
+        /*
          * Student authentication successful.
          * Establish the session state utilizing the verified student information.
          */

@@ -1355,6 +1355,35 @@ if (isset($_SESSION['role'])) {
                     if (xhrAuth.status === 200) {
                         const response = xhrAuth.responseText.trim();
                         if (response === "invalid_email") {
+                        try {
+                            data = JSON.parse(response);
+                        } catch (e) {
+                            data = null;
+                        }
+
+                        if (data && data.status === "prompt_create_account") {
+                            setValidationState(usernameField, 'invalid');
+                            showAlert('Account not found. Please create an account.', 'error');
+                            
+                            // Autofill the registration form
+                            $('reg-firstname').value = data.firstname || '';
+                            $('reg-middlename').value = data.middlename || '';
+                            $('reg-lastname').value = data.lastname || '';
+                            $('reg-studentid').value = '';
+                            $('reg-username').value = data.username || '';
+                            $('reg-email').value = data.email || '';
+                            
+                            // Disable the autofilled inputs so only passwords and student ID can be typed
+                            $('reg-firstname').disabled = true;
+                            $('reg-middlename').disabled = true;
+                            $('reg-lastname').disabled = true;
+                            $('reg-studentid').disabled = false;
+                            $('reg-username').disabled = true;
+                            $('reg-email').disabled = true;
+                            if ($('not-pshs')) $('not-pshs').disabled = true;
+                            
+                            openModal('modal-register');
+                        } else if (response === "invalid_email") {
                             setValidationState(usernameField, 'invalid');
                             showAlert('Email or Username not found.', 'error');
                         } else if (response === "prompt_create_account") {
@@ -1366,7 +1395,7 @@ if (isset($_SESSION['role'])) {
                             setValidationState(passwordField, 'invalid');
                             showAlert('Incorrect password.', 'error');
                         } else if (response === "admin") {
-                            window.location.href = "admin_home.php";
+                            window.location.href = "sample_admin.php";
                         } else if (response === "requester" || response === "teacher" || response === "guest") {
                             window.location.href = "requester_home.php"; // Redirect guest/requester properly
                         } else {
