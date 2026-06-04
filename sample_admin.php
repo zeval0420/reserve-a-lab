@@ -56,7 +56,7 @@
                 margin: 0 auto;
             }
             @media (max-width: 768px) {
-                .main-wrapper { width: 100%; }
+                .main-wrapper { width: 95%; }
             }
 
             /* ─── HEADING ROW ───────────────────────────────────── */
@@ -254,6 +254,31 @@
                 gap: 8px;
                 flex-wrap: wrap;
                 justify-content: center;
+            }
+
+            /* Single row layout for list variant */
+            .lab-card--list .lab-card__admin-footer {
+                flex-direction: row;
+                justify-content: space-between;
+                width: 100%;
+                padding: 8px 16px;
+                margin-top: 0;
+                background: rgba(235, 240, 250, 0.4);
+                border-radius: 0 0 12px 12px;
+            }
+            .lab-card--list .lab-card__admin-actions {
+                flex-wrap: nowrap;
+            }
+            @media (max-width: 600px) {
+                .lab-card--list .lab-card__admin-footer {
+                    flex-direction: column;
+                    gap: 8px;
+                    padding: 10px;
+                }
+                .lab-card--list .lab-card__admin-actions {
+                    flex-wrap: wrap;
+                    justify-content: center;
+                }
             }
 
             /* ─── ANIMATIONS ────────────────────────────────────── */
