@@ -1354,7 +1354,7 @@ if (isset($_SESSION['role'])) {
                 xhrAuth.onload = function () {
                     if (xhrAuth.status === 200) {
                         const response = xhrAuth.responseText.trim();
-                        if (response === "invalid_email") {
+                        let data;
                         try {
                             data = JSON.parse(response);
                         } catch (e) {

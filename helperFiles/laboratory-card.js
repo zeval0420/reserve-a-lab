@@ -21,6 +21,7 @@
    instances of the same lab stay in sync on toggle.
 ──────────────────────────────────────────────────────────────── */
 const _labCardState = {};
+const _isAdminMode = (typeof isAdmin !== 'undefined' && isAdmin) || window.location.pathname.includes('admin');
 
 /* ─── UTILITY: HTML ESCAPE ─────────────────────────────────── */
 function _escapeHtml(str) {
@@ -265,14 +266,17 @@ function _buildListCard(data, isAvailable) {
                         </div>
                     </div>
 
-                    <!-- Admin footer: toggle (left) | color hex + Edit + Remove (right) -->
+                    <!-- Card footer: admin controls if admin, otherwise request button -->
                     <div class="lab-card__footer">
-                        ${_toggleSwitch(data.id, isAvailable)}
-
-                        <div class="lab-card__footer-right">
-                            ${_colorBadge(data.color)}
-                            ${_actionButtons(data.id)}
-                        </div>
+                        ${_isAdminMode ? `
+                            ${_toggleSwitch(data.id, isAvailable)}
+                            <div class="lab-card__footer-right">
+                                ${_colorBadge(data.color)}
+                                ${_actionButtons(data.id)}
+                            </div>
+                        ` : `
+                            ${_requestButton(data.id, isAvailable)}
+                        `}
                     </div>
                 </div>
             </div>
