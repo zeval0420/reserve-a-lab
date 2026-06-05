@@ -6,6 +6,7 @@
         <title>About Us - PSHS-IRC Lab System</title>
         <?php include('helperFiles/headData.php'); ?>
 
+        <link rel="stylesheet" href="css/game-section.css">
         <style>
             /* ========================================
                CSS VARIABLES & RESET
@@ -1074,6 +1075,46 @@
                 </div>
             </div>
         </section>
+        <!-- ========================================
+             GAMES SECTION
+        ======================================== -->
+
+        <div class="games-section">
+            <section>
+                <div class="games-section__header">
+                    <span class="games-section__title">Now Playing</span>
+                </div>
+                <div class="games-section__now-playing" id="games-now-playing">Select a game →</div>
+        
+                <div class="games-section__frame-wrap">
+                    <!-- Placeholder shown before any game is selected -->
+                    <div class="games-section__placeholder" id="games-placeholder">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.82m5.84-2.56a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.63 2a14.98 14.98 0 00-3.16 9.75m9.12 2.62A14.89 14.89 0 014.5 9.75"/>
+                        </svg>
+                        <span>Choose a game from the list</span>
+                    </div>
+                    <iframe id="games-iframe" src="" title="Game" allowfullscreen
+                            style="display:none;"></iframe>
+                </div>
+            </section>
+        
+            <aside>
+                <div class="games-carousel__label">Games</div>
+                <button class="games-carousel__arrow" id="games-arrow-up" aria-label="Scroll up">▲</button>
+                <div class="games-carousel__track-wrap">
+                    <div class="games-carousel__track" id="games-track">
+                        <!-- Skeleton placeholders while loading -->
+                        <div class="game-card-skeleton"></div>
+                        <div class="game-card-skeleton"></div>
+                        <div class="game-card-skeleton"></div>
+                    </div>
+                </div>
+                <button class="games-carousel__arrow" id="games-arrow-down" aria-label="Scroll down">▼</button>
+            </aside>
+        </div>
+
 
         <!-- ========================================
              MISSION & VISION SECTION
@@ -1623,6 +1664,7 @@
         <!-- Footer -->
         <?php include 'helperFiles/footer.php'; ?>
 
+        <script src="helperFiles/game-section.js"></script>
         <script>
             $(document).ready(function () {
                 // ========================================

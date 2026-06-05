@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Memory Match</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#0B1B62; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; font-family:'Courier New',monospace; color:#fff; gap:16px; }
+  h2 { font-size:20px; letter-spacing:4px; color:#4F73D9; }
+  #info { font-size:13px; color:#4F73D9; letter-spacing:2px; }
+  #board { display:grid; grid-template-columns:repeat(4,70px); gap:8px; }
+  .card { width:70px; height:70px; background:linear-gradient(135deg,rgba(43,85,196,0.2),rgba(43,85,196,0.4)); border:1px solid rgba(79,115,217,0.4); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:28px; cursor:pointer; transition:all 0.3s; user-select:none; }
+  .card.flipped { background:linear-gradient(135deg,rgba(43,85,196,0.5),rgba(79,115,217,0.7)); border-color:#4F73D9; }
+  .card.matched { background:linear-gradient(135deg,rgba(40,167,69,0.3),rgba(40,167,69,0.5)); border-color:#28a745; cursor:default; }
+  .card:hover:not(.flipped):not(.matched) { transform:scale(1.05); border-color:#4F73D9; }
+  #msg { font-size:13px; color:#888; }
+  #restart { padding:8px 20px; background:linear-gradient(135deg,rgba(43,85,196,0.1),rgba(43,85,196,0.3)); border:1px solid rgba(43,85,196,0.4); border-radius:20px; color:#4F73D9; font-family:'Courier New',monospace; font-size:13px; cursor:pointer; letter-spacing:2px; transition:all 0.2s; }
+  #restart:hover { background:linear-gradient(135deg,rgba(43,85,196,0.2),rgba(43,85,196,0.4)); transform:translateY(-2px); }
+</style>
+</head>
+<body>
+<h2>MEMORY MATCH</h2>
+<div id="info">MOVES: 0 &nbsp;|&nbsp; PAIRS: 0/8</div>
+<div id="board"></div>
+<div id="msg">Click a card to begin</div>
+<button id="restart" onclick="setup()">RESTART</button>
+<script>
+const emojis = ['🔬','🧪','⚗️','🔭','💡','🧲','🖥️','⚡'];
+let cards=[], flipped=[], moves=0, matched=0, lock=false;
+
+function setup() {
+  const board = document.getElementById('board');
+  board.innerHTML=''; flipped=[]; moves=0; matched=0; lock=false;
+  document.getElementById('info').textContent='MOVES: 0 | PAIRS: 0/8';
+  document.getElementById('msg').textContent='Click a card to begin';
+  cards = [...emojis,...emojis].sort(()=>Math.random()-0.5);
+  cards.forEach((emoji,i)=>{
+    const card = document.createElement('div');
+    card.className='card';
+    card.dataset.emoji=emoji;
+    card.dataset.index=i;
+    card.textContent='';
+    card.addEventListener('click',()=>flip(card));
+    board.appendChild(card);
+  });
+}
+
+function flip(card) {
+  if(lock||card.classList.contains('flipped')||card.classList.contains('matched')) return;
+  card.classList.add('flipped');
+  card.textContent=card.dataset.emoji;
+  flipped.push(card);
+  if(flipped.length===2) {
+    moves++;
+    document.getElementById('info').textContent=`MOVES: ${moves} | PAIRS: ${matched}/8`;
+    lock=true;
+    if(flipped[0].dataset.emoji===flipped[1].dataset.emoji) {
+      flipped.forEach(c=>c.classList.add('matched'));
+      matched++;
+      document.getElementById('info').textContent=`MOVES: ${moves} | PAIRS: ${matched}/8`;
+      if(matched===8) document.getElementById('msg').textContent=`Completed in ${moves} moves! 🎉`;
+      flipped=[]; lock=false;
+    } else {
+      setTimeout(()=>{
+        flipped.forEach(c=>{ c.classList.remove('flipped'); c.textContent=''; });
+        flipped=[]; lock=false;
+      },900);
+    }
+  }
+}
+setup();
+</script>
+</body>
+</html>

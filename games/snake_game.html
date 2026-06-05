@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Snake</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0B1B62; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: 'Courier New', monospace; color: #fff; }
+  h2 { margin-bottom: 12px; font-size: 20px; letter-spacing: 4px; color: #4F73D9; }
+  canvas { border: 2px solid #2B55C4; border-radius: 8px; }
+  #score { margin-top: 12px; font-size: 14px; color: #4F73D9; letter-spacing: 2px; }
+  #msg { margin-top: 8px; font-size: 12px; color: #888; }
+</style>
+</head>
+<body>
+<h2>SNAKE</h2>
+<canvas id="c" width="300" height="300"></canvas>
+<div id="score">SCORE: 0</div>
+<div id="msg">Click canvas or press SPACE to start</div>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const GRID = 15, COLS = 20, ROWS = 20;
+let snake, dir, food, score, loop, running = false;
+
+function init() {
+  snake = [{x:10,y:10},{x:9,y:10},{x:8,y:10}];
+  dir = {x:1,y:0};
+  score = 0;
+  placeFood();
+  document.getElementById('score').textContent = 'SCORE: 0';
+  document.getElementById('msg').textContent = 'Arrow keys / WASD to move';
+}
+
+function placeFood() {
+  food = {x: Math.floor(Math.random()*COLS), y: Math.floor(Math.random()*ROWS)};
+}
+
+function tick() {
+  const head = {x: snake[0].x + dir.x, y: snake[0].y + dir.y};
+  if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS) return end();
+  if (snake.some(s => s.x===head.x && s.y===head.y)) return end();
+  snake.unshift(head);
+  if (head.x===food.x && head.y===food.y) { score++; document.getElementById('score').textContent='SCORE: '+score; placeFood(); }
+  else snake.pop();
+  draw();
+}
+
+function draw() {
+  ctx.fillStyle = '#0B1B62'; ctx.fillRect(0,0,300,300);
+  snake.forEach((s,i) => {
+    ctx.fillStyle = i===0 ? '#4F73D9' : '#2B55C4';
+    ctx.fillRect(s.x*GRID+1, s.y*GRID+1, GRID-2, GRID-2);
+  });
+  ctx.fillStyle = '#dc3545';
+  ctx.beginPath(); ctx.arc(food.x*GRID+GRID/2, food.y*GRID+GRID/2, GRID/2-2, 0, Math.PI*2); ctx.fill();
+}
+
+function end() {
+  clearInterval(loop); running = false;
+  document.getElementById('msg').textContent = 'Game over! Click or SPACE to restart';
+  ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0,0,300,300);
+  ctx.fillStyle='#fff'; ctx.font='20px Courier New'; ctx.textAlign='center'; ctx.fillText('GAME OVER',150,150);
+}
+
+function start() { if(running) return; running=true; init(); loop=setInterval(tick,120); }
+
+document.addEventListener('keydown', e => {
+  if ((e.code==='Space'||e.key===' ') && !running) { start(); return; }
+  if (!running) return;
+  if ((e.key==='ArrowUp'||e.key==='w') && dir.y===0) dir={x:0,y:-1};
+  if ((e.key==='ArrowDown'||e.key==='s') && dir.y===0) dir={x:0,y:1};
+  if ((e.key==='ArrowLeft'||e.key==='a') && dir.x===0) dir={x:-1,y:0};
+  if ((e.key==='ArrowRight'||e.key==='d') && dir.x===0) dir={x:1,y:0};
+});
+canvas.addEventListener('click', () => { if(!running) start(); });
+
+// Initial draw
+ctx.fillStyle='#0B1B62'; ctx.fillRect(0,0,300,300);
+</script>
+</body>
+</html>
