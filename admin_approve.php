@@ -343,6 +343,19 @@
                                     <button type="button" class="btn-liquid date-range-btn" data-range="year">Past Year</button>
                                 </div>
                             </div>
+                            <div class="form-group">
+                                <label for="summaryClassification"><strong>Material Classification:</strong></label>
+                                <select class="form-control liquid-input" id="summaryClassification">
+                                    <option value="all">All Classifications</option>
+                                    <option value="Equipment">Equipment</option>
+                                    <option value="Semi Expendable">Semi Expendable</option>
+                                    <option value="Consumable">Consumable</option>
+                                    <option value="Reagent">Reagent</option>
+                                    <option value="Glassware">Glassware</option>
+                                    <option value="Food Lab">Food Lab</option>
+                                    <option value="Uncategorized">Uncategorized</option>
+                                </select>
+                            </div>
                             <hr>
                             <div class="form-group row">
                                 <div class="col-md-6">
@@ -543,6 +556,7 @@
             $('#generateSummary').click(function () {
                 const startDate = $('#startDate').val();
                 const endDate = $('#endDate').val();
+                const classification = $('#summaryClassification').val() || 'all';
 
                 // Basic validation
                 if (!startDate || !endDate) {
@@ -565,7 +579,8 @@
                 $.post('ajax/ajax_admin_action.php', {
                     action: 'generate_summary',
                     startDate: startDate,
-                    endDate: endDate
+                    endDate: endDate,
+                    classification: classification
                 }, function (response) {
                     $btn.prop('disabled', false).html(originalText); // Re-enable button
                     // jQuery automatically parses the JSON response, so we can use it directly.
@@ -579,11 +594,11 @@
                             if (response.items.hasOwnProperty(classification) && response.items[classification].length > 0) {
                                 hasItems = true;
                                 content += `<h4>${classification}</h4>`;
-                                content += '<table class="table table-bordered table-striped mt-2 mb-4"><thead><tr><th>Item</th><th>Description</th><th>Quantity Used</th><th>Requestor</th><th>Date of Use</th></tr></thead><tbody>';
+                                content += '<table class="table table-bordered table-striped mt-2 mb-4"><thead><tr><th>Item</th><th>Description</th><th>Quantity Used</th><th>Requestor</th><th>Date of Use</th><th style="width: 100px; text-align: center;">Action</th></tr></thead><tbody>';
                                 response.items[classification].forEach(i => {
                                     const description = i.description || 'N/A';
                                     const unit = i.unit || ''; // Fallback for items with no unit
-                                    content += `<tr><td>${i.item}</td><td>${description}</td><td>${i.quantity} ${unit}</td><td>${i.requestor}</td><td>${i.date} (${i.time})</td></tr>`;
+                                    content += `<tr><td>${i.item}</td><td>${description}</td><td>${i.quantity} ${unit}</td><td>${i.requestor}</td><td>${i.date} (${i.time})</td><td style="text-align: center;"><a href="supervisor_approve.php?id=${i.formID}" target="_blank" class="btn btn-liquid" style="padding: 2px 8px; font-size: 11px; margin: 0; display: inline-block;">View Details</a></td></tr>`;
                                 });
                                 content += '</tbody></table>';
                             }
@@ -609,6 +624,7 @@
             $('#summaryModal').on('click', '#printSummary', function() {
                 const startDate = $('#startDate').val();
                 const endDate = $('#endDate').val();
+                const classification = $('#summaryClassification').val() || 'all';
                 const summaryContent = $('#summaryContent').html();
 
                 // Check if dates are selected and a summary has been generated
@@ -621,7 +637,7 @@
                     return;
                 }
 
-                const url = `helperFiles/generate_summary_pdf.php?startDate=${startDate}&endDate=${endDate}`;
+                const url = `helperFiles/generate_summary_pdf.php?startDate=${startDate}&endDate=${endDate}&classification=${classification}`;
                 window.open(url, '_blank');
             });
         });

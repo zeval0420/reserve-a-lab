@@ -166,13 +166,14 @@
             header('Content-Type: application/json');
             $startDate = $_POST['startDate'] ?? null;
             $endDate = $_POST['endDate'] ?? null;
+            $classificationFilter = $_POST['classification'] ?? 'all';
 
             if (!$startDate || !$endDate) {
                 echo json_encode(['success' => false, 'message' => 'Start and end dates are required.']);
                 exit();
             }
 
-            $stmt = $conn->prepare("
+            $sql = "
                 SELECT 
                     COALESCE(si.classification, 'Uncategorized') as classification,
                     mr.item, 
@@ -183,22 +184,35 @@
                     a.middlename,
                     a.lastname,
                     fr.inclusiveDate,
-                    fr.inclusiveTime
+                    fr.inclusiveTime,
+                    fr.id AS formID
                 FROM scilab_material_requests mr
                 JOIN scilab_form_requests fr ON mr.formID = fr.id
                 LEFT JOIN scilab_inventory si ON mr.item = si.item
                 LEFT JOIN accounts a ON fr.requesterEmployeeID = a.employeeID
                 WHERE fr.statusScilabPersonnel = 'Approved'
                 AND fr.inclusiveDate BETWEEN ? AND ?
-                ORDER BY COALESCE(si.classification, 'Uncategorized') ASC, mr.item ASC, fr.inclusiveDate ASC
-            ");
+            ";
+
+            if ($classificationFilter !== 'all') {
+                $sql .= " AND COALESCE(si.classification, 'Uncategorized') = ? ";
+            }
+
+            $sql .= " ORDER BY COALESCE(si.classification, 'Uncategorized') ASC, mr.item ASC, fr.inclusiveDate ASC ";
+
+            $stmt = $conn->prepare($sql);
 
             if ($stmt === false) {
                 echo json_encode(['success' => false, 'message' => 'Database query preparation failed.']);
                 exit();
             }
 
-            $stmt->bind_param("ss", $startDate, $endDate);
+            if ($classificationFilter !== 'all') {
+                $stmt->bind_param("sss", $startDate, $endDate, $classificationFilter);
+            } else {
+                $stmt->bind_param("ss", $startDate, $endDate);
+            }
+
             $stmt->execute();
             $result = $stmt->get_result();
 
@@ -220,7 +234,8 @@
                     'unit' => $row['unit'],
                     'requestor' => $requestorName,
                     'date' => $row['inclusiveDate'],
-                    'time' => $row['inclusiveTime']
+                    'time' => $row['inclusiveTime'],
+                    'formID' => $row['formID']
                 ];
             }
 

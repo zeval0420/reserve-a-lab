@@ -8,13 +8,14 @@ use Dompdf\Options;
 // Get dates
 $startDate = $_GET['startDate'] ?? null;
 $endDate = $_GET['endDate'] ?? null;
+$classificationFilter = $_GET['classification'] ?? 'all';
 
 if (!$startDate || !$endDate) {
     die('Error: Start and end dates are required.');
 }
 
 // Fetch item usage data
-$stmt = $conn->prepare("
+$sql = "
     SELECT 
         COALESCE(si.classification, 'Uncategorized') as classification,
         mr.item, 
@@ -32,14 +33,26 @@ $stmt = $conn->prepare("
     LEFT JOIN accounts a ON fr.requesterEmployeeID = a.employeeID
     WHERE fr.statusScilabPersonnel = 'Approved'
     AND fr.inclusiveDate BETWEEN ? AND ?
-    ORDER BY COALESCE(si.classification, 'Uncategorized') ASC, mr.item ASC, fr.inclusiveDate ASC
-");
+";
+
+if ($classificationFilter !== 'all') {
+    $sql .= " AND COALESCE(si.classification, 'Uncategorized') = ? ";
+}
+
+$sql .= " ORDER BY COALESCE(si.classification, 'Uncategorized') ASC, mr.item ASC, fr.inclusiveDate ASC ";
+
+$stmt = $conn->prepare($sql);
 
 if ($stmt === false) {
     die('Database query preparation failed.');
 }
 
-$stmt->bind_param('ss', $startDate, $endDate);
+if ($classificationFilter !== 'all') {
+    $stmt->bind_param('sss', $startDate, $endDate, $classificationFilter);
+} else {
+    $stmt->bind_param('ss', $startDate, $endDate);
+}
+
 $stmt->execute();
 $result = $stmt->get_result();
 
