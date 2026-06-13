@@ -28,7 +28,7 @@
     // Creates a placeholder string for SQL IN clause
     $inClause = "'" . implode("','", $CLASSIFICATIONS) . "'";
 
-    $inventoryQuery = $conn->query("SELECT id, classification, item, productID, description, quantity, unit, status 
+    $inventoryQuery = $conn->query("SELECT id, classification, item, productID, description, quantity, unit, status, threshold_qty, threshold_notified 
                                     FROM scilab_inventory 
                                     WHERE classification IN ($inClause) AND (status IS NULL OR status != 'Removed')
                                     ORDER BY classification, item");
@@ -168,6 +168,7 @@
                         <button id="scanBarcodeBtn" class="btn-liquid">Scan Barcode</button>
                         <button id="stockInBtn" class="btn-liquid-info">Stock In</button>
                         <button id="bulkImportBtn" class="btn-liquid-info">Bulk Import</button>
+                        <button id="thresholdAlertsBtn" class="btn-liquid-warning">Alert Thresholds</button>
                         <button id="editModeBtn" class="btn-liquid-warning">Edit Mode</button>
                         <button id="cancelEditBtn" class="btn-liquid-danger" style="display:none;">Cancel</button>
                         <button id="addItemBtn" class="btn-liquid-success">Add Product</button>
@@ -239,6 +240,10 @@
                                     <option value="Available">Available</option>
                                     <option value="Out of Stock">Out of Stock</option>
                                 </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Alert Threshold Quantity (Optional)</label>
+                                <input type="number" class="form-control liquid-input" name="threshold_qty" min="0" placeholder="No alert">
                             </div>
                         </form>
                     </div>
@@ -356,6 +361,10 @@
                                     <option value="Out of Stock">Out of Stock</option>
                                 </select>
                             </div>
+                            <div class="form-group">
+                                <label>Alert Threshold Quantity (Optional)</label>
+                                <input type="number" class="form-control liquid-input" name="threshold_qty" min="0" placeholder="No alert">
+                            </div>
                         </form>
                     </div>
                     <div class="modal-footer">
@@ -429,6 +438,40 @@
             </div>
         </div>
 
+        <!-- Alert Threshold Settings Modal -->
+        <div class="modal fade" id="thresholdSettingsModal" tabindex="-1" role="dialog">
+            <div class="modal-dialog modal-lg" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">🔔 Alert Threshold Settings</h5>
+                        <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="text-muted">Set threshold values for items. An automated email notification will be sent to admins when an item's quantity reaches or drops below its threshold.</p>
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            <table class="table table-bordered table-striped" id="thresholds-edit-table" style="width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th>Item Name</th>
+                                        <th>Description</th>
+                                        <th>Current Stock</th>
+                                        <th>Alert Threshold Quantity</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="thresholds-edit-body">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-liquid-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn-liquid-success" id="saveThresholdsBtn">Save Thresholds</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <?php include 'helperFiles/footer.php'; ?>
     </body>
 
@@ -478,14 +521,22 @@
                 if (allInventory[type] && allInventory[type].length !== 0) {
                     allInventory[type].forEach(item => {
                         if (item.classification !== type || item.status === 'Removed') return;
+
+                        const qtyVal = parseInt(item.quantity);
+                        const thresholdVal = (item.threshold_qty !== null && item.threshold_qty !== '') ? parseInt(item.threshold_qty) : null;
+                        const isLow = thresholdVal !== null && qtyVal <= thresholdVal;
+                        
+                        const qtyDisplay = isLow ? `<span class="text-danger" style="font-weight:bold;"><i class="bi bi-exclamation-triangle-fill"></i> ${item.quantity}</span>` : item.quantity;
+                        const statusDisplay = isLow ? `<span class="badge badge-danger" style="background-color:#c0392b; color:#fff; padding: 4px 8px; border-radius: 4px;">Low Stock</span>` : item.status;
+
                         const row = `
                             <tr data-id="${item.id}">
                                 <td>${item.item}</td>
                                 <td>${item.productID}</td>
                                 <td>${item.description || ''}</td>
-                                <td>${item.quantity}</td>
+                                <td data-quantity="${item.quantity}">${qtyDisplay}</td>
                                 <td>${item.unit}</td>
-                                <td>${item.status}</td>
+                                <td data-status="${item.status}">${statusDisplay}</td>
                                 <td>
                                     <button class="btn-liquid edit-btn" style="padding: 6px 12px;"><i class="bi bi-pencil"></i></button>
                                     <button class="btn-liquid-danger delete-btn" style="padding: 6px 12px;"><i class="bi bi-trash"></i></button>
@@ -922,21 +973,21 @@
                     
                     // Helper to create input safely
                     const mkInput = (val, name, type='text') => {
-                        const safeVal = val.replace(/"/g, '&quot;');
+                        const safeVal = (val || '').replace(/"/g, '&quot;');
                         return `<input type="${type}" class="form-control form-control-sm liquid-input" name="${name}" value="${safeVal}" style="min-width: 80px;">`;
                     };
                     
                     cells.eq(0).html(mkInput(cells.eq(0).text(), 'item'));
                     cells.eq(1).html(mkInput(cells.eq(1).text(), 'productID'));
                     cells.eq(2).html(mkInput(cells.eq(2).text(), 'description'));
-                    cells.eq(3).html(mkInput(cells.eq(3).text(), 'quantity', 'number'));
+                    cells.eq(3).html(mkInput(cells.eq(3).attr('data-quantity') || cells.eq(3).text(), 'quantity', 'number'));
                     
                     const unitVal = cells.eq(4).text();
                     const units = ['pieces', 'mL', 'grams', 'boxes'];
                     let unitOpts = units.map(u => `<option value="${u}" ${u === unitVal ? 'selected' : ''}>${u}</option>`).join('');
                     cells.eq(4).html(`<select class="form-control form-control-sm liquid-input" name="unit">${unitOpts}</select>`);
 
-                    const statusVal = cells.eq(5).text();
+                    const statusVal = cells.eq(5).attr('data-status') || cells.eq(5).text();
                     const statuses = ['Available', 'Out of Stock'];
                     let statusOpts = statuses.map(s => `<option value="${s}" ${s === statusVal ? 'selected' : ''}>${s}</option>`).join('');
                     cells.eq(5).html(`<select class="form-control form-control-sm liquid-input" name="status">${statusOpts}</select>`);
@@ -962,6 +1013,7 @@
                     const row = $(this);
                     if(row.find('.dataTables_empty').length) return;
 
+                    const itemData = allInventory[currentType].find(i => i.id == row.data('id')) || {};
                     updates.push({
                         id: row.data('id'),
                         classification: currentType,
@@ -971,6 +1023,7 @@
                         quantity: row.find('[name="quantity"]').val(),
                         unit: row.find('[name="unit"]').val(),
                         status: row.find('[name="status"]').val(),
+                        threshold_qty: itemData.threshold_qty !== null ? itemData.threshold_qty : '',
                         action: 'update_inventory'
                     });
                 });
@@ -1139,6 +1192,78 @@
                 $('#scanner-container').empty();
                 // keep quaggaInitialized true so restart can call Quagga.start() without reinit
             }
+
+            // ================= ALERT THRESHOLDS EVENT HANDLERS =================
+            $('#thresholdAlertsBtn').click(function() {
+                const tbody = $('#thresholds-edit-body');
+                tbody.empty();
+
+                // Flatten all items across classifications
+                const flatItems = Object.values(allInventory).reduce((acc, val) => acc.concat(val), []);
+                const activeItems = flatItems.filter(i => i.status !== 'Removed');
+
+                if (activeItems.length === 0) {
+                    tbody.append('<tr><td colspan="4" class="text-center">No products in inventory.</td></tr>');
+                } else {
+                    activeItems.sort((a, b) => a.item.localeCompare(b.item));
+                    activeItems.forEach(item => {
+                        const thresholdVal = (item.threshold_qty !== null && item.threshold_qty !== undefined) ? item.threshold_qty : '';
+                        const desc = item.description ? item.description : '<span class="text-muted">No Description</span>';
+                        
+                        const qtyVal = parseInt(item.quantity);
+                        const isLow = item.threshold_qty !== null && item.threshold_qty !== '' && qtyVal <= parseInt(item.threshold_qty);
+                        const rowStyle = isLow ? 'background-color: #fff3f3;' : '';
+                        
+                        tbody.append(`
+                            <tr style="${rowStyle}" data-id="${item.id}">
+                                <td><strong>${item.item}</strong> <small class="text-muted">(${item.classification})</small></td>
+                                <td>${desc}</td>
+                                <td>${item.quantity} ${item.unit}</td>
+                                <td>
+                                    <input type="number" class="form-control liquid-input threshold-input" 
+                                           value="${thresholdVal}" min="0" placeholder="No Alert" 
+                                           style="width: 120px;">
+                                </td>
+                            </tr>
+                        `);
+                    });
+                }
+
+                $('#thresholdSettingsModal').modal('show');
+            });
+
+            $('#saveThresholdsBtn').click(function() {
+                const thresholds = [];
+                $('#thresholds-edit-body tr').each(function() {
+                    const row = $(this);
+                    const id = row.data('id');
+                    if (!id) return;
+                    
+                    const val = row.find('.threshold-input').val();
+                    thresholds.push({
+                        id: id,
+                        threshold: val
+                    });
+                });
+
+                $('#saveThresholdsBtn').prop('disabled', true).text('Saving...');
+
+                $.post('ajax/ajax_inventory.php', {
+                    action: 'update_thresholds',
+                    thresholds: thresholds
+                }, function(res) {
+                    $('#saveThresholdsBtn').prop('disabled', false).text('Save Thresholds');
+                    if (res.trim() === 'success') {
+                        showToast('Alert thresholds updated successfully.', 'success');
+                        $('#thresholdSettingsModal').modal('hide');
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1000);
+                    } else {
+                        showToast('Failed to update thresholds.', 'error');
+                    }
+                });
+            });
 
             // ===== Handle Scanned Barcode =====
             function handleScannedBarcode(code) {

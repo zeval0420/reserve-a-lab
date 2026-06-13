@@ -14,6 +14,14 @@ if (!$startDate || !$endDate) {
     die('Error: Start and end dates are required.');
 }
 
+if ($classificationFilter === 'all' || $classificationFilter === '') {
+    $classifications = [];
+} else {
+    $classifications = explode(',', $classificationFilter);
+}
+
+$filterByClassification = !empty($classifications) && !in_array('all', $classifications);
+
 // Fetch item usage data
 $sql = "
     SELECT 
@@ -35,8 +43,9 @@ $sql = "
     AND fr.inclusiveDate BETWEEN ? AND ?
 ";
 
-if ($classificationFilter !== 'all') {
-    $sql .= " AND COALESCE(si.classification, 'Uncategorized') = ? ";
+if ($filterByClassification) {
+    $placeholders = implode(',', array_fill(0, count($classifications), '?'));
+    $sql .= " AND COALESCE(si.classification, 'Uncategorized') IN ($placeholders) ";
 }
 
 $sql .= " ORDER BY COALESCE(si.classification, 'Uncategorized') ASC, mr.item ASC, fr.inclusiveDate ASC ";
@@ -47,8 +56,10 @@ if ($stmt === false) {
     die('Database query preparation failed.');
 }
 
-if ($classificationFilter !== 'all') {
-    $stmt->bind_param('sss', $startDate, $endDate, $classificationFilter);
+if ($filterByClassification) {
+    $bindTypes = 'ss' . str_repeat('s', count($classifications));
+    $bindParams = array_merge([$startDate, $endDate], $classifications);
+    $stmt->bind_param($bindTypes, ...$bindParams);
 } else {
     $stmt->bind_param('ss', $startDate, $endDate);
 }

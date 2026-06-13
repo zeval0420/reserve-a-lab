@@ -166,12 +166,24 @@
             header('Content-Type: application/json');
             $startDate = $_POST['startDate'] ?? null;
             $endDate = $_POST['endDate'] ?? null;
-            $classificationFilter = $_POST['classification'] ?? 'all';
+            $classificationFilter = $_POST['classification'] ?? [];
 
             if (!$startDate || !$endDate) {
                 echo json_encode(['success' => false, 'message' => 'Start and end dates are required.']);
                 exit();
             }
+
+            if (!is_array($classificationFilter)) {
+                if ($classificationFilter === 'all' || $classificationFilter === '') {
+                    $classifications = [];
+                } else {
+                    $classifications = explode(',', $classificationFilter);
+                }
+            } else {
+                $classifications = $classificationFilter;
+            }
+
+            $filterByClassification = !empty($classifications) && !in_array('all', $classifications);
 
             $sql = "
                 SELECT 
@@ -194,8 +206,9 @@
                 AND fr.inclusiveDate BETWEEN ? AND ?
             ";
 
-            if ($classificationFilter !== 'all') {
-                $sql .= " AND COALESCE(si.classification, 'Uncategorized') = ? ";
+            if ($filterByClassification) {
+                $placeholders = implode(',', array_fill(0, count($classifications), '?'));
+                $sql .= " AND COALESCE(si.classification, 'Uncategorized') IN ($placeholders) ";
             }
 
             $sql .= " ORDER BY COALESCE(si.classification, 'Uncategorized') ASC, mr.item ASC, fr.inclusiveDate ASC ";
@@ -207,8 +220,10 @@
                 exit();
             }
 
-            if ($classificationFilter !== 'all') {
-                $stmt->bind_param("sss", $startDate, $endDate, $classificationFilter);
+            if ($filterByClassification) {
+                $bindTypes = 'ss' . str_repeat('s', count($classifications));
+                $bindParams = array_merge([$startDate, $endDate], $classifications);
+                $stmt->bind_param($bindTypes, ...$bindParams);
             } else {
                 $stmt->bind_param("ss", $startDate, $endDate);
             }

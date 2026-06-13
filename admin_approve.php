@@ -166,6 +166,110 @@
                 flex: 1;
                 line-height: 1.4;
             }
+
+            /* Multiselect consistency */
+            .form-group .multiselect-native-select .btn-group, 
+            .form-group .btn-group { width: 100%; }
+            button.multiselect {
+                width: 100%; text-align: left; 
+                background: linear-gradient(135deg, rgba(43, 85, 196, 0.05), rgba(43, 85, 196, 0.15)) !important;
+                backdrop-filter: blur(8px);
+                -webkit-backdrop-filter: blur(8px);
+                border: 1px solid rgba(43, 85, 196, 0.2) !important;
+                color: #2B55C4 !important; 
+                display: flex; align-items: center; justify-content: space-between;
+                height: 38px; border-radius: 20px !important; box-shadow: 0 4px 12px rgba(43, 85, 196, 0.1); background-image: none;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                font-weight: 600;
+            }
+            button.multiselect:focus, button.multiselect.active {
+                box-shadow: 0 8px 20px rgba(43, 85, 196, 0.2); border-color: rgba(43, 85, 196, 0.4) !important; outline: 0;
+            }
+            button.multiselect .caret { margin-left: auto; }
+            .multiselect-container {
+                width: 100%;
+                background: rgba(255, 255, 255, 0.95) !important;
+                backdrop-filter: blur(16px);
+                -webkit-backdrop-filter: blur(16px);
+                border: 1px solid rgba(43, 85, 196, 0.2) !important;
+                border-radius: 15px !important;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15) !important;
+                margin-top: 5px !important;
+                padding: 8px 0;
+                max-height: 300px;
+                overflow-y: auto;
+            }
+            .multiselect-container > li { margin-bottom: 2px; }
+            .multiselect-container > li > a > label {
+                padding: 2px 15px; width: 100%; cursor: pointer; font-weight: normal; margin: 0;
+            }
+            .multiselect-container > li > a { margin: 0 5px; border-radius: 8px; transition: all 0.2s; }
+            .multiselect-container > li > a:hover { background-color: rgba(43, 85, 196, 0.1); color: #2B55C4; }
+            .multiselect-container > li.active > a {
+                background: linear-gradient(135deg, rgba(43, 85, 196, 0.8), rgba(43, 85, 196, 0.9)) !important;
+                color: white !important;
+                box-shadow: 0 4px 10px rgba(43, 85, 196, 0.3);
+            }
+            
+            /* Custom Checkbox Style inside Dropdown */
+            .multiselect-container input[type="checkbox"] {
+                appearance: none;
+                -webkit-appearance: none;
+                width: 18px;
+                height: 18px;
+                border: 2px solid #2B55C4;
+                border-radius: 5px;
+                margin-right: 10px;
+                position: relative;
+                cursor: pointer;
+                vertical-align: middle;
+                margin-top: 0;
+                background-color: rgba(255, 255, 255, 0.5);
+                transition: all 0.2s ease;
+            }
+
+            @keyframes pulse-blue {
+                0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(43, 85, 196, 0.7); }
+                70% { transform: scale(1.15); box-shadow: 0 0 0 4px rgba(43, 85, 196, 0); }
+                100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(43, 85, 196, 0); }
+            }
+            
+            .multiselect-container input[type="checkbox"]:checked {
+                background-color: #2B55C4;
+                border-color: #2B55C4;
+                animation: pulse-blue 0.4s ease-out;
+            }
+            
+            .multiselect-container input[type="checkbox"]:checked::after {
+                content: '';
+                position: absolute;
+                left: 5px;
+                top: 1px;
+                width: 5px;
+                height: 10px;
+                border: solid white;
+                border-width: 0 2px 2px 0;
+                transform: rotate(45deg);
+            }
+            
+            /* Ensure label text aligns nicely with custom checkbox */
+            .multiselect-container > li > a > label {
+                display: flex !important;
+                align-items: center;
+                padding: 8px 15px !important;
+            }
+            
+            /* Invert colors for active state row */
+            .multiselect-container > li.active > a input[type="checkbox"] {
+                border-color: rgba(255, 255, 255, 0.8);
+            }
+            .multiselect-container > li.active > a input[type="checkbox"]:checked {
+                background-color: white;
+                border-color: white;
+            }
+            .multiselect-container > li.active > a input[type="checkbox"]:checked::after {
+                border-color: #2B55C4;
+            }
         </style>
     </head>
     <body>
@@ -345,8 +449,7 @@
                             </div>
                             <div class="form-group">
                                 <label for="summaryClassification"><strong>Material Classification:</strong></label>
-                                <select class="form-control liquid-input" id="summaryClassification">
-                                    <option value="all">All Classifications</option>
+                                <select class="form-control" id="summaryClassification" multiple="multiple">
                                     <option value="Equipment">Equipment</option>
                                     <option value="Semi Expendable">Semi Expendable</option>
                                     <option value="Consumable">Consumable</option>
@@ -556,7 +659,7 @@
             $('#generateSummary').click(function () {
                 const startDate = $('#startDate').val();
                 const endDate = $('#endDate').val();
-                const classification = $('#summaryClassification').val() || 'all';
+                const classification = $('#summaryClassification').val() || [];
 
                 // Basic validation
                 if (!startDate || !endDate) {
@@ -620,11 +723,21 @@
                 });
             });
 
+            // Initialize Classification Multiselect dropdown
+            $('#summaryClassification').multiselect({
+                includeSelectAllOption: true,
+                nonSelectedText: 'Select Classification',
+                selectAllText: 'All Classifications',
+                allSelectedText: 'All Classifications'
+            });
+            $('#summaryClassification').multiselect('selectAll', false);
+            $('#summaryClassification').multiselect('updateButtonText');
+
             // Use event delegation for the dynamically added print button
             $('#summaryModal').on('click', '#printSummary', function() {
                 const startDate = $('#startDate').val();
                 const endDate = $('#endDate').val();
-                const classification = $('#summaryClassification').val() || 'all';
+                const classification = ($('#summaryClassification').val() || []).join(',');
                 const summaryContent = $('#summaryContent').html();
 
                 // Check if dates are selected and a summary has been generated
