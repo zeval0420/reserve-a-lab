@@ -1,0 +1,109 @@
+<!-- ============================================================
+     laboratory-card-demo.html
+     Example usage — assumes layout has loaded:
+       Bootstrap 5, Bootstrap Icons, SweetAlert2, AOS,
+       universal.css, laboratory-card.css, laboratory-card.js
+     ============================================================ -->
+
+<script>
+const sampleLabs = [
+    {
+        id: 1,
+        image: null,
+        laboratoryName: 'General Chemistry Laboratory',
+        pendingRequests: 4,
+        location: 'Science Building A, Room 101',
+        color: '#2B55C4',
+        availability: 'Available'
+    },
+    {
+        id: 2,
+        image: null,
+        laboratoryName: 'Advanced Physics Lab',
+        pendingRequests: 0,
+        location: 'Physics Annex, Room 201',
+        color: '#28C76F',
+        availability: 'Unavailable'
+    },
+    {
+        id: 3,
+        image: null,
+        laboratoryName: 'Microbiology & Cell Culture Lab',
+        pendingRequests: 7,
+        location: 'Life Sciences Bldg, Room 305',
+        color: '#FF4D4D',
+        availability: 'Available'
+    },
+    {
+        id: 4,
+        image: null,
+        laboratoryName: 'Electronics & Circuits Lab',
+        pendingRequests: 2,
+        location: 'Engineering Hall, Room 114',
+        color: '#ffc107',
+        availability: 'Available'
+    },
+    {
+        id: 5,
+        image: null,
+        laboratoryName: 'Environmental Science Lab',
+        pendingRequests: 1,
+        location: 'Natural Sciences Bldg, Room 203',
+        color: '#17a2b8',
+        availability: 'Unavailable'
+    },
+    {
+        id: 6,
+        image: null,
+        laboratoryName: 'Biochemistry Research Lab',
+        pendingRequests: 12,
+        location: 'Research Center, Room 402',
+        color: '#6f42c1',
+        availability: 'Available'
+    }
+];
+</script>
+
+<!-- ─── CLIENT: COMPLETE CARD GALLERY ───────────────────────── -->
+<section class="lab-gallery-section">
+    <div class="lab-gallery-label">
+        <i class="bi bi-grid-3x3-gap me-1"></i>Complete Cards — Laboratory Catalog (Client)
+    </div>
+    <div class="lab-gallery--complete" id="gallery-complete"></div>
+</section>
+
+<!-- ─── CLIENT: COMPACT CARD GALLERY ───────────────────────── -->
+<section class="lab-gallery-section">
+    <div class="lab-gallery-label">
+        <i class="bi bi-layout-wtf me-1"></i>Compact Cards — Dashboard Widgets (Client)
+    </div>
+    <div class="lab-gallery--compact" id="gallery-compact"></div>
+</section>
+
+<!-- ─── ADMIN: LIST CARD GALLERY ────────────────────────────── -->
+<section class="lab-gallery-section">
+    <div class="lab-gallery-label">
+        <i class="bi bi-list-ul me-1"></i>List Cards — Administrative View (Admin)
+    </div>
+    <div class="lab-gallery--list" id="gallery-list"></div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (typeof AOS !== 'undefined') AOS.init({ once: true, offset: 20 });
+
+    renderLabGallery(document.getElementById('gallery-complete'), sampleLabs, 'complete');
+    renderLabGallery(document.getElementById('gallery-compact'),  sampleLabs, 'compact');
+    renderLabGallery(document.getElementById('gallery-list'),     sampleLabs, 'list');
+});
+</script>
+
+<!--
+    ─── SINGLE CARD IN PHP ──────────────────────────────────────
+    <div id="lab-slot"></div>
+    <script>
+        const lab = <?= json_encode($labRow) ?>;
+        document.getElementById('lab-slot').innerHTML = createLabCard(lab, 'complete');
+        if (typeof AOS !== 'undefined') AOS.refresh();
+    </script>
+-->

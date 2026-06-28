@@ -1,0 +1,41 @@
+{
+  "name": "Polaroid Fun",
+  "description": "Playful scattered polaroid-style layout with tilted photo frames.",
+  "thumbnail": "thumbnail.png",
+  "frame": "frame.png",
+  "output": {
+    "width": 1400,
+    "height": 1400
+  },
+  "background": "#FFFAEB",
+  "photos": [
+    {
+      "x": 90,
+      "y": 130,
+      "width": 560,
+      "height": 420,
+      "rotation": -6
+    },
+    {
+      "x": 740,
+      "y": 200,
+      "width": 560,
+      "height": 420,
+      "rotation": 5
+    },
+    {
+      "x": 100,
+      "y": 760,
+      "width": 560,
+      "height": 420,
+      "rotation": 4
+    },
+    {
+      "x": 730,
+      "y": 820,
+      "width": 560,
+      "height": 420,
+      "rotation": -5
+    }
+  ]
+}

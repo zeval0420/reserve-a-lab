@@ -1,0 +1,41 @@
+{
+  "name": "School Spirit",
+  "description": "Bold maroon-and-gold strip for school pride at Opening of Classes.",
+  "thumbnail": "thumbnail.png",
+  "frame": "frame.png",
+  "output": {
+    "width": 600,
+    "height": 1800
+  },
+  "background": "#5B121E",
+  "photos": [
+    {
+      "x": 40,
+      "y": 90,
+      "width": 520,
+      "height": 380,
+      "rotation": 0
+    },
+    {
+      "x": 40,
+      "y": 490,
+      "width": 520,
+      "height": 380,
+      "rotation": 0
+    },
+    {
+      "x": 40,
+      "y": 890,
+      "width": 520,
+      "height": 380,
+      "rotation": 0
+    },
+    {
+      "x": 40,
+      "y": 1290,
+      "width": 520,
+      "height": 380,
+      "rotation": 0
+    }
+  ]
+}

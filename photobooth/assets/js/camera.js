@@ -1,0 +1,83 @@
+/**
+ * assets/js/camera.js
+ * ------------------------------------------------------------------
+ * Owns everything related to the webcam: requesting permission,
+ * listing devices, starting/stopping the stream, and grabbing a still
+ * frame as a JPEG data URL. Knows nothing about templates, countdowns
+ * or sessions — single responsibility, per the architecture brief.
+ * ------------------------------------------------------------------
+ */
+export class CameraController {
+  constructor(videoEl) {
+    this.video = videoEl;
+    this.stream = null;
+    this.captureCanvas = document.createElement('canvas');
+  }
+
+  /** List available video input devices (for the Settings page). */
+  static async listDevices() {
+    if (!navigator.mediaDevices?.enumerateDevices) return [];
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    return devices.filter((d) => d.kind === 'videoinput');
+  }
+
+  /**
+   * Start (or restart) the webcam stream.
+   * @param {object} opts { deviceId, width, height }
+   */
+  async start(opts = {}) {
+    this.stop();
+    const constraints = {
+      audio: false,
+      video: {
+        width: { ideal: opts.width || 1280 },
+        height: { ideal: opts.height || 720 },
+        facingMode: opts.deviceId ? undefined : 'user',
+        deviceId: opts.deviceId ? { exact: opts.deviceId } : undefined,
+      },
+    };
+    this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+    this.video.srcObject = this.stream;
+    await this.video.play();
+    return this.stream;
+  }
+
+  stop() {
+    if (this.stream) {
+      this.stream.getTracks().forEach((track) => track.stop());
+      this.stream = null;
+    }
+  }
+
+  get isMirrored() {
+    return this.video.classList.contains('is-mirrored');
+  }
+
+  setMirrored(mirrored) {
+    this.video.classList.toggle('is-mirrored', !!mirrored);
+  }
+
+  /**
+   * Grab the current video frame as a JPEG data URL.
+   * If the preview is mirrored on screen, the capture is mirrored too
+   * so the saved photo matches exactly what the user saw of themselves.
+   */
+  captureFrame(quality = 0.92) {
+    const video = this.video;
+    const w = video.videoWidth;
+    const h = video.videoHeight;
+    if (!w || !h) throw new Error('Camera is not ready yet.');
+
+    this.captureCanvas.width = w;
+    this.captureCanvas.height = h;
+    const ctx = this.captureCanvas.getContext('2d');
+
+    if (this.isMirrored) {
+      ctx.translate(w, 0);
+      ctx.scale(-1, 1);
+    }
+    ctx.drawImage(video, 0, 0, w, h);
+
+    return this.captureCanvas.toDataURL('image/jpeg', quality);
+  }
+}

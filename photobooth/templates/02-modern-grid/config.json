@@ -1,0 +1,41 @@
+{
+  "name": "Modern Grid",
+  "description": "Minimalist 2x2 square grid with thin geometric accents.",
+  "thumbnail": "thumbnail.png",
+  "frame": "frame.png",
+  "output": {
+    "width": 1600,
+    "height": 1600
+  },
+  "background": "#FAFAFC",
+  "photos": [
+    {
+      "x": 60,
+      "y": 110,
+      "width": 715,
+      "height": 715,
+      "rotation": 0
+    },
+    {
+      "x": 825,
+      "y": 110,
+      "width": 715,
+      "height": 715,
+      "rotation": 0
+    },
+    {
+      "x": 60,
+      "y": 875,
+      "width": 715,
+      "height": 715,
+      "rotation": 0
+    },
+    {
+      "x": 825,
+      "y": 875,
+      "width": 715,
+      "height": 715,
+      "rotation": 0
+    }
+  ]
+}
