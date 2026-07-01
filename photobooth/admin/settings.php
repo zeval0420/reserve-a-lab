@@ -75,6 +75,7 @@ $authenticated = admin_is_authenticated();
       <div class="admin-header__title">⚙️ Photobooth Settings</div>
       <nav class="admin-header__nav">
         <a class="btn btn--ghost" href="gallery.php">Gallery</a>
+        <a class="btn btn--ghost" href="../creator/gallery.php">Template Creator</a>
         <a class="btn btn--ghost" href="../index.php">Kiosk View</a>
         <button class="btn btn--secondary" id="btn-logout">Log out</button>
       </nav>

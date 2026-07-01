@@ -191,14 +191,20 @@
 /* ---------------------------------------------------------------------- */
 /* Camera screen                                                           */
 /* ---------------------------------------------------------------------- */
-.camera-stage {
-  position: relative;
+.camera-layout {
+  display: flex;
+  gap: var(--space-5);
   flex: 1;
+  min-height: 0;
+}
+
+.camera-stage {
+  flex: 1;
+  position: relative;
   border-radius: var(--radius-lg);
   overflow: hidden;
   background: #000;
   box-shadow: var(--shadow-lg);
-  margin-bottom: var(--space-5);
 }
 
 .camera-stage video {
@@ -208,23 +214,6 @@
   object-fit: cover;
 }
 .camera-stage video.is-mirrored { transform: scaleX(-1); }
-
-.camera-stage__frame-overlay {
-  position: absolute;
-  inset: 0;
-  width: 100%; height: 100%;
-  object-fit: contain;
-  pointer-events: none;
-}
-
-.camera-stage__slot-highlight {
-  position: absolute;
-  border: 4px dashed rgba(255,255,255,0.85);
-  border-radius: 12px;
-  box-shadow: 0 0 0 4000px rgba(0,0,0,0.35);
-  pointer-events: none;
-  transition: all var(--duration-normal) var(--ease-out);
-}
 
 .camera-stage__flash {
   position: absolute;
@@ -266,6 +255,46 @@
 }
 .progress-dot.is-done { background: var(--color-accent); }
 .progress-dot.is-current { background: #fff; transform: scale(1.3); }
+
+.camera-template-preview {
+  width: 180px;
+  flex-shrink: 0;
+  position: relative;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-surface-sunken);
+  box-shadow: var(--shadow-md);
+}
+
+.camera-template-preview__frame {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.camera-template-preview__captures {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.camera-template-preview__captures img {
+  position: absolute;
+  object-fit: cover;
+  border-radius: 3px;
+}
+
+.camera-template-preview__slot-highlight {
+  position: absolute;
+  z-index: 2;
+  border: 3px dashed rgba(255,255,255,0.85);
+  border-radius: 8px;
+  box-shadow: 0 0 0 4000px rgba(0,0,0,0.35);
+  pointer-events: none;
+  transition: all var(--duration-normal) var(--ease-out);
+}
 
 .camera-controls {
   display: flex;

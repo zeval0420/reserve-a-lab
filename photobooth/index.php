@@ -75,15 +75,20 @@ require_once __DIR__ . '/includes/bootstrap.php';
       <span style="width:90px"></span>
     </div>
     <div class="screen__inner">
-      <div class="camera-stage" id="camera-stage">
-        <video id="camera-video" autoplay playsinline muted></video>
-        <img id="camera-frame-overlay" class="camera-stage__frame-overlay" alt="">
-        <div class="camera-stage__slot-highlight" id="camera-slot-highlight" style="opacity:0"></div>
-        <div class="camera-stage__flash" id="camera-flash"></div>
-        <div class="camera-stage__countdown">
-          <div class="camera-stage__countdown-number" id="countdown-number"></div>
+      <div class="camera-layout">
+        <div class="camera-stage" id="camera-stage">
+          <video id="camera-video" autoplay playsinline muted></video>
+          <div class="camera-stage__flash" id="camera-flash"></div>
+          <div class="camera-stage__countdown">
+            <div class="camera-stage__countdown-number" id="countdown-number"></div>
+          </div>
+          <div class="camera-stage__progress" id="camera-progress"></div>
         </div>
-        <div class="camera-stage__progress" id="camera-progress"></div>
+        <div class="camera-template-preview" id="camera-template-preview">
+          <img id="camera-frame-overlay" class="camera-template-preview__frame" alt="">
+          <div class="camera-template-preview__captures" id="camera-slot-captures"></div>
+          <div class="camera-template-preview__slot-highlight" id="camera-slot-highlight" style="opacity:0"></div>
+        </div>
       </div>
       <div class="camera-controls">
         <button class="btn btn--primary btn--xl" id="btn-camera-start">Start Capturing</button>

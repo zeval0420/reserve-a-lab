@@ -36,24 +36,25 @@ export class CaptureFlow {
     this.template = template;
     this.frameImgEl.src = template.frame_url;
     this.frameImgEl.style.aspectRatio = `${template.output.width} / ${template.output.height}`;
+    this.clearSlotPhotos();
   }
 
-  /** Compute where the template's overlay image actually renders inside the stage (object-fit:contain math). */
+  /** Compute where the template's frame image actually renders inside the preview panel (object-fit:contain math). */
   _overlayBox() {
-    const stageRect = this.stageEl.getBoundingClientRect();
+    const panelRect = this.previewEl.getBoundingClientRect();
     const imgRatio = this.template.output.width / this.template.output.height;
-    const stageRatio = stageRect.width / stageRect.height;
+    const panelRatio = panelRect.width / panelRect.height;
     let w, h;
-    if (imgRatio > stageRatio) {
-      w = stageRect.width;
+    if (imgRatio > panelRatio) {
+      w = panelRect.width;
       h = w / imgRatio;
     } else {
-      h = stageRect.height;
+      h = panelRect.height;
       w = h * imgRatio;
     }
     return {
-      x: (stageRect.width - w) / 2,
-      y: (stageRect.height - h) / 2,
+      x: (panelRect.width - w) / 2,
+      y: (panelRect.height - h) / 2,
       w, h,
     };
   }
@@ -76,6 +77,32 @@ export class CaptureFlow {
     this.highlightEl.style.opacity = '0';
   }
 
+  /** Fill a slot in the template preview with the captured photo. */
+  _showSlotPhoto(index, dataUrl) {
+    const slot = this.template.photos[index];
+    const box = this._overlayBox();
+    const scaleX = box.w / this.template.output.width;
+    const scaleY = box.h / this.template.output.height;
+
+    let img = this.slotCapturesEl.children[index];
+    if (!img) {
+      img = document.createElement('img');
+      this.slotCapturesEl.appendChild(img);
+    }
+
+    img.src = dataUrl;
+    img.style.left = `${box.x + slot.x * scaleX}px`;
+    img.style.top = `${box.y + slot.y * scaleY}px`;
+    img.style.width = `${slot.width * scaleX}px`;
+    img.style.height = `${slot.height * scaleY}px`;
+  }
+
+  /** Remove all captured slot photos from the template preview. */
+  clearSlotPhotos() {
+    this.slotCapturesEl = this.slotCapturesEl || document.getElementById('camera-slot-captures');
+    if (this.slotCapturesEl) this.slotCapturesEl.innerHTML = '';
+  }
+
   /** Run the countdown, flash, shutter, capture, and upload for ONE slot (1-based index). */
   async captureOne(sessionId, slotNumber, countdownSeconds, onProgress = () => {}) {
     this.highlightSlot(slotNumber - 1);
@@ -96,6 +123,7 @@ export class CaptureFlow {
     onProgress({ phase: 'captured', n: slotNumber });
 
     await SessionClient.savePhoto(sessionId, slotNumber, dataUrl);
+    this._showSlotPhoto(slotNumber - 1, dataUrl);
     await wait(120); // let the flash visually register before moving on
     this.hideHighlight();
 

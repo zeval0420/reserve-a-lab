@@ -182,3 +182,62 @@ through the small, documented JSON contracts in `api/*.php`.
   (localhost is exempt).
 - `config/` and `includes/` are blocked from direct HTTP access via the
   bundled `.htaccess` files (Apache only — see deployment note above).
+
+---
+
+## 10. Visual Template Creator
+
+The photobooth ships with a fully standalone **WYSIWYG Template Creator** module at `creator/`.
+
+**Access it** at `http://localhost:8000/creator/gallery.php` (same admin passcode as Settings).
+
+### Workflow
+
+1. **Gallery** — lists every installed template with Edit / Preview / Duplicate / Rename / Export (ZIP) / Delete actions.
+2. **New Template** → Upload a frame image (PNG / JPG / WEBP). The editor opens with the image on the canvas.
+3. **Place slots** — click "＋" in the toolbar to add photo-slot boxes. Drag to move, drag the corner/edge handles to resize, drag the ↻ handle above a box to rotate.
+4. **Align** — toolbar buttons for left/centre/right, top/centre/bottom, distribute vertically/horizontally, match width, match height, bring forward/backward, reset rotation.
+5. **Snap** — slots snap to the frame edges and centrelines automatically (toggle the ⊞ button).
+6. **Properties panel** — right sidebar shows numeric X/Y/W/H/rotation for the selected slot; type exact values for pixel-perfect layouts.
+7. **Preview** — composites the 4 bundled sample images into the current layout and shows the result in a modal.
+8. **Save** — writes `config.json`, regenerates `thumbnail.png` and `preview.png`, and returns to the gallery.
+
+### Import / Export
+
+- **Export** — any gallery card has an ⬇ Export button that downloads the template as a self-contained ZIP (`frame.png`, `thumbnail.png`, `preview.png`, `config.json`).
+- **Import** — the gallery's ⬆ Import ZIP button accepts any compliant ZIP and installs it under `templates/`, regenerating thumbnails with the installed sample photos.
+
+### Module files
+
+```
+creator/
+├── gallery.php          Gallery listing page (admin-gated)
+├── editor.php           WYSIWYG editor page (admin-gated)
+├── creator.css          All creator-specific styles (shares main app CSS tokens)
+├── api/
+│   ├── bootstrap.php    Loads main bootstrap + creator classes
+│   ├── CreatorTemplateManager.php  Gallery CRUD (list, duplicate, rename, delete)
+│   ├── ThumbnailGenerator.php      GD-based thumbnail + preview generation
+│   ├── ImportExportManager.php     ZIP import / export
+│   ├── gallery_list.php, template_duplicate.php, template_rename.php,
+│   │   template_delete.php, frame_upload.php, save.php,
+│   │   preview_generate.php, export.php, import.php
+└── js/
+    ├── editor.js          Main editor controller
+    ├── SlotManager.js     Drag / resize / rotate / align / validate slots
+    ├── CanvasRenderer.js  Zoom, frame image, snap guides
+    ├── PropsPanel.js      Right-hand numeric properties panel
+    ├── CreatorAPI.js      Fetch wrappers for all creator API endpoints
+    ├── gallery.js         Gallery page controller
+    └── utils.js           Toasts, promptModal, confirmModal
+```
+
+### Sample photos for preview generation
+
+`assets/img/samples/sample1–4.jpg` are the placeholder images composited into previews. Regenerate them with:
+
+```bash
+python3 tools/generate_samples.py
+```
+
+Or replace them with real event photos (800×600 JPG, named `sample1.jpg`–`sample4.jpg`) for more realistic previews.

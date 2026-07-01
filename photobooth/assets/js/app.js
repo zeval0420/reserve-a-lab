@@ -67,6 +67,7 @@ class PhotoboothApp {
     this.captureFlow = new CaptureFlow({
       camera: this.camera,
       stageEl: $('#camera-stage'),
+      previewEl: $('#camera-template-preview'),
       frameImgEl: $('#camera-frame-overlay'),
       highlightEl: $('#camera-slot-highlight'),
       flashEl: $('#camera-flash'),
