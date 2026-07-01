@@ -24,14 +24,17 @@ export class CameraController {
   /**
    * Start (or restart) the webcam stream.
    * @param {object} opts { deviceId, width, height }
+   *   width/height can be a number (ideal) or a constraint object ({ min, ideal, max }).
    */
   async start(opts = {}) {
     this.stop();
+    const toConstraint = (v, fallback) =>
+      v == null ? { ideal: fallback } : typeof v === 'number' ? { ideal: v } : v;
     const constraints = {
       audio: false,
       video: {
-        width: { ideal: opts.width || 1280 },
-        height: { ideal: opts.height || 720 },
+        width: toConstraint(opts.width, 1280),
+        height: toConstraint(opts.height, 720),
         facingMode: opts.deviceId ? undefined : 'user',
         deviceId: opts.deviceId ? { exact: opts.deviceId } : undefined,
       },
@@ -39,6 +42,7 @@ export class CameraController {
     this.stream = await navigator.mediaDevices.getUserMedia(constraints);
     this.video.srcObject = this.stream;
     await this.video.play();
+    await this._waitForFrame();
     return this.stream;
   }
 
@@ -46,6 +50,15 @@ export class CameraController {
     if (this.stream) {
       this.stream.getTracks().forEach((track) => track.stop());
       this.stream = null;
+    }
+  }
+
+  /** Wait until the video element has actual frame dimensions (3s timeout). */
+  async _waitForFrame() {
+    const deadline = Date.now() + 3000;
+    while (!this.video.videoWidth || !this.video.videoHeight) {
+      if (Date.now() > deadline) throw new Error('Camera stream timed out waiting for frame data.');
+      await new Promise((r) => requestAnimationFrame(r));
     }
   }
 

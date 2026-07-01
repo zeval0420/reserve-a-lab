@@ -57,6 +57,13 @@ img { max-width: 100%; display: block; }
   padding: var(--space-6) var(--space-5);
 }
 
+#screen-camera .screen__inner {
+  padding: var(--space-6) var(--space-2);
+  max-width: none;
+  min-height: 0;
+  gap: var(--space-4);
+}
+
 /* ---- Top bar shared by most screens ---- */
 .topbar {
   display: flex;

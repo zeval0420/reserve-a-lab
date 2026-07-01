@@ -98,8 +98,9 @@ class PhotoboothApp {
   /* ---------------------------------------------------------------- */
   resetIdleTimer() {
     clearTimeout(this.idleTimer);
-    if (this.screens.welcome.classList.contains('screen--active')) return; // no timeout needed on welcome
-    const seconds = this.config?.idle_return_seconds || 20;
+    if (this.screens.welcome.classList.contains('screen--active') ||
+        this.screens.done.classList.contains('screen--active')) return; // no timeout on welcome or done
+    const seconds = this.config?.idle_return_seconds || 300;
     this.idleTimer = setTimeout(() => {
       toast('Session timed out — returning to start.');
       this.hardReset();
@@ -177,7 +178,8 @@ class PhotoboothApp {
 
     try {
       await this.camera.start({
-        width: this.config?.camera_width, height: this.config?.camera_height,
+        width: { min: this.template.photos[0].width, ideal: 1280 },
+        height: { min: this.template.photos[0].height, ideal: 720 },
       });
     } catch (e) {
       toast('Camera access was denied or unavailable: ' + e.message, 'error');
@@ -226,7 +228,7 @@ class PhotoboothApp {
     }
 
     this.camera.stop();
-    this.reviewGrid.render(this.photoDataUrls);
+    this.reviewGrid.render(this.template, this.photoDataUrls);
     this.showScreen('review');
   }
 
@@ -241,7 +243,10 @@ class PhotoboothApp {
     this.renderProgressDots(slotNumber - 1);
 
     try {
-      await this.camera.start();
+      await this.camera.start({
+        width: { min: this.template.photos[0].width, ideal: 1280 },
+        height: { min: this.template.photos[0].height, ideal: 720 },
+      });
       this.camera.setMirrored(this.config.mirror_preview);
       const dataUrl = await this.captureFlow.captureOne(this.sessionId, slotNumber, this.config.countdown_seconds);
       this.photoDataUrls[slotNumber - 1] = dataUrl;

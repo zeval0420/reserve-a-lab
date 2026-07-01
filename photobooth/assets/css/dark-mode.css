@@ -18,7 +18,7 @@ html.theme-dark .template-card__thumb {
 }
 
 /* Soften thumbnails slightly so bright captured photos don't blow out the dark UI */
-html.theme-dark .review-card img,
+html.theme-dark .review-strip__slot-img,
 html.theme-dark .template-card__thumb img {
   filter: brightness(0.97);
 }

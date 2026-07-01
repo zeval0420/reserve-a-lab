@@ -76,8 +76,8 @@
   100% { box-shadow: var(--shadow-lg), 0 0 0 18px rgba(255,255,255,0); }
 }
 
-/* ---- Review thumbnails pop in when a photo is (re)captured ---- */
-.review-card.is-fresh img {
+/* ---- Review slot photo pop in when a photo is (re)captured ---- */
+.review-strip__slot-img.is-fresh {
   animation: photoPop var(--duration-normal) var(--ease-out);
 }
 @keyframes photoPop {

@@ -107,9 +107,7 @@ require_once __DIR__ . '/includes/bootstrap.php';
     </div>
     <div class="screen__inner">
       <p class="muted center-col" style="margin-bottom:16px">Not happy with one? Tap ↻ on that photo to retake just that shot.</p>
-      <div class="scroll-region">
-        <div class="review-grid" id="review-grid"></div>
-      </div>
+      <div class="review-stage" id="review-grid"></div>
       <button class="btn btn--primary btn--xl btn--block" id="btn-review-continue">Looks Great — Continue</button>
     </div>
   </section>

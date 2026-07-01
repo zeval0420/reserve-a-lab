@@ -1,53 +1,76 @@
 /**
  * assets/js/review.js
  * ------------------------------------------------------------------
- * Renders the "Review your photos" screen and wires up per-photo
- * retake buttons. Retaking a photo re-runs the countdown/capture flow
- * for just that one slot (via CaptureFlow.captureOne) and refreshes
- * only that card — the other three are untouched.
+ * Renders the "Review your photos" screen. Shows the captured photos
+ * composited into their slots inside the template frame, with per-slot
+ * retake buttons.
  * ------------------------------------------------------------------
  */
-import { el, $ } from './utils.js';
+import { el } from './utils.js';
 
 export class ReviewGrid {
   constructor(containerEl) {
     this.container = containerEl;
-    this.onRetake = null; // set by app.js: async (index) => newDataUrl
+    this.onRetake = null;
   }
 
-  render(photoDataUrls) {
+  render(template, photoDataUrls) {
     this.container.innerHTML = '';
-    photoDataUrls.forEach((dataUrl, i) => {
-      const card = this._buildCard(i + 1, dataUrl);
-      this.container.appendChild(card);
-    });
-  }
 
-  _buildCard(slotNumber, dataUrl) {
-    const img = el('img', { src: dataUrl, alt: `Photo ${slotNumber}` });
-    const card = el('div', { class: 'review-card', dataset: { slot: String(slotNumber) } }, [
-      img,
-      el('span', { class: 'review-card__label' }, `Photo ${slotNumber}`),
-      el('button', {
-        class: 'btn btn--secondary btn--icon review-card__retake',
+    const strip = el('div', {
+      class: 'review-strip',
+      style: `aspect-ratio:${template.output.width}/${template.output.height}`,
+    });
+
+    strip.appendChild(el('img', {
+      class: 'review-strip__frame',
+      src: template.frame_url,
+      alt: '',
+    }));
+
+    photoDataUrls.forEach((dataUrl, i) => {
+      const slot = template.photos[i];
+      const slotEl = el('div', {
+        class: 'review-strip__slot',
+        style: [
+          `left:${(slot.x / template.output.width) * 100}%`,
+          `top:${(slot.y / template.output.height) * 100}%`,
+          `width:${(slot.width / template.output.width) * 100}%`,
+          `height:${(slot.height / template.output.height) * 100}%`,
+        ].join(';'),
+      });
+
+      const img = el('img', {
+        class: 'review-strip__slot-img is-fresh',
+        src: dataUrl,
+        alt: `Photo ${i + 1}`,
+      });
+      slotEl.appendChild(img);
+
+      const btn = el('button', {
+        class: 'btn review-strip__retake',
         title: 'Retake this photo',
-        onClick: async () => {
-          if (!this.onRetake) return;
-          card.classList.add('is-retaking');
-          try {
-            const newDataUrl = await this.onRetake(slotNumber);
-            if (newDataUrl) {
-              img.src = newDataUrl;
-              card.classList.remove('is-fresh');
-              void card.offsetWidth;
-              card.classList.add('is-fresh');
-            }
-          } finally {
-            card.classList.remove('is-retaking');
+      }, '↻');
+      btn.addEventListener('click', async () => {
+        if (!this.onRetake) return;
+        btn.disabled = true;
+        try {
+          const newDataUrl = await this.onRetake(i + 1);
+          if (newDataUrl) {
+            img.src = newDataUrl;
+            img.classList.remove('is-fresh');
+            void img.offsetWidth;
+            img.classList.add('is-fresh');
           }
-        },
-      }, '↻'),
-    ]);
-    return card;
+        } finally {
+          btn.disabled = false;
+        }
+      });
+      slotEl.appendChild(btn);
+
+      strip.appendChild(slotEl);
+    });
+
+    this.container.appendChild(strip);
   }
 }

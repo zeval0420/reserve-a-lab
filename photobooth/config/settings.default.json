@@ -33,6 +33,6 @@
   },
   "ui": {
     "dark_mode": "auto",
-    "idle_return_seconds": 20
+    "idle_return_seconds": 300
   }
 }
