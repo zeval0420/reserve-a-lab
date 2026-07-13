@@ -29,7 +29,6 @@ $editId = sanitize_id($_GET['edit'] ?? '');
 <link rel="stylesheet" href="../assets/css/main.css">
 <link rel="stylesheet" href="../assets/css/components.css">
 <link rel="stylesheet" href="../assets/css/animations.css">
-<link rel="stylesheet" href="../assets/css/dark-mode.css">
 <link rel="stylesheet" href="creator.css">
 </head>
 <body>
@@ -225,11 +224,7 @@ $editId = sanitize_id($_GET['edit'] ?? '');
 <div id="creator-toasts"></div>
 
 <script>
-  // Expose the edit id so editor.js can read it without a server round-trip.
   window.__EDIT_ID__ = <?= json_encode($editId ?: null) ?>;
-  // Apply theme immediately from localStorage before first paint.
-  const override = localStorage.getItem('photobooth.themeOverride');
-  if (override === 'dark') document.documentElement.classList.add('theme-dark');
 </script>
 <script type="module" src="js/editor.js"></script>
 

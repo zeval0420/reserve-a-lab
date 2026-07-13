@@ -14,7 +14,7 @@
   --color-accent-contrast: #ffffff;
 
   /* ---- Surfaces ---- */
-  --color-bg: #f6f8fc;              /* app backdrop, very light blue-grey */
+  --color-bg: #FFFDF5;              /* app backdrop, warm cream */
   --color-surface: #ffffff;         /* cards, panels */
   --color-surface-raised: #ffffff;
   --color-surface-sunken: #f1f4f9;

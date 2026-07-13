@@ -3,7 +3,7 @@
  * index.php
  * ------------------------------------------------------------------
  * The kiosk entry point. This file only renders the page shell — every
- * screen in the workflow (welcome -> template gallery -> camera ->
+ * screen in the workflow (template gallery -> camera ->
  * review -> final preview -> done) lives as a <section class="screen">
  * below, and assets/js/app.js shows/hides them as the user progresses.
  * All real logic (camera access, compositing, saving, printing) is
@@ -24,38 +24,19 @@ require_once __DIR__ . '/includes/bootstrap.php';
 <link rel="stylesheet" href="assets/css/main.css">
 <link rel="stylesheet" href="assets/css/components.css">
 <link rel="stylesheet" href="assets/css/animations.css">
-<link rel="stylesheet" href="assets/css/dark-mode.css">
 </head>
 <body>
 
 <div id="app">
 
   <!-- ============================================================ -->
-  <!-- SCREEN 1 — Welcome                                            -->
+  <!-- SCREEN 1 — Template gallery                                   -->
   <!-- ============================================================ -->
-  <section id="screen-welcome" class="screen screen--active">
+  <section id="screen-gallery" class="screen screen--active">
     <div class="topbar">
-      <div class="brand"><span class="brand__dot"></span> Opening of Classes Photobooth</div>
-      <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode">🌓</button>
-    </div>
-    <div class="welcome">
-      <div class="welcome__glow"></div>
-      <span class="welcome__badge">SCHOOL YEAR 2026</span>
-      <h1 class="welcome__title">Welcome! Let's take<br>your photo strip.</h1>
-      <p class="welcome__subtitle">Pick a fun frame, strike a pose four times, and walk away with a printed keepsake from Opening of Classes.</p>
-      <button class="btn btn--primary btn--xl welcome__cta" id="btn-start">Tap to Start</button>
-      <div class="welcome__footer">Hidden admin access: tap the logo 5 times</div>
-    </div>
-  </section>
-
-  <!-- ============================================================ -->
-  <!-- SCREEN 2 — Template gallery                                   -->
-  <!-- ============================================================ -->
-  <section id="screen-gallery" class="screen">
-    <div class="topbar">
-      <button class="btn btn--ghost" id="btn-gallery-back">← Back</button>
+      <div class="brand" id="brand-logo"><span class="brand__dot"></span></div>
       <h2>Choose a Frame</h2>
-      <span style="width:90px"></span>
+      <span></span>
     </div>
     <div class="screen__inner">
       <div class="scroll-region">
@@ -152,6 +133,6 @@ require_once __DIR__ . '/includes/bootstrap.php';
 <audio id="audio-countdown" preload="auto"></audio>
 <audio id="audio-shutter" preload="auto"></audio>
 
-<script type="module" src="assets/js/app.js"></script>
+<script type="module" src="assets/js/app.js?v=<?= time() ?>"></script>
 </body>
 </html>

@@ -10,7 +10,6 @@
  * ------------------------------------------------------------------
  */
 import { $, el, toast, wait } from './utils.js';
-import { applyTheme, toggleTheme, watchSystemTheme } from './theme.js';
 import { CameraController } from './camera.js';
 import { TemplateGallery } from './templateGallery.js';
 import { CaptureFlow } from './captureFlow.js';
@@ -20,7 +19,6 @@ import { SessionClient } from './sessionClient.js';
 class PhotoboothApp {
   constructor() {
     this.screens = {
-      welcome: $('#screen-welcome'),
       gallery: $('#screen-gallery'),
       camera: $('#screen-camera'),
       review: $('#screen-review'),
@@ -46,18 +44,13 @@ class PhotoboothApp {
       const { config } = await SessionClient.getPublicConfig();
       this.config = config;
     } catch (e) {
-      // Even if settings can't be read, fall back to sane defaults so the
-      // kiosk doesn't dead-end on a blank screen.
       this.config = {
         countdown_seconds: 3, countdown_play_sound: true, mirror_preview: true,
         countdown_sound: 'assets/sounds/beep.wav', shutter_sound: 'assets/sounds/shutter.wav',
-        volume: 0.8, dark_mode: 'auto', idle_return_seconds: 20,
+        volume: 0.8, idle_return_seconds: 300,
       };
       console.warn('Falling back to default config:', e.message);
     }
-
-    applyTheme(this.config.dark_mode);
-    watchSystemTheme(this.config.dark_mode);
 
     $('#audio-countdown').src = this.config.countdown_sound;
     $('#audio-shutter').src = this.config.shutter_sound;
@@ -81,7 +74,7 @@ class PhotoboothApp {
 
     this.bindEvents();
     this.resetIdleTimer();
-    this.showScreen('welcome');
+    this.goToGallery();
   }
 
   /* ---------------------------------------------------------------- */
@@ -94,12 +87,11 @@ class PhotoboothApp {
   }
 
   /* ---------------------------------------------------------------- */
-  /* Idle timeout -> auto-return to welcome                            */
+  /* Idle timeout -> auto-return to gallery                            */
   /* ---------------------------------------------------------------- */
   resetIdleTimer() {
     clearTimeout(this.idleTimer);
-    if (this.screens.welcome.classList.contains('screen--active') ||
-        this.screens.done.classList.contains('screen--active')) return; // no timeout on welcome or done
+    if (this.screens.done.classList.contains('screen--active')) return;
     const seconds = this.config?.idle_return_seconds || 300;
     this.idleTimer = setTimeout(() => {
       toast('Session timed out — returning to start.');
@@ -110,10 +102,8 @@ class PhotoboothApp {
   bindEvents() {
     document.addEventListener('pointerdown', () => this.resetIdleTimer());
 
-    $('#theme-toggle').addEventListener('click', () => toggleTheme(this.config.dark_mode));
-
     // Hidden admin entrance: tap the brand/logo 5 times within 2s.
-    $('.brand').addEventListener('click', () => {
+    $('#brand-logo').addEventListener('click', () => {
       this.logoTapCount++;
       clearTimeout(this.logoTapTimer);
       this.logoTapTimer = setTimeout(() => (this.logoTapCount = 0), 2000);
@@ -122,8 +112,6 @@ class PhotoboothApp {
       }
     });
 
-    $('#btn-start').addEventListener('click', () => this.goToGallery());
-    $('#btn-gallery-back').addEventListener('click', () => this.hardReset());
     $('#btn-gallery-continue').addEventListener('click', () => this.startCameraScreen());
 
     $('#btn-camera-cancel').addEventListener('click', () => this.hardReset());
@@ -138,7 +126,7 @@ class PhotoboothApp {
   }
 
   /* ---------------------------------------------------------------- */
-  /* Step: Welcome -> Gallery                                          */
+  /* Step: Load + show Gallery                                          */
   /* ---------------------------------------------------------------- */
   async goToGallery() {
     this.showScreen('gallery');
@@ -236,8 +224,6 @@ class PhotoboothApp {
   /* Retake a single photo from the Review screen                      */
   /* ---------------------------------------------------------------- */
   async retakePhoto(slotNumber) {
-    // Briefly bring the camera screen back to the foreground for this one shot,
-    // then return to Review automatically.
     this.showScreen('camera');
     $('#camera-title').textContent = `Retaking Photo ${slotNumber}`;
     this.renderProgressDots(slotNumber - 1);
@@ -317,7 +303,7 @@ class PhotoboothApp {
   }
 
   /* ---------------------------------------------------------------- */
-  /* Reset everything and go back to Welcome                           */
+  /* Reset everything and go back to Gallery                           */
   /* ---------------------------------------------------------------- */
   hardReset() {
     clearInterval(this._doneInterval);
@@ -325,7 +311,7 @@ class PhotoboothApp {
     this.sessionId = null;
     this.template = null;
     this.photoDataUrls = [];
-    this.showScreen('welcome');
+    this.showScreen('gallery');
     clearTimeout(this.idleTimer);
   }
 }

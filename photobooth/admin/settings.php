@@ -25,7 +25,6 @@ $authenticated = admin_is_authenticated();
 <link rel="stylesheet" href="../assets/css/main.css">
 <link rel="stylesheet" href="../assets/css/components.css">
 <link rel="stylesheet" href="../assets/css/animations.css">
-<link rel="stylesheet" href="../assets/css/dark-mode.css">
 <link rel="stylesheet" href="../assets/css/admin.css">
 </head>
 <body style="overflow:auto;">

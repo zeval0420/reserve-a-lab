@@ -6,7 +6,6 @@
  * ------------------------------------------------------------------
  */
 import { $, el, toast, apiFetch, apiPost } from '../utils.js';
-import { applyTheme } from '../theme.js';
 import { CameraController } from '../camera.js';
 
 const form = $('#settings-form');
@@ -14,7 +13,6 @@ let state = null; // { settings, available_printers, available_templates }
 
 async function load() {
   state = await apiFetch('../api/settings_get.php');
-  applyTheme(state.settings.ui.dark_mode);
   let cameraDevices = [];
   try {
     cameraDevices = await CameraController.listDevices();
@@ -94,10 +92,8 @@ function render(cameraDevices) {
   ]));
 
   // ---- Appearance ----
-  form.appendChild(section('Appearance', 'Controls the built-in dark mode.', [
-    field('Dark mode', el('select', { id: 'f-dark-mode' }, ['auto', 'light', 'dark'].map((v) =>
-      el('option', { value: v, ...(v === s.ui.dark_mode ? { selected: 'selected' } : {}) }, v.charAt(0).toUpperCase() + v.slice(1))))),
-    field('Idle return to welcome (seconds)', el('input', { type: 'number', id: 'f-idle-seconds', min: '5', max: '120', value: s.ui.idle_return_seconds })),
+  form.appendChild(section('Appearance', 'UI behavior settings.', [
+    field('Idle return to start (seconds)', el('input', { type: 'number', id: 'f-idle-seconds', min: '5', max: '120', value: s.ui.idle_return_seconds })),
   ]));
 
   // ---- Admin ----
@@ -112,7 +108,6 @@ function render(cameraDevices) {
 
   $('#btn-refresh-templates').addEventListener('click', refreshTemplates);
   $('#btn-save').addEventListener('click', save);
-  $('#f-dark-mode').addEventListener('change', (e) => applyTheme(e.target.value));
 }
 
 function section(title, hint, children) {
@@ -174,7 +169,7 @@ async function save() {
       volume: parseFloat($('#f-volume').value),
     },
     ui: {
-      dark_mode: $('#f-dark-mode').value,
+      dark_mode: 'light',
       idle_return_seconds: parseInt($('#f-idle-seconds').value, 10) || 20,
     },
   };
