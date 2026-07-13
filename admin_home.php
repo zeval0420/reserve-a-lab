@@ -11,164 +11,117 @@
         exit();
     }
 
-    $email = $_SESSION['email'];
-    $username = $_SESSION['username'];
+    $username = $_SESSION['username'] ?? 'Admin';
+
+    /* Fetch current school year for pending counts. */
+    $syResult = $conn->query("SELECT MAX(value) AS currentSY FROM current");
+    $currentSY = ($syResult && $syResult->num_rows > 0) ? $syResult->fetch_assoc()['currentSY'] : null;
+
+    /* Fetch all active labs with pending request counts. */
+    $labsJson = [];
+    $labs = $conn->query("SELECT * FROM scilab_availability WHERE status='active' ORDER BY scilabName ASC");
+    if ($labs) {
+        while ($lab = $labs->fetch_assoc()) {
+            $id = $lab['scilabName'];
+            $pending = 0;
+            if ($currentSY) {
+                $pStmt = $conn->prepare("SELECT COUNT(*) AS cnt FROM scilab_form_requests WHERE scilabName=? AND statusScilabPersonnel='Pending' AND sy=?");
+                $pStmt->bind_param("ss", $id, $currentSY);
+                $pStmt->execute();
+                $pending = (int)($pStmt->get_result()->fetch_assoc()['cnt'] ?? 0);
+                $pStmt->close();
+            }
+            $imgVersion = file_exists($lab['mainImagePath']) ? filemtime($lab['mainImagePath']) : time();
+            $labsJson[] = [
+                'id'               => $id,
+                'laboratoryName'   => $id,
+                'location'         => $lab['location'] ?? '',
+                'image'            => htmlspecialchars($lab['mainImagePath']) . '?v=' . $imgVersion,
+                'availability'     => $lab['availability'] ?? 'Not Available',
+                'color'            => $lab['color'] ?? '#2B55C4',
+                'pendingRequests'  => $pending,
+            ];
+        }
+    }
 ?>
-
 <!DOCTYPE html>
-<html>
+<html lang="en">
     <head>
-        <title>Home</title>
+        <title>Admin Home</title>
         <?php include('helperFiles/headData.php'); ?>
-
+        <link rel="stylesheet" href="css/laboratory-card.css">
+        <link rel="stylesheet" href="css/home-heading.css">
         <style>
-            body { background-color: #f5f5f5; }
             .main-wrapper {
-                width: 80vw; min-height: 80vh; margin: 0 auto 10vh;
-                padding: 20px; background-color: #e6e6e6;
-                border-radius: 30px; box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+                width: 80%;
+                margin: 0 auto 5rem;
             }
-            .card, .lab-card {
-                background: rgba(255, 255, 255, 0.85);
-                backdrop-filter: blur(12px);
-                -webkit-backdrop-filter: blur(12px);
-                border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-                text-align: center; display: flex;
-                flex-direction: column; justify-content: space-between;
-                transition: transform 0.2s ease-in-out; margin-bottom: 25px;
-                padding: 15px;
-            }
-            .fixed-card, .add-scilab-card {
-                min-height: 550px; display: flex;
-                justify-content: center; align-items: center;
-                text-align: center;
-            }
-            .lab-card {
-                min-height: 520px; padding: 25px 15px;
-                justify-content: space-between; align-items: center;
-            }
-            .fixed-img, .lab-img {
-                width: 100%; object-fit: cover; border-radius: 10px;
-            }
-            .skeleton { background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%); background-size: 200% 100%; animation: skeleton-shimmer 1.5s infinite; color: transparent; }
-            @keyframes skeleton-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-            .fixed-img { height: 210px; }
-            .lab-img { height: 160px; }
-            .unavailable { color: red; }
-            .action-btns { margin-bottom: 10px; }
-            .image-divider {
-                border: none; border-top: 2px solid #e0e0e0;
-                width: 80%; margin: 15px auto;
+            @media (max-width: 768px) {
+                .main-wrapper { width: 95%; }
             }
 
-            /* Switch */
-            .switch {
-                position: relative; display: inline-block;
-                width: 140px; height: 34px; vertical-align: middle;
-            }
-            .switch input { opacity: 0; width: 0; height: 0; }
-            .slider {
-                position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-                background: linear-gradient(135deg, rgba(200, 200, 200, 0.3), rgba(200, 200, 200, 0.5));
-                backdrop-filter: blur(4px);
-                -webkit-backdrop-filter: blur(4px);
-                border: 1px solid rgba(255, 255, 255, 0.4);
-                transition: 0.4s; border-radius: 34px;
-                box-shadow: inset 0 1px 4px rgba(0,0,0,0.1);
-            }
-            .slider::before {
-                content: ""; position: absolute; height: 26px; width: 26px;
-                left: 4px; bottom: 3px; background-color: white;
-                transition: 0.4s; border-radius: 50%;
-                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-                z-index: 2;
-            }
-            input:checked + .slider { 
-                background: linear-gradient(135deg, rgba(43, 85, 196, 0.7), rgba(43, 85, 196, 0.9));
-                border-color: rgba(43, 85, 196, 0.3);
-            }
-            input:checked + .slider::before { transform: translateX(106px); }
-
-            .slider::after {
-                content: 'Not Available';
-                color: #666;
-                position: absolute;
-                right: 15px;
-                top: 50%;
-                transform: translateY(-50%);
-                font-size: 12px;
-                font-weight: bold;
-                transition: all 0.4s;
-            }
-            input:checked + .slider::after {
-                content: 'Available';
-                color: white;
-                right: unset;
-                left: 15px;
-            }
-
-            /* Gallery */
-            #galleryOverlay {
-                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-                background: rgba(15,15,15,0.65); z-index: 9999;
-                display: flex; align-items: center; justify-content: center;
+            /* ─── ADD LAB CARD ──────────────────────────────────── */
+            .add-lab-card {
+                display: flex;
                 flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
             }
-            .overlay-backdrop {
-                position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-                background: rgba(0,0,0,0.45); z-index: -1;
+            .add-lab-card:hover {
+                border-color: var(--color-primary-mid) !important;
+                background: rgba(43,85,196,0.07) !important;
+                color: var(--color-primary-mid) !important;
+                transform: translateY(-2px);
             }
-            .gallery-content {
-                position: relative; width: 80%; max-width: 900px;
-                text-align: center; color: white;
+            .add-lab-card i { font-size: 2rem; }
+
+            /* Variant-specific add card sizing */
+            .lab-gallery--complete .add-lab-card {
+                min-height: 340px;
+                border-radius: var(--radius-card);
+                border: 2px dashed var(--color-border);
+                background: rgba(43,85,196,0.03);
+                cursor: pointer;
+                transition: all 0.25s ease;
+                color: var(--color-text-secondary);
+                font-weight: 600;
+                gap: 10px;
             }
-            .gallery-close {
-                position: absolute; top: -20px; right: -20px;
-                font-size: 40px; background: transparent; border: none;
-                color: white; cursor: pointer;
+            .lab-gallery--compact .add-lab-card {
+                min-height: 280px;
+                width: calc(25% - 12px);
+                min-width: 220px;
+                max-width: 300px;
+                border-radius: var(--radius-card);
+                border: 2px dashed var(--color-border);
+                background: rgba(43,85,196,0.03);
+                cursor: pointer;
+                transition: all 0.25s ease;
+                color: var(--color-text-secondary);
+                font-weight: 600;
+                gap: 10px;
             }
-            .gallery-title {
-                margin-bottom: 20px; font-size: 28px; font-weight: bold;
+            .lab-gallery--list .add-lab-card {
+                min-height: 90px;
+                flex-direction: row;
+                border-radius: 12px;
+                border: 2px dashed var(--color-border);
+                background: rgba(43,85,196,0.03);
+                cursor: pointer;
+                transition: all 0.25s ease;
+                color: var(--color-text-secondary);
+                font-weight: 600;
+                gap: 10px;
             }
-            .carousel-wrapper {
-                display: flex; align-items: center; justify-content: space-between;
-            }
-            .carousel-images { flex: 1; text-align: center; }
-            .carousel-images img {
-                max-height: 500px; max-width: 100%; border-radius: 10px;
-            }
-            .gallery-nav {
-                font-size: 40px; background: transparent; border: none;
-                color: white; cursor: pointer; width: 60px; user-select: none;
-            }
-            .no-images-message {
-                text-align: center; font-size: 1.2rem; color: #888;
-                padding: 60px 20px;
-            }
-            #existingGalleryImages img {
-                height: 100px; object-fit: cover;
-                border-radius: 0.25rem; margin-right: 10px;
-            }
-            .image-wrapper {
-                margin: 10px; position: relative; display: inline-block;
-            }
-            .image-wrapper img {
-                height: 100px; width: auto; border-radius: 0.5rem;
-                object-fit: cover;
-            }
-            .image-wrapper .delete-image-btn {
-                position: absolute; top: -10px; right: -10px;
-                padding: 6px 8px; font-size: 12px; z-index: 5;
-            }
-            .pending-link { color: inherit; text-decoration: none; }
-            .pending-link:hover { text-decoration: underline; color: #2b55c4; }
+
+            /* ─── COLOR PICKER ──────────────────────────────────── */
             .scilab-color-picker {
                 -webkit-appearance: none;
                 -moz-appearance: none;
                 appearance: none;
-                width: 25px;
-                height: 25px;
-                background-color: transparent;
+                width: 26px; height: 26px;
+                background: transparent;
                 border: none;
                 cursor: pointer;
                 border-radius: 50%;
@@ -176,15 +129,123 @@
                 display: inline-block;
                 vertical-align: middle;
             }
-            .scilab-color-picker::-webkit-color-swatch {
-                border-radius: 50%;
-                border: 1px solid #ddd;
-            }
-            .scilab-color-picker::-moz-color-swatch { border-radius: 50%; border: 1px solid #ddd; }
+            .scilab-color-picker::-webkit-color-swatch { border-radius: 50%; border: 1px solid #ddd; }
+            .scilab-color-picker::-moz-color-swatch   { border-radius: 50%; border: 1px solid #ddd; }
 
-            @media (max-width: 768px) {
-                .main-wrapper { width: 95vw; margin-bottom: 5vh; border-radius: 15px; padding: 10px; }
-                .card, .lab-card { margin-bottom: 15px; }
+            /* ─── SWITCH (availability toggle) ─────────────────── */
+            .switch {
+                position: relative; display: inline-block;
+                width: 140px; height: 34px; vertical-align: middle;
+            }
+            .switch input { opacity: 0; width: 0; height: 0; }
+            .slider {
+                position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+                background: linear-gradient(135deg,rgba(200,200,200,.3),rgba(200,200,200,.5));
+                backdrop-filter: blur(4px);
+                -webkit-backdrop-filter: blur(4px);
+                border: 1px solid rgba(255,255,255,.4);
+                transition: .4s; border-radius: 34px;
+                box-shadow: inset 0 1px 4px rgba(0,0,0,.1);
+            }
+            .slider::before {
+                content: ""; position: absolute;
+                height: 26px; width: 26px; left: 4px; bottom: 3px;
+                background: white; transition: .4s; border-radius: 50%;
+                box-shadow: 0 2px 5px rgba(0,0,0,.2); z-index: 2;
+            }
+            input:checked + .slider {
+                background: linear-gradient(135deg,rgba(43,85,196,.7),rgba(43,85,196,.9));
+                border-color: rgba(43,85,196,.3);
+            }
+            input:checked + .slider::before { transform: translateX(106px); }
+            .slider::after {
+                content: 'Not Available'; color: #666;
+                position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
+                font-size: 12px; font-weight: bold; transition: all .4s;
+            }
+            input:checked + .slider::after { content: 'Available'; color: white; right: unset; left: 15px; }
+
+            /* ─── GALLERY OVERLAY ───────────────────────────────── */
+            #galleryOverlay {
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(15,15,15,.65); z-index: 9999;
+                display: flex; align-items: center; justify-content: center;
+                flex-direction: column;
+            }
+            .overlay-backdrop { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
+            .gallery-content  { position: relative; width: 80%; max-width: 900px; text-align: center; color: white; }
+            .gallery-close    { position: absolute; top: -20px; right: -20px; font-size: 40px; background: transparent; border: none; color: white; cursor: pointer; }
+            .gallery-title    { margin-bottom: 20px; font-size: 28px; font-weight: bold; }
+            .carousel-wrapper { display: flex; align-items: center; justify-content: space-between; }
+            .carousel-images  { flex: 1; text-align: center; }
+            .carousel-images img { max-height: 500px; max-width: 100%; border-radius: 10px; }
+            .gallery-nav      { font-size: 40px; background: transparent; border: none; color: white; cursor: pointer; width: 60px; user-select: none; }
+            #existingGalleryImages img { height: 100px; object-fit: cover; border-radius: .25rem; margin-right: 10px; }
+            .image-wrapper    { margin: 10px; position: relative; display: inline-block; }
+            .image-wrapper img { height: 100px; width: auto; border-radius: .5rem; object-fit: cover; }
+            .image-wrapper .delete-image-btn {
+                position: absolute; top: -10px; right: -10px;
+                padding: 6px 8px; font-size: 12px; z-index: 5;
+            }
+
+            /* ─── CARD ADMIN EXTRAS ─────────────────────────────── */
+            .lab-card__admin-footer {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 10px;
+                padding: 12px 0 4px;
+                border-top: 1px solid var(--color-border);
+                margin-top: 10px;
+            }
+            .lab-card__admin-footer .lab-card__color-row {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 12px;
+                color: var(--color-text-secondary);
+                font-weight: 600;
+            }
+            .lab-card__admin-actions {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            /* Single row layout for list variant */
+            .lab-card--list .lab-card__admin-footer {
+                flex-direction: row;
+                justify-content: space-between;
+                width: 100%;
+                padding: 8px 16px;
+                margin-top: 0;
+                background: rgba(235, 240, 250, 0.4);
+                border-radius: 0 0 12px 12px;
+            }
+            .lab-card--list .lab-card__admin-actions {
+                flex-wrap: nowrap;
+            }
+            @media (max-width: 600px) {
+                .lab-card--list .lab-card__admin-footer {
+                    flex-direction: column;
+                    gap: 8px;
+                    padding: 10px;
+                }
+                .lab-card--list .lab-card__admin-actions {
+                    flex-wrap: wrap;
+                    justify-content: center;
+                }
+            }
+
+            /* ─── ANIMATIONS ────────────────────────────────────── */
+            @keyframes btn-pop    { 0%{transform:scale(.88)} 60%{transform:scale(1.06)} 100%{transform:scale(1)} }
+            @keyframes welcome-in { from{opacity:0;transform:translateX(-10px)} to{opacity:1;transform:translateX(0)} }
+            @keyframes selector-in{ from{opacity:0;transform:translateX(10px)} to{opacity:1;transform:translateX(0)} }
+
+            @media (max-width: 480px) {
+                .view-selector__btn span { display: none; }
+                .view-selector__btn { padding: 7px 10px; }
             }
         </style>
     </head>
@@ -192,278 +253,289 @@
     <body>
         <?php include('helperFiles/header.php'); ?>
 
-        <div style="text-align:center; margin:20px 0; font-size:4vh; font-weight:bold; color:#0e0054;">
-            Welcome, <?= htmlspecialchars($username) ?>!
-        </div>
+        <!-- Pass PHP lab data to JavaScript -->
+        <script>
+            const labsData = <?= json_encode($labsJson, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+        </script>
 
         <div class="main-wrapper">
-            <div class="container-fluid text-center mt-4">
-                <div class="row">
-                    <?php
-                    $labs = $conn->query("SELECT * FROM scilab_availability WHERE status='active' ORDER BY scilabName ASC");
-                    $currentSY = $conn->query("SELECT MAX(value) AS currentSY FROM current")->fetch_assoc()['currentSY'];
-
-                    while ($lab = $labs->fetch_assoc()):
-                        $id = $lab['scilabName'];
-                        $mainImagePath = '../' . $lab['mainImagePath'];
-                        $imgVersion = file_exists($mainImagePath) ? filemtime($mainImagePath) : time();
-                        $imgId = 'lab-img-' . preg_replace('/\s+/', '-', $id);
-
-                        $pending = $conn->query("
-                            SELECT COUNT(*) AS cnt FROM scilab_form_requests
-                            WHERE scilabName='$id' AND statusScilabPersonnel='Pending' AND sy='$currentSY'
-                        ")->fetch_assoc()['cnt'];
-                    ?>
-                    <div class="col-md-4 mb-4">
-                        <div class="card fixed-card lab-card text-center" data-scilab="<?= htmlspecialchars($id) ?>">
-                            <div style="width: 100%;">
-                            <img id="<?= $imgId ?>" src="<?= htmlspecialchars($lab['mainImagePath']) ?>?v=<?= $imgVersion ?>"
-                                alt="Lab <?= htmlspecialchars($id) ?>" class="fixed-img gallery-launch skeleton"
-                                data-lab="<?= htmlspecialchars($id) ?>"
-                                style="cursor:pointer; height:200px; object-fit:cover;"
-                                onload="this.classList.remove('skeleton');"
-                                onerror="this.onerror=null; this.src='img/placeholder.svg'; this.classList.remove('skeleton');">
-
-                            <h4 class="mt-3 fw-bold text-primary"><?= htmlspecialchars($id) ?></h4>
-                            <hr class="image-divider">
-                            <p class="text-muted mb-1">
-                                <a href="admin_approve.php?status=Pending&search=<?= urlencode($id) ?>" class="pending-link">
-                                    <?= $pending ?> pending request(s)
-                                </a>
-                            </p>
-                            <p class="mb-3"><small><i class="bi bi-geo-alt-fill"></i> <?= htmlspecialchars($lab['location']) ?></small></p>
-                            </div>
-
-                            <div class="mb-3 text-center">
-                                <span style="font-weight:bold; vertical-align: middle;">Color Display in Calendar: </span>
-                                <input type="color"
-                                    class="form-control form-control-color scilab-color-picker"
-                                    value="<?= htmlspecialchars($lab['color']) ?>"
-                                    data-old="<?= htmlspecialchars($lab['color']) ?>"
-                                    data-scilab="<?= htmlspecialchars($id) ?>">
-                            </div>
-
-                            <div class="d-flex justify-content-center gap-2 mb-3">
-                                <button class="btn-liquid-danger" onclick="openRemoveModal('<?= $id ?>')">
-                                    <i class="bi bi-trash"></i> Remove
-                                </button>
-                                <button class="btn-liquid" onclick="openEditModal('<?= $id ?>')">
-                                    <i class="bi bi-pencil"></i> Edit
-                                </button>
-                            </div>
-
-                            <div class="d-flex justify-content-center align-items-center gap-2">
-                                <label class="switch m-0">
-                                    <input type="checkbox" onchange="toggleLab(this)">
-                                    <span class="slider round"></span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                    <?php endwhile; ?>
-
-                    <div class="col-md-4 mb-4">
-                        <div class="card add-scilab-card d-flex align-items-center justify-content-center text-center"
-                            style="min-height:420px; cursor:pointer;" onclick="$('#addLabModal').modal('show')">
-                            <h4 class="m-auto">Add Science Laboratory</h4>
-                        </div>
-                    </div>
+            <!-- Heading row -->
+            <div class="heading">
+                <p class="heading__welcome">Welcome, <span><?= htmlspecialchars($username) ?></span></p>
+                <div class="view-selector" role="group" aria-label="Card view selector">
+                    <button class="view-selector__btn active" data-view="complete" onclick="switchView(this,'complete')" title="Complete view">
+                        <i class="bi bi-grid-3x3-gap-fill"></i><span>Complete</span>
+                    </button>
+                    <button class="view-selector__btn" data-view="compact" onclick="switchView(this,'compact')" title="Compact view">
+                        <i class="bi bi-grid-fill"></i><span>Compact</span>
+                    </button>
+                    <button class="view-selector__btn" data-view="list" onclick="switchView(this,'list')" title="List view">
+                        <i class="bi bi-list-ul"></i><span>List</span>
+                    </button>
                 </div>
             </div>
 
-            <!-- Add Lab Modal -->
-            <div class="modal fade" id="addLabModal" tabindex="-1">
-                <div class="modal-dialog">
-                    <form id="addLabForm" enctype="multipart/form-data" class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Add Science Laboratory</h5>
-                            <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="form-group"><label>Lab Name:</label><input type="text" name="lab_name" class="form-control liquid-input" required></div>
-                            <div class="form-group"><label>Location:</label><input type="text" name="lab_location" class="form-control liquid-input" required></div>
-                            <div class="form-group"><label>Upload Lab Image (JPG only):</label><input type="file" name="lab_image" class="form-control liquid-input" accept=".jpg,.jpeg" required></div>
-                        </div>
-                        <div class="modal-footer">
-                            <button class="btn-liquid-success" type="submit">Add Lab</button>
-                            <button class="btn-liquid-secondary" data-dismiss="modal">Cancel</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
+            <!-- Card gallery — populated by JS -->
+            <div id="lab-gallery" class="lab-gallery--complete"></div>
+        </div>
 
-            <!-- Confirm Remove Modal -->
-            <div class="modal fade" id="confirmRemoveModal" tabindex="-1">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Confirm Remove</h5>
-                            <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
-                        </div>
-                        <div class="modal-body">Are you sure you want to remove this science laboratory?</div>
-                        <div class="modal-footer">
-                            <input type="hidden" id="removeScilabId">
-                            <button class="btn-liquid-secondary" data-dismiss="modal">Cancel</button>
-                            <button class="btn-liquid-danger" onclick="confirmRemoveScilab()">Yes</button>
-                        </div>
+        <!-- ══════════════════════════════════════════════════
+             MODALS (ported from admin_home.php)
+        ═══════════════════════════════════════════════════ -->
+
+        <!-- Add Lab Modal -->
+        <div class="modal fade" id="addLabModal" tabindex="-1">
+            <div class="modal-dialog">
+                <form id="addLabForm" enctype="multipart/form-data" class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add Science Laboratory</h5>
+                        <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
                     </div>
-                </div>
-            </div>
-
-            <!-- Edit Lab Modal -->
-            <div class="modal fade" id="editLabModal" tabindex="-1">
-                <div class="modal-dialog">
-                    <form id="editLabForm" enctype="multipart/form-data" class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Edit Science Laboratory</h5>
-                            <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
-                        </div>
-                        <div class="modal-body">
-                            <input type="hidden" name="lab_id" id="editLabId">
-                            <input type="hidden" name="lab_old_name" id="editLabOldName">
-                            <div class="form-group"><label>Lab Name:</label><input type="text" name="lab_name" id="editLabName" class="form-control liquid-input" required></div>
-                            <div class="form-group"><label>Location:</label><input type="text" name="lab_location" id="editLabLocation" class="form-control liquid-input" required></div>
-                            <div class="form-group">
-                                <label>Upload New Image (JPG only):</label>
-                                <input type="file" name="lab_image" id="labImage" class="form-control liquid-input" accept=".jpg,.jpeg">
-                                <small class="text-muted">If uploaded, this will replace the current image.</small>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button class="btn-liquid-success" type="submit">Save</button>
-                            <button class="btn-liquid-secondary" data-dismiss="modal">Cancel</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Edit Gallery Modal -->
-            <div class="modal fade" id="editGalleryModal" tabindex="-1">
-                <div class="modal-dialog modal-lg modal-dialog-centered">
-                    <div class="modal-content shadow-lg rounded">
-                        <div class="modal-header">
-                            <h5 class="modal-title"><i class="fas fa-images me-2"></i>Edit Lab Gallery</h5>
-                            <button class="close" data-dismiss="modal"><span>&times;</span></button>
-                        </div>
-                        <div class="modal-body">
-                            <form id="galleryEditForm" enctype="multipart/form-data">
-                                <input type="hidden" name="labName" id="editLabName">
-                                <div class="form-group mb-4">
-                                    <label class="fw-bold">Add New Images</label>
-                                    <input type="file" name="galleryImages[]" id="newGalleryImages" class="form-control" multiple accept=".jpg,.jpeg,.png,.gif">
-                                    <small class="form-text text-muted">Select multiple JPG, PNG, or GIF images.</small>
-                                </div>
-                                <div>
-                                    <label class="fw-bold">Existing Images</label>
-                                    <div id="existingGalleryImages" class="d-flex flex-wrap gap-3 border rounded p-3 bg-light" style="min-height:120px;"></div>
-                                </div>
-                                <div class="text-end mt-4">
-                                    <button class="btn btn-success"><i class="fas fa-upload me-1"></i>Upload Images</button>
-                                </div>
-                            </form>
-                        </div>
+                    <div class="modal-body">
+                        <div class="form-group"><label>Lab Name:</label><input type="text" name="lab_name" class="form-control liquid-input" required></div>
+                        <div class="form-group"><label>Location:</label><input type="text" name="lab_location" class="form-control liquid-input" required></div>
+                        <div class="form-group"><label>Upload Lab Image (JPG only):</label><input type="file" name="lab_image" class="form-control liquid-input" accept=".jpg,.jpeg" required></div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Gallery Overlay -->
-            <div id="galleryOverlay" style="display:none;">
-                <div class="overlay-backdrop"></div>
-                <div class="gallery-content">
-                    <button class="gallery-close">&times;</button>
-                    <h4 id="galleryTitle" class="gallery-title"></h4>
-                    <div class="carousel-wrapper">
-                        <button class="gallery-nav left">&#10094;</button>
-                        <div id="galleryCarousel" class="carousel-images"></div>
-                        <button class="gallery-nav right">&#10095;</button>
+                    <div class="modal-footer">
+                        <button class="btn-liquid-success" type="submit">Add Lab</button>
+                        <button class="btn-liquid-secondary" data-dismiss="modal" type="button">Cancel</button>
                     </div>
-                    <div class="gallery-footer">
-                        <button id="editGalleryBtn" class="btn btn-warning text-white fw-bold mt-3">Edit Gallery</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Confirm Remove Modal -->
+        <div class="modal fade" id="confirmRemoveModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Confirm Remove</h5>
+                        <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                    </div>
+                    <div class="modal-body">Are you sure you want to remove this science laboratory?</div>
+                    <div class="modal-footer">
+                        <input type="hidden" id="removeScilabId">
+                        <button class="btn-liquid-secondary" data-dismiss="modal" type="button">Cancel</button>
+                        <button class="btn-liquid-danger" onclick="confirmRemoveScilab()" type="button">Yes, Remove</button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <?php include 'helperFiles/footer.php'; ?>
+        <!-- Edit Lab Modal -->
+        <div class="modal fade" id="editLabModal" tabindex="-1">
+            <div class="modal-dialog">
+                <form id="editLabForm" enctype="multipart/form-data" class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Edit Science Laboratory</h5>
+                        <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" name="lab_id"       id="editLabId">
+                        <input type="hidden" name="lab_old_name" id="editLabOldName">
+                        <div class="form-group"><label>Lab Name:</label><input type="text" name="lab_name" id="editLabNameInput" class="form-control liquid-input" required></div>
+                        <div class="form-group"><label>Location:</label><input type="text" name="lab_location" id="editLabLocation" class="form-control liquid-input" required></div>
+                        <div class="form-group">
+                            <label>Upload New Image (JPG only):</label>
+                            <input type="file" name="lab_image" id="labImageInput" class="form-control liquid-input" accept=".jpg,.jpeg">
+                            <small class="text-muted">If uploaded, this will replace the current image.</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-liquid-success" type="submit">Save</button>
+                        <button class="btn-liquid-secondary" data-dismiss="modal" type="button">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Edit Gallery Modal -->
+        <div class="modal fade" id="editGalleryModal" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content shadow-lg">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="bi bi-images me-2"></i>Edit Lab Gallery</h5>
+                        <button class="close" data-dismiss="modal"><span>&times;</span></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="galleryEditForm" enctype="multipart/form-data">
+                            <input type="hidden" name="labName" id="galleryEditLabName">
+                            <div class="form-group mb-4">
+                                <label class="fw-bold">Add New Images</label>
+                                <input type="file" name="galleryImages[]" id="newGalleryImages" class="form-control" multiple accept=".jpg,.jpeg,.png,.gif">
+                                <small class="form-text text-muted">Select multiple JPG, PNG, or GIF images.</small>
+                            </div>
+                            <div>
+                                <label class="fw-bold">Existing Images</label>
+                                <div id="existingGalleryImages" class="d-flex flex-wrap gap-3 border rounded p-3 bg-light" style="min-height:120px;"></div>
+                            </div>
+                            <div class="text-right mt-4">
+                                <button class="btn-liquid-success" type="submit"><i class="bi bi-upload me-1"></i>Upload Images</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gallery Overlay (full-screen carousel) -->
+        <div id="galleryOverlay" style="display:none;">
+            <div class="overlay-backdrop"></div>
+            <div class="gallery-content">
+                <button class="gallery-close">&times;</button>
+                <h4 id="galleryTitle" class="gallery-title"></h4>
+                <div class="carousel-wrapper">
+                    <button class="gallery-nav left">&#10094;</button>
+                    <div id="galleryCarousel" class="carousel-images"></div>
+                    <button class="gallery-nav right">&#10095;</button>
+                </div>
+                <div class="gallery-footer mt-3">
+                    <button id="editGalleryBtn" class="btn-liquid-info">Edit Gallery</button>
+                </div>
+            </div>
+        </div>
+
+        <?php include('helperFiles/footer.php'); ?>
     </body>
 
+    <!-- Laboratory card component -->
+    <script src="helperFiles/laboratory-card.js?v=<?= filemtime('helperFiles/laboratory-card.js') ?>"></script>
+
     <script>
-        let galleryImages = [], currentIndex = 0;
+        /* ══════════════════════════════════════════════════════
+           GALLERY RENDERER + VIEW SWITCHER
+        ═══════════════════════════════════════════════════════ */
 
-        // ===== Gallery Display =====
-        function showGallery(images, title, isMain = false) {
-            galleryImages = images; currentIndex = 0;
-            const container = $('#galleryImageContainer').empty();
-            if (isMain) {
-                container.append(`
-                    <div class="text-center">
-                        <img src="${images[0]}" class="img-fluid rounded shadow-sm" style="max-height:300px;" alt="Main Lab Image">
-                        <p class="text-muted mt-2">No gallery images found. Showing main lab image.</p>
-                    </div>
-                `);
-                nextImage();
-            } else updateGalleryImage();
-            $('#galleryTitle').text(`${title} - Gallery`);
-            $('#galleryOverlay').fadeIn();
-        }
-        function updateGalleryImage() {
-            if (galleryImages.length === 0) return;
-            $('#galleryCarousel').html(`<img src="${galleryImages[currentIndex]}" alt="Lab Image">`);
-        }
-        function nextImage() {
-            if (galleryImages.length === 0) return;
-            currentIndex = (currentIndex + 1) % galleryImages.length;
-            updateGalleryImage();
-        }
-        function prevImage() {
-            if (galleryImages.length === 0) return;
-            currentIndex = (currentIndex - 1 + galleryImages.length) % galleryImages.length;
-            updateGalleryImage();
-        }
+        let currentVariant = 'complete';
 
+        /**
+         * Build the gallery including the "Add Lab" card at the end.
+         */
+        function renderGallery(variant) {
+            const container = document.getElementById('lab-gallery');
+            if (!container) return;
 
-        // ===== Gallery and Availability =====
-        $(document).ready(() => {
-            // Open gallery
-            $('.gallery-launch').click(function () {
-                const lab = $(this).data('lab'), main = `img/labimages/${lab}.jpg`;
-                $.post('ajax/ajax_admin.php', { action: 'get_lab_images', lab }, imgs => {
-                    imgs.length ? showGallery(imgs, lab) : showGallery([main], lab, true);
-                }, 'json').fail(() => showToast('Failed to load gallery.', 'error'));
+            container.className = `lab-gallery--${variant}`;
+
+            // Render lab cards via the JS component
+            container.innerHTML = labsData.map(lab => createLabCard(lab, variant)).join('');
+
+            // Append "Add Lab" card
+            const addCard = document.createElement('div');
+            addCard.className = 'add-lab-card';
+            addCard.innerHTML = '<i class="bi bi-plus-circle"></i><span>Add Science Laboratory</span>';
+            addCard.onclick = () => $('#addLabModal').modal('show');
+            container.appendChild(addCard);
+
+            // Inject admin extras (color picker + action buttons + toggle) into each card
+            labsData.forEach(lab => {
+                const card = document.getElementById(`lab-card-${variant}-${lab.id}`);
+                if (!card) return;
+                _injectAdminControls(card, lab, variant);
             });
 
-            // Gallery controls
-            $('.gallery-close').click(() => $('#galleryOverlay').fadeOut());
-            $('.gallery-nav.left').click(prevImage);
-            $('.gallery-nav.right').click(nextImage);
-            $(document).on('keydown', e => { if (e.key === 'Escape') $('#galleryOverlay').fadeOut(); });
+            // Set toggle states from live availability
+            _refreshToggles();
 
-            // Availability setup
+            if (typeof AOS !== 'undefined') AOS.refresh();
+        }
+
+        /**
+         * Append color picker + action buttons + availability toggle into a rendered card.
+         */
+        function _injectAdminControls(card, lab, variant) {
+            const footer = card.querySelector('.lab-card__footer');
+            if (!footer) return;
+
+            // Build admin extras HTML
+            const extras = document.createElement('div');
+            extras.className = 'lab-card__admin-footer';
+            extras.innerHTML = `
+                <div class="lab-card__color-row">
+                    <span style="font-size:12px;font-weight:600;">Calendar Color:</span>
+                    <input type="color"
+                        class="scilab-color-picker"
+                        value="${_escapeHtml(lab.color)}"
+                        data-old="${_escapeHtml(lab.color)}"
+                        data-scilab="${_escapeHtml(lab.id)}">
+                </div>
+                <div class="lab-card__admin-actions">
+                    <a href="admin_approve.php?status=Pending&search=${encodeURIComponent(lab.id)}"
+                       class="btn-liquid" style="font-size:12px;">
+                        <i class="bi bi-clock me-1"></i>${lab.pendingRequests} Pending
+                    </a>
+                    <button class="btn-liquid admin-edit-btn" data-scilab="${_escapeHtml(lab.id)}" style="font-size:12px;">
+                        <i class="bi bi-pencil me-1"></i>Edit
+                    </button>
+                    <button class="btn-liquid-danger admin-remove-btn" data-scilab="${_escapeHtml(lab.id)}" style="font-size:12px;">
+                        <i class="bi bi-trash me-1"></i>Remove
+                    </button>
+                </div>
+                <label class="switch m-0">
+                    <input type="checkbox"
+                        class="lab-toggle-chk"
+                        data-scilab="${_escapeHtml(lab.id)}"
+                        onchange="toggleLab(this)">
+                    <span class="slider"></span>
+                </label>`;
+
+            // Replace the default footer (which has a Request button) with admin version
+            footer.replaceWith(extras);
+        }
+
+        /**
+         * Fetch live availability and set all toggle checkboxes.
+         */
+        function _refreshToggles() {
             $.post('ajax/ajax_admin.php', { action: 'get_availability' }, res => {
-                const data = JSON.parse(res);
-                $('.card').each(function () {
-                    const card = $(this), id = card.data('scilab'),
-                        chk = card.find('input[type="checkbox"]');
-                    const avail = data[id] === 'Available';
-                    chk.prop('checked', avail);
+                let data;
+                try { data = JSON.parse(res); } catch(e) { return; }
+                document.querySelectorAll('.lab-toggle-chk').forEach(chk => {
+                    const name = chk.dataset.scilab;
+                    if (data[name] !== undefined) chk.checked = data[name] === 'Available';
                 });
-            }).fail(() => showToast('Failed to fetch availability data.', 'error'));
-        });
+            }).fail(() => showToast('Failed to fetch availability.', 'error'));
+        }
 
-        // ===== Edit Laboratory =====
-        function openEditModal(lab) {
-            $.post('ajax/ajax_admin.php', { action: 'get_lab_details', lab_id: lab }, data => {
+        /**
+         * switchView — called by heading buttons.
+         */
+        function switchView(btn, variant) {
+            document.querySelectorAll('.view-selector__btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentVariant = variant;
+            renderGallery(variant);
+        }
+
+        /* ══════════════════════════════════════════════════════
+           AVAILABILITY TOGGLE
+        ═══════════════════════════════════════════════════════ */
+
+        function toggleLab(chk) {
+            const name     = chk.dataset.scilab;
+            const newState = chk.checked ? 'Available' : 'Not Available';
+            $.post('ajax/ajax_admin.php', { scilabName: name, availability: newState })
+             .fail(() => showToast('Failed to update availability.', 'error'));
+        }
+
+        /* ══════════════════════════════════════════════════════
+           EDIT LABORATORY
+        ═══════════════════════════════════════════════════════ */
+
+        function openEditModal(labName) {
+            $.post('ajax/ajax_admin.php', { action: 'get_lab_details', lab_id: labName }, data => {
                 if (!data) return showToast('Failed to fetch lab details.', 'error');
-                $('#editLabOldName').val(lab);
-                $('#editLabName').val(data.oldName);
+                $('#editLabOldName').val(labName);
+                $('#editLabNameInput').val(data.oldName);
                 $('#editLabLocation').val(data.location);
-                $('#labImage').val('');
+                $('#labImageInput').val('');
                 $('#editLabModal').modal('show');
             }, 'json').fail(() => showToast('Error fetching lab details.', 'error'));
         }
-        $('#editLabForm').submit(e => {
+
+        $('#editLabForm').submit(function(e) {
             e.preventDefault();
-            const fd = new FormData(e.target);
+            const fd = new FormData(this);
             fd.append('action', 'edit_lab_image');
             $.ajax({
                 url: 'ajax/ajax_admin.php', type: 'POST', data: fd,
@@ -473,50 +545,21 @@
                     if (res !== 'success') return showToast('Update failed: ' + res, 'error');
                     showToast('Lab updated successfully!', 'success');
                     $('#editLabModal').modal('hide');
-                    const newName = $('#editLabName').val().trim(),
-                        oldName = $('#editLabOldName').val().trim(),
-                        newSrc = `img/labimages/${newName}.jpg?v=${Date.now()}`,
-                        idNew = '#lab-img-' + newName.replace(/\s+/g, '-'),
-                        idOld = '#lab-img-' + oldName.replace(/\s+/g, '-');
-                    const img = $(idNew).length ? $(idNew) : $(idOld);
-                    img.attr({ src: newSrc, id: idNew.substring(1) });
-                    if (oldName !== newName) {
-                        const card = img.closest('.card');
-                        card.find('h4').text(newName);
-                        card.attr('data-scilab', newName);
-                    }
-                }
-            });
-        });
-
-        // ===== Availability Toggle =====
-        function toggleLab(chk) {
-            const card = $(chk).closest('.card'),
-                name = card.find('h4').text().trim(),
-                newState = chk.checked ? 'Available' : 'Not Available';
-            $.post('ajax/ajax_admin.php', { scilabName: name, availability: newState }, () => {
-            }).fail(() => showToast('Failed to update availability.', 'error'));
-        }
-
-        // ===== Add and Remove Labs =====
-        $('#addLabForm').submit(e => {
-            e.preventDefault();
-            const fd = new FormData(e.target);
-            fd.append('action', 'add_new_laboratory');
-            $.ajax({
-                url: 'ajax/ajax_admin.php', method: 'POST', data: fd,
-                contentType: false, processData: false,
-                success: res => {
-                    showToast(res.trim() === 'Success' ? 'Lab added successfully!' : res, res.trim() === 'Success' ? 'success' : 'error');
                     location.reload();
                 },
-                error: () => showToast('Error adding lab.', 'error')
+                error: () => showToast('Error updating lab.', 'error')
             });
         });
-        function openRemoveModal(id) {
-            $('#removeScilabId').val(id);
+
+        /* ══════════════════════════════════════════════════════
+           REMOVE LABORATORY
+        ═══════════════════════════════════════════════════════ */
+
+        function openRemoveModal(labName) {
+            $('#removeScilabId').val(labName);
             $('#confirmRemoveModal').modal('show');
         }
+
         function confirmRemoveScilab() {
             const id = $('#removeScilabId').val();
             $.post('ajax/ajax_admin.php', { action: 'remove_scilab', scilabName: id }, res => {
@@ -524,76 +567,148 @@
             }).fail(() => showToast('Failed to send remove request.', 'error'));
         }
 
-        // ===== Edit Gallery =====
+        /* ══════════════════════════════════════════════════════
+           ADD LABORATORY
+        ═══════════════════════════════════════════════════════ */
+
+        $('#addLabForm').submit(function(e) {
+            e.preventDefault();
+            const fd = new FormData(this);
+            fd.append('action', 'add_new_laboratory');
+            $.ajax({
+                url: 'ajax/ajax_admin.php', method: 'POST', data: fd,
+                contentType: false, processData: false,
+                success: res => {
+                    if (res.trim() === 'Success') {
+                        showToast('Lab added successfully!', 'success');
+                        location.reload();
+                    } else {
+                        showToast(res, 'error');
+                    }
+                },
+                error: () => showToast('Error adding lab.', 'error')
+            });
+        });
+
+        /* ══════════════════════════════════════════════════════
+           GALLERY (image carousel)
+        ═══════════════════════════════════════════════════════ */
+
+        let galleryImages = [], currentIndex = 0;
+
+        function showGallery(images, title, isMain = false) {
+            galleryImages = images;
+            currentIndex = 0;
+            if (isMain) {
+                $('#galleryCarousel').html(`<img src="${images[0]}" class="img-fluid rounded" alt="Main Lab Image" style="max-height:500px;">`);
+            } else {
+                updateGalleryImage();
+            }
+            $('#galleryTitle').text(title + ' — Gallery');
+            $('#galleryOverlay').fadeIn();
+        }
+
+        function updateGalleryImage() {
+            if (!galleryImages.length) return;
+            $('#galleryCarousel').html(`<img src="${galleryImages[currentIndex]}" alt="Lab Image">`);
+        }
+
+        function nextImage() { if (galleryImages.length) { currentIndex = (currentIndex + 1) % galleryImages.length; updateGalleryImage(); } }
+        function prevImage() { if (galleryImages.length) { currentIndex = (currentIndex - 1 + galleryImages.length) % galleryImages.length; updateGalleryImage(); } }
+
+        // Gallery controls
+        $('.gallery-close').click(() => $('#galleryOverlay').fadeOut());
+        $('.gallery-nav.left').click(prevImage);
+        $('.gallery-nav.right').click(nextImage);
+        $(document).on('keydown', e => { if (e.key === 'Escape') $('#galleryOverlay').fadeOut(); });
+
+        // Open gallery when lab image is clicked (delegated — cards render after page load)
+        $(document).on('click', '.lab-card__image', function() {
+            const card = $(this).closest('[data-lab-id]');
+            const lab  = card.data('lab-id');
+            const main = `img/labimages/${lab}.jpg`;
+            $.post('ajax/ajax_admin.php', { action: 'get_lab_images', lab }, imgs => {
+                imgs.length ? showGallery(imgs, lab) : showGallery([main], lab, true);
+            }, 'json').fail(() => showToast('Failed to load gallery.', 'error'));
+        });
+
+        /* ══════════════════════════════════════════════════════
+           EDIT GALLERY
+        ═══════════════════════════════════════════════════════ */
+
         $('#editGalleryBtn').click(() => {
-            const lab = $('#galleryTitle').text().split(' - ')[0];
-            $('#editLabName').val(lab);
-            $('#editGalleryModal, #galleryOverlay').modal('hide').fadeOut();
+            const lab = $('#galleryTitle').text().replace(' — Gallery', '').trim();
+            $('#galleryEditLabName').val(lab);
+            $('#galleryOverlay').fadeOut();
             $.post('ajax/ajax_admin.php', { action: 'get_lab_images', lab }, imgs => {
                 const cont = $('#existingGalleryImages').empty();
-                if (!imgs.length) return cont.html('<p>No images found.</p>');
+                if (!imgs.length) return cont.html('<p class="text-muted">No images found.</p>');
                 imgs.forEach(img => {
                     const name = img.split('/').pop();
                     cont.append(`
-                        <div class="image-wrapper position-relative">
+                        <div class="image-wrapper">
                             <img src="${img}" class="img-thumbnail shadow-sm">
                             <button type="button" class="btn btn-sm btn-danger rounded-circle shadow delete-image-btn"
                                 data-img="${name}" title="Delete Image">
-                                <i class="fas fa-times"></i>
+                                <i class="bi bi-x"></i>
                             </button>
                         </div>`);
                 });
             }, 'json');
             $('#editGalleryModal').modal('show');
         });
-        $('#galleryEditForm').submit(e => {
+
+        $('#galleryEditForm').submit(function(e) {
             e.preventDefault();
-            const fd = new FormData(e.target);
-            fd.append('labName', $('#editLabName').val());
+            const fd = new FormData(this);
             fd.append('action', 'upload_gallery_images');
             $.ajax({
                 url: 'ajax/ajax_admin.php', method: 'POST', data: fd,
                 contentType: false, processData: false,
-                success: () => {
-                    showToast('Images uploaded!', 'success');
-                    $('#editGalleryModal').modal('hide');
-                }
+                success: () => { showToast('Images uploaded!', 'success'); $('#editGalleryModal').modal('hide'); },
+                error:   () => showToast('Upload failed.', 'error')
             });
         });
-        $(document).on('click', '.delete-image-btn', function () {
-            const img = $(this).data('img'), lab = $('#editLabName').val();
+
+        $(document).on('click', '.delete-image-btn', function() {
+            const img = $(this).data('img');
+            const lab = $('#galleryEditLabName').val();
             $.post('ajax/ajax_admin.php', { action: 'delete_gallery_image', labName: lab, fileName: img }, () => {
-                $(`button[data-img="${img}"]`).parent().remove();
+                $(this).closest('.image-wrapper').remove();
             });
         });
 
-        // ===== Edit SciLab Color =====
-        $(document).on('change', '.scilab-color-picker', function () {
-            const picker = $(this)
-            const newColor = picker.val()
-            const oldColor = picker.data('old')
-            const scilab = picker.data('scilab')
+        // Click event delegation for Edit and Remove buttons
+        $(document).on('click', '.admin-edit-btn', function() {
+            const lab = $(this).data('scilab');
+            openEditModal(lab);
+        });
 
-            if (!confirm('Are you sure you want to change this scilab color?')) {
-                picker.val(oldColor)
-                return
-            }
+        $(document).on('click', '.admin-remove-btn', function() {
+            const lab = $(this).data('scilab');
+            openRemoveModal(lab);
+        });
 
-            $.post('ajax/ajax_admin.php', {
-                action: 'update_scilab_color',
-                scilabName: scilab,
-                color: newColor
-            }, res => {
-                if (res.trim() !== 'success') {
-                    showToast('Failed to update color', 'error')
-                    picker.val(oldColor)
-                } else {
-                    picker.data('old', newColor)
-                }
-            }).fail(() => {
-                showToast('Server error', 'error')
-                picker.val(oldColor)
-            })
-        })
+        /* ══════════════════════════════════════════════════════
+           COLOR PICKER
+        ═══════════════════════════════════════════════════════ */
+
+        $(document).on('change', '.scilab-color-picker', function() {
+            const picker   = $(this);
+            const newColor = picker.val();
+            const oldColor = picker.data('old');
+            const scilab   = picker.data('scilab');
+            if (!confirm('Change the calendar color for ' + scilab + '?')) { picker.val(oldColor); return; }
+            $.post('ajax/ajax_admin.php', { action: 'update_scilab_color', scilabName: scilab, color: newColor }, res => {
+                if (res.trim() !== 'success') { showToast('Failed to update color', 'error'); picker.val(oldColor); }
+                else picker.data('old', newColor);
+            }).fail(() => { showToast('Server error', 'error'); picker.val(oldColor); });
+        });
+
+        /* ══════════════════════════════════════════════════════
+           INIT — render gallery on page load
+        ═══════════════════════════════════════════════════════ */
+
+        $(document).ready(() => renderGallery('complete'));
     </script>
 </html>
