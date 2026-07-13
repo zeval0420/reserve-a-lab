@@ -146,6 +146,60 @@
 }
 
 /* ---------------------------------------------------------------------- */
+/* Camera picker (gallery screen)                                          */
+/* ---------------------------------------------------------------------- */
+.btn-camera-picker__btn {
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.btn-camera-picker__btn:hover { color: var(--color-text); background: var(--color-surface-sunken); }
+
+.camera-picker {
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  margin: 0 auto var(--space-4);
+  max-width: 380px;
+  overflow: hidden;
+}
+.camera-picker.is-hidden { display: none; }
+
+.camera-picker__header {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.camera-picker__list { display: flex; flex-direction: column; }
+
+.camera-picker__item {
+  appearance: none;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  padding: var(--space-3) var(--space-4);
+  font-size: 15px;
+  color: var(--color-text);
+  transition: background var(--duration-fast) var(--ease-out);
+}
+.camera-picker__item:hover { background: var(--color-surface-sunken); }
+.camera-picker__item.is-active { font-weight: 700; color: var(--color-accent); }
+.camera-picker__item + .camera-picker__item { border-top: 1px solid var(--color-border); }
+
+/* ---------------------------------------------------------------------- */
 /* Template gallery                                                        */
 /* ---------------------------------------------------------------------- */
 .template-grid {

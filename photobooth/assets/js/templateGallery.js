@@ -53,6 +53,7 @@ export class TemplateGallery {
     Array.from(this.container.children).forEach((card) => {
       card.classList.toggle('is-selected', card.dataset.templateId === id);
     });
+    if (this.onSelect) this.onSelect(id);
   }
 
   getSelected() {

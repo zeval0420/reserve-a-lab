@@ -9,12 +9,12 @@
  * just a few new lines here to slot it into the flow.
  * ------------------------------------------------------------------
  */
-import { $, el, toast, wait } from './utils.js';
-import { CameraController } from './camera.js';
-import { TemplateGallery } from './templateGallery.js';
-import { CaptureFlow } from './captureFlow.js';
-import { ReviewGrid } from './review.js';
-import { SessionClient } from './sessionClient.js';
+import { $, el, toast, wait } from './utils.js?v=1';
+import { CameraController } from './camera.js?v=1';
+import { TemplateGallery } from './templateGallery.js?v=1';
+import { CaptureFlow } from './captureFlow.js?v=1';
+import { ReviewGrid } from './review.js?v=1';
+import { SessionClient } from './sessionClient.js?v=1';
 
 class PhotoboothApp {
   constructor() {
@@ -71,8 +71,20 @@ class PhotoboothApp {
     this.captureFlow.countdown.playSound = this.config.countdown_play_sound;
 
     this.reviewGrid.onRetake = (slotNumber) => this.retakePhoto(slotNumber);
+    this.gallery.onSelect = (templateId) => this.warmUpCamera(templateId);
+
+    const saved = localStorage.getItem('photobooth_camera');
+    if (saved) {
+      const devices = await CameraController.listDevices();
+      if (devices.some((d) => d.deviceId === saved)) {
+        this.camera.deviceId = saved;
+      } else {
+        localStorage.removeItem('photobooth_camera');
+      }
+    }
 
     this.bindEvents();
+    this.populateCameraPicker();
     this.resetIdleTimer();
     this.goToGallery();
   }
@@ -84,6 +96,60 @@ class PhotoboothApp {
     Object.entries(this.screens).forEach(([key, node]) => {
       node.classList.toggle('screen--active', key === name);
     });
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Start camera early when user picks a template                     */
+  /* ---------------------------------------------------------------- */
+  async warmUpCamera(templateId) {
+    if (this.camera.stream) return;
+    const template = this.gallery.templates.find((t) => t.id === templateId);
+    if (!template) return;
+    try {
+      await this.camera.start({
+        width: { min: template.photos[0].width, ideal: 1280 },
+        height: { min: template.photos[0].height, ideal: 720 },
+      });
+      this.camera.setMirrored(this.config.mirror_preview);
+      this.populateCameraPicker();
+    } catch (_) {
+      /* Camera will start properly when user clicks Continue */
+    }
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Camera device picker                                               */
+  /* ---------------------------------------------------------------- */
+  async populateCameraPicker() {
+    const devices = await CameraController.listDevices();
+    const list = $('#camera-picker-list');
+    list.innerHTML = '';
+    if (devices.length === 0) {
+      list.innerHTML = '<div class="camera-picker__item" style="cursor:default;color:var(--color-text-muted)">No cameras detected</div>';
+      return;
+    }
+    devices.forEach((d) => {
+      const label = d.label || `Camera ${d.deviceId.slice(0, 8)}…`;
+      const active = d.deviceId === this.camera.deviceId || (!this.camera.deviceId && !d.label && devices.length === 1);
+      const btn = el('button', {
+        class: 'camera-picker__item' + (active ? ' is-active' : ''),
+        onClick: () => this.switchCamera(d.deviceId),
+      }, label);
+      list.appendChild(btn);
+    });
+  }
+
+  async switchCamera(deviceId) {
+    this.camera.deviceId = deviceId;
+    $('#camera-picker').classList.add('is-hidden');
+    localStorage.setItem('photobooth_camera', deviceId);
+    try {
+      await this.camera.switchDevice(deviceId);
+      this.camera.setMirrored(this.config.mirror_preview);
+      this.populateCameraPicker();
+    } catch (e) {
+      toast('Could not switch camera: ' + e.message, 'error');
+    }
   }
 
   /* ---------------------------------------------------------------- */
@@ -113,6 +179,10 @@ class PhotoboothApp {
     });
 
     $('#btn-gallery-continue').addEventListener('click', () => this.startCameraScreen());
+
+    $('#btn-camera-picker').addEventListener('click', () => {
+      $('#camera-picker').classList.toggle('is-hidden');
+    });
 
     $('#btn-camera-cancel').addEventListener('click', () => this.hardReset());
     $('#btn-camera-start').addEventListener('click', () => this.runFullCapture());
@@ -164,14 +234,19 @@ class PhotoboothApp {
     $('#btn-camera-start').disabled = false;
     $('#btn-camera-start').textContent = 'Start Capturing';
 
-    try {
-      await this.camera.start({
-        width: { min: this.template.photos[0].width, ideal: 1280 },
-        height: { min: this.template.photos[0].height, ideal: 720 },
-      });
-    } catch (e) {
-      toast('Camera access was denied or unavailable: ' + e.message, 'error');
+    if (!this.camera.stream) {
+      try {
+        await this.camera.start({
+          width: { min: this.template.photos[0].width, ideal: 1280 },
+          height: { min: this.template.photos[0].height, ideal: 720 },
+        });
+      } catch (e) {
+        toast('Camera access was denied or unavailable: ' + e.message, 'error');
+      }
+    } else {
+      this.camera.setMirrored(this.config.mirror_preview);
     }
+    this.populateCameraPicker();
   }
 
   renderProgressDots(currentIndex) {
@@ -215,7 +290,6 @@ class PhotoboothApp {
       return;
     }
 
-    this.camera.stop();
     this.reviewGrid.render(this.template, this.photoDataUrls);
     this.showScreen('review');
   }
@@ -229,14 +303,9 @@ class PhotoboothApp {
     this.renderProgressDots(slotNumber - 1);
 
     try {
-      await this.camera.start({
-        width: { min: this.template.photos[0].width, ideal: 1280 },
-        height: { min: this.template.photos[0].height, ideal: 720 },
-      });
       this.camera.setMirrored(this.config.mirror_preview);
       const dataUrl = await this.captureFlow.captureOne(this.sessionId, slotNumber, this.config.countdown_seconds);
       this.photoDataUrls[slotNumber - 1] = dataUrl;
-      this.camera.stop();
       this.showScreen('review');
       return dataUrl;
     } catch (e) {
@@ -282,6 +351,7 @@ class PhotoboothApp {
       'Your strip has been saved.';
     $('#done-message').textContent = message;
 
+    this.camera.stop();
     this.showScreen('done');
     this.runDoneCountdown(5);
   }
@@ -307,7 +377,6 @@ class PhotoboothApp {
   /* ---------------------------------------------------------------- */
   hardReset() {
     clearInterval(this._doneInterval);
-    this.camera.stop();
     this.sessionId = null;
     this.template = null;
     this.photoDataUrls = [];

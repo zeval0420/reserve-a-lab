@@ -28,22 +28,36 @@ export class CameraController {
    */
   async start(opts = {}) {
     this.stop();
+    const did = opts.deviceId || this.deviceId;
     const toConstraint = (v, fallback) =>
       v == null ? { ideal: fallback } : typeof v === 'number' ? { ideal: v } : v;
-    const constraints = {
+    const buildConstraints = (deviceId) => ({
       audio: false,
       video: {
         width: toConstraint(opts.width, 1280),
         height: toConstraint(opts.height, 720),
-        facingMode: opts.deviceId ? undefined : 'user',
-        deviceId: opts.deviceId ? { exact: opts.deviceId } : undefined,
+        facingMode: deviceId ? undefined : 'user',
+        deviceId: deviceId ? { exact: deviceId } : undefined,
       },
-    };
-    this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+    });
+    try {
+      this.stream = await navigator.mediaDevices.getUserMedia(buildConstraints(did));
+    } catch (_) {
+      if (!did) throw _;
+      this.deviceId = null;
+      this.stream = await navigator.mediaDevices.getUserMedia(buildConstraints(null));
+    }
     this.video.srcObject = this.stream;
     await this.video.play();
     await this._waitForFrame();
     return this.stream;
+  }
+
+  async switchDevice(deviceId) {
+    this.deviceId = deviceId;
+    const w = this.video.videoWidth || 1280;
+    const h = this.video.videoHeight || 720;
+    return this.start({ deviceId, width: w, height: h });
   }
 
   stop() {

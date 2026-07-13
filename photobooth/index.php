@@ -36,11 +36,17 @@ require_once __DIR__ . '/includes/bootstrap.php';
     <div class="topbar">
       <div class="brand" id="brand-logo"><span class="brand__dot"></span></div>
       <h2>Choose a Frame</h2>
-      <span></span>
+      <button class="btn btn--ghost btn-camera-picker__btn" id="btn-camera-picker" title="Switch camera">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      </button>
     </div>
     <div class="screen__inner">
       <div class="scroll-region">
         <div class="template-grid" id="template-grid"></div>
+      </div>
+      <div class="camera-picker is-hidden" id="camera-picker">
+        <div class="camera-picker__header">Select Camera</div>
+        <div class="camera-picker__list" id="camera-picker-list"></div>
       </div>
       <button class="btn btn--primary btn--xl btn--block" id="btn-gallery-continue">Continue</button>
     </div>
