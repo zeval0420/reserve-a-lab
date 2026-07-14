@@ -71,7 +71,6 @@ class PhotoboothApp {
     this.captureFlow.countdown.playSound = this.config.countdown_play_sound;
 
     this.reviewGrid.onRetake = (slotNumber) => this.retakePhoto(slotNumber);
-    this.gallery.onSelect = (templateId) => this.warmUpCamera(templateId);
 
     const saved = localStorage.getItem('photobooth_camera');
     if (saved) {
@@ -84,7 +83,6 @@ class PhotoboothApp {
     }
 
     this.bindEvents();
-    this.populateCameraPicker();
     this.resetIdleTimer();
     this.goToGallery();
   }
@@ -99,54 +97,68 @@ class PhotoboothApp {
   }
 
   /* ---------------------------------------------------------------- */
-  /* Start camera early when user picks a template                     */
+  /* Start camera early when gallery loads                             */
   /* ---------------------------------------------------------------- */
-  async warmUpCamera(templateId) {
+  async startCamera() {
     if (this.camera.stream) return;
-    const template = this.gallery.templates.find((t) => t.id === templateId);
-    if (!template) return;
     try {
-      await this.camera.start({
-        width: { min: template.photos[0].width, ideal: 1280 },
-        height: { min: template.photos[0].height, ideal: 720 },
-      });
+      const template = this.gallery.getSelected() || this.gallery.templates[0];
+      const w = template?.photos[0]?.width || 1280;
+      const h = template?.photos[0]?.height || 720;
+      await this.camera.start({ width: { min: w, ideal: 1280 }, height: { min: h, ideal: 720 } });
       this.camera.setMirrored(this.config.mirror_preview);
-      this.populateCameraPicker();
-    } catch (_) {
-      /* Camera will start properly when user clicks Continue */
+      this.attachModalVideo();
+    } catch (_) { /* Camera will start when user clicks Continue */ }
+  }
+
+  attachModalVideo() {
+    const modalVideo = $('#camera-modal-video');
+    if (this.camera.stream) {
+      modalVideo.srcObject = this.camera.stream;
+      modalVideo.play().catch(() => {});
     }
   }
 
   /* ---------------------------------------------------------------- */
-  /* Camera device picker                                               */
+  /* Camera preview modal                                               */
   /* ---------------------------------------------------------------- */
-  async populateCameraPicker() {
+  async populateCameraModalList() {
     const devices = await CameraController.listDevices();
-    const list = $('#camera-picker-list');
+    const list = $('#camera-modal-list');
     list.innerHTML = '';
     if (devices.length === 0) {
-      list.innerHTML = '<div class="camera-picker__item" style="cursor:default;color:var(--color-text-muted)">No cameras detected</div>';
+      list.innerHTML = '<div class="camera-modal__item" style="cursor:default;color:var(--color-text-muted)">No cameras detected</div>';
       return;
     }
     devices.forEach((d) => {
       const label = d.label || `Camera ${d.deviceId.slice(0, 8)}…`;
       const active = d.deviceId === this.camera.deviceId || (!this.camera.deviceId && !d.label && devices.length === 1);
       const btn = el('button', {
-        class: 'camera-picker__item' + (active ? ' is-active' : ''),
+        class: 'camera-modal__item' + (active ? ' is-active' : ''),
         onClick: () => this.switchCamera(d.deviceId),
       }, label);
       list.appendChild(btn);
     });
   }
 
+  openCameraModal() {
+    $('#camera-modal').classList.remove('is-hidden');
+    this.populateCameraModalList();
+    this.attachModalVideo();
+  }
+
+  closeCameraModal() {
+    $('#camera-modal').classList.add('is-hidden');
+  }
+
   async switchCamera(deviceId) {
     this.camera.deviceId = deviceId;
-    $('#camera-picker').classList.add('is-hidden');
     localStorage.setItem('photobooth_camera', deviceId);
     try {
       await this.camera.switchDevice(deviceId);
       this.camera.setMirrored(this.config.mirror_preview);
-      this.populateCameraPicker();
+      this.attachModalVideo();
+      this.populateCameraModalList();
     } catch (e) {
       toast('Could not switch camera: ' + e.message, 'error');
     }
@@ -180,9 +192,9 @@ class PhotoboothApp {
 
     $('#btn-gallery-continue').addEventListener('click', () => this.startCameraScreen());
 
-    $('#btn-camera-picker').addEventListener('click', () => {
-      $('#camera-picker').classList.toggle('is-hidden');
-    });
+    $('#btn-camera-picker').addEventListener('click', () => this.openCameraModal());
+    $('#btn-camera-modal-close').addEventListener('click', () => this.closeCameraModal());
+    $('#camera-modal-backdrop').addEventListener('click', () => this.closeCameraModal());
 
     $('#btn-camera-cancel').addEventListener('click', () => this.hardReset());
     $('#btn-camera-start').addEventListener('click', () => this.runFullCapture());
@@ -202,6 +214,7 @@ class PhotoboothApp {
     this.showScreen('gallery');
     try {
       await this.gallery.load();
+      this.startCamera();
     } catch (e) {
       toast('Could not load templates: ' + e.message, 'error');
     }
@@ -246,7 +259,6 @@ class PhotoboothApp {
     } else {
       this.camera.setMirrored(this.config.mirror_preview);
     }
-    this.populateCameraPicker();
   }
 
   renderProgressDots(currentIndex) {

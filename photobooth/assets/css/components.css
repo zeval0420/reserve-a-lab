@@ -146,7 +146,7 @@
 }
 
 /* ---------------------------------------------------------------------- */
-/* Camera picker (gallery screen)                                          */
+/* Camera preview modal (gallery screen)                                   */
 /* ---------------------------------------------------------------------- */
 .btn-camera-picker__btn {
   width: 48px;
@@ -161,30 +161,79 @@
 }
 .btn-camera-picker__btn:hover { color: var(--color-text); background: var(--color-surface-sunken); }
 
-.camera-picker {
-  background: var(--color-surface);
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
-  margin: 0 auto var(--space-4);
-  max-width: 380px;
-  overflow: hidden;
+.camera-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.camera-picker.is-hidden { display: none; }
+.camera-modal.is-hidden { display: none; }
 
-.camera-picker__header {
+.camera-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+}
+
+.camera-modal__dialog {
+  position: relative;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  width: 90vw;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: var(--space-5);
+}
+
+.camera-modal__close {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: var(--color-surface-sunken);
+  border-radius: 50%;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  transition: background var(--duration-fast) var(--ease-out);
+}
+.camera-modal__close:hover { background: var(--color-border); color: var(--color-text); }
+
+.camera-modal__video-wrap {
+  background: #000;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  margin-bottom: var(--space-4);
+}
+.camera-modal__video-wrap video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.camera-modal__header {
   font-size: 13px;
   font-weight: 700;
   color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--space-2);
 }
 
-.camera-picker__list { display: flex; flex-direction: column; }
+.camera-modal__list { display: flex; flex-direction: column; gap: 2px; }
 
-.camera-picker__item {
+.camera-modal__item {
   appearance: none;
   border: none;
   background: none;
@@ -193,11 +242,11 @@
   padding: var(--space-3) var(--space-4);
   font-size: 15px;
   color: var(--color-text);
+  border-radius: var(--radius-sm);
   transition: background var(--duration-fast) var(--ease-out);
 }
-.camera-picker__item:hover { background: var(--color-surface-sunken); }
-.camera-picker__item.is-active { font-weight: 700; color: var(--color-accent); }
-.camera-picker__item + .camera-picker__item { border-top: 1px solid var(--color-border); }
+.camera-modal__item:hover { background: var(--color-surface-sunken); }
+.camera-modal__item.is-active { font-weight: 700; color: var(--color-accent); background: var(--color-accent-soft); }
 
 /* ---------------------------------------------------------------------- */
 /* Template gallery                                                        */
@@ -321,6 +370,8 @@
 }
 
 .camera-template-preview__frame {
+  position: relative;
+  z-index: 3;
   width: 100%;
   height: 100%;
   object-fit: contain;
@@ -331,7 +382,6 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 1;
 }
 
 .camera-template-preview__captures img {
@@ -342,7 +392,6 @@
 
 .camera-template-preview__slot-highlight {
   position: absolute;
-  z-index: 2;
   border: 3px dashed rgba(255,255,255,0.85);
   border-radius: 8px;
   box-shadow: 0 0 0 4000px rgba(0,0,0,0.35);
@@ -377,6 +426,9 @@
 }
 
 .review-strip__frame {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
   display: block;
   width: 100%;
   height: 100%;

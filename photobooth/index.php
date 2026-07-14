@@ -36,17 +36,13 @@ require_once __DIR__ . '/includes/bootstrap.php';
     <div class="topbar">
       <div class="brand" id="brand-logo"><span class="brand__dot"></span></div>
       <h2>Choose a Frame</h2>
-      <button class="btn btn--ghost btn-camera-picker__btn" id="btn-camera-picker" title="Switch camera">
+      <button class="btn btn--ghost btn-camera-picker__btn" id="btn-camera-picker" title="Preview camera">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
       </button>
     </div>
     <div class="screen__inner">
       <div class="scroll-region">
         <div class="template-grid" id="template-grid"></div>
-      </div>
-      <div class="camera-picker is-hidden" id="camera-picker">
-        <div class="camera-picker__header">Select Camera</div>
-        <div class="camera-picker__list" id="camera-picker-list"></div>
       </div>
       <button class="btn btn--primary btn--xl btn--block" id="btn-gallery-continue">Continue</button>
     </div>
@@ -72,9 +68,9 @@ require_once __DIR__ . '/includes/bootstrap.php';
           <div class="camera-stage__progress" id="camera-progress"></div>
         </div>
         <div class="camera-template-preview" id="camera-template-preview">
-          <img id="camera-frame-overlay" class="camera-template-preview__frame" alt="">
           <div class="camera-template-preview__captures" id="camera-slot-captures"></div>
           <div class="camera-template-preview__slot-highlight" id="camera-slot-highlight" style="opacity:0"></div>
+          <img id="camera-frame-overlay" class="camera-template-preview__frame" alt="">
         </div>
       </div>
       <div class="camera-controls">
@@ -134,6 +130,21 @@ require_once __DIR__ . '/includes/bootstrap.php';
 </div>
 
 <div id="toast-stack"></div>
+
+<!-- ============================================================ -->
+<!-- Camera preview modal                                          -->
+<!-- ============================================================ -->
+<div class="camera-modal is-hidden" id="camera-modal">
+  <div class="camera-modal__backdrop" id="camera-modal-backdrop"></div>
+  <div class="camera-modal__dialog">
+    <button class="camera-modal__close" id="btn-camera-modal-close" aria-label="Close">&times;</button>
+    <div class="camera-modal__video-wrap">
+      <video id="camera-modal-video" autoplay playsinline muted></video>
+    </div>
+    <div class="camera-modal__header">Switch Camera</div>
+    <div class="camera-modal__list" id="camera-modal-list"></div>
+  </div>
+</div>
 
 <!-- Hidden audio elements; sources are set dynamically from Settings -->
 <audio id="audio-countdown" preload="auto"></audio>

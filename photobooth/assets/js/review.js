@@ -22,12 +22,6 @@ export class ReviewGrid {
       style: `aspect-ratio:${template.output.width}/${template.output.height}`,
     });
 
-    strip.appendChild(el('img', {
-      class: 'review-strip__frame',
-      src: template.frame_url,
-      alt: '',
-    }));
-
     photoDataUrls.forEach((dataUrl, i) => {
       const slot = template.photos[i];
       const slotEl = el('div', {
@@ -70,6 +64,12 @@ export class ReviewGrid {
 
       strip.appendChild(slotEl);
     });
+
+    strip.appendChild(el('img', {
+      class: 'review-strip__frame',
+      src: template.frame_url,
+      alt: '',
+    }));
 
     this.container.appendChild(strip);
   }
