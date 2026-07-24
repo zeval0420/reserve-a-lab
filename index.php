@@ -1395,7 +1395,7 @@ if (isset($_SESSION['role'])) {
                             setValidationState(passwordField, 'invalid');
                             showAlert('Incorrect password.', 'error');
                         } else if (response === "admin") {
-                            window.location.href = "sample_admin.php";
+                            window.location.href = "admin_home.php";
                         } else if (response === "requester" || response === "teacher" || response === "guest") {
                             window.location.href = "requester_home.php"; // Redirect guest/requester properly
                         } else {

@@ -76,6 +76,19 @@
     $formIDs = [];
 
     while ($r = $result->fetch_assoc()) {
+        $statuses = [
+            strtolower($r['supervisor_status'] ?? 'pending'),
+            strtolower($r['subject_teacher_status'] ?? 'pending'),
+            strtolower($r['lab_personnel_status'] ?? 'pending'),
+            strtolower($r['cid_chief_status'] ?? 'pending'),
+        ];
+        if (in_array('rejected', $statuses)) {
+            $r['_approval_status'] = 'Rejected';
+        } elseif (count(array_unique($statuses)) === 1 && $statuses[0] === 'approved') {
+            $r['_approval_status'] = 'Approved';
+        } else {
+            $r['_approval_status'] = 'Pending';
+        }
         $requests[] = $r;
         $formIDs[] = $r['id'];
     }
@@ -150,6 +163,10 @@
 
             @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
             .spin { animation: spin 1s linear infinite; display: inline-block; }
+            .badge { padding: 5px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+            .badge-success { background: #28a745; color: #fff; }
+            .badge-danger { background: #dc3545; color: #fff; }
+            .badge-warning { background: #ffc107; color: #212529; }
             .material-line {
                 display: flex;
                 align-items: flex-start;
@@ -225,6 +242,7 @@
                                 <th>Date of Use</th>
                                 <th>Requested Materials</th>
                                 <th>Teacher-in-Charge</th>
+                                <th>Approval Status</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
@@ -253,6 +271,13 @@
                                 ?>
                                 <td><?= $materialText ?></td>
                                 <td><?= !empty($row['teacherInCharge']) ? htmlspecialchars($row['teacherInCharge']) : '—' ?></td>
+
+                                <td>
+                                    <?php $as = $row['_approval_status']; ?>
+                                    <span class="badge badge-<?= $as === 'Approved' ? 'success' : ($as === 'Rejected' ? 'danger' : 'warning') ?>">
+                                        <?= $as ?>
+                                    </span>
+                                </td>
 
                                 <td>
                                     <button

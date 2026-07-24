@@ -764,6 +764,22 @@
                 $('.is-invalid').removeClass('is-invalid');
                 let isValid = true;
 
+                // Check that venue is filled
+                const venueVal = $('#venue_select').val();
+                if (!venueVal) {
+                    showToast("Please select a facility.", 'warning');
+                    $('#venue_select').addClass('is-invalid');
+                    isValid = false;
+                }
+
+                // Check that grade level is filled
+                const gradeLevel = $('#grade_select').val();
+                if (!gradeLevel) {
+                    showToast("Please select a grade level.", 'warning');
+                    $('#grade_select').addClass('is-invalid');
+                    isValid = false;
+                }
+
                 // Check that section field is filled
                 const selectedSections = $('#sections-checkboxes').val();
                 if (!selectedSections || selectedSections.length === 0) {
@@ -772,11 +788,59 @@
                     isValid = false;
                 }
 
+                // Check that subject is filled
+                const subject = $('#subject_select').val();
+                if (!subject) {
+                    showToast("Please select a subject.", 'warning');
+                    $('#subject_select').addClass('is-invalid');
+                    isValid = false;
+                }
+
+                // Check that topic is filled
+                const topic = $('input[name="topic"]').val();
+                if (!topic || !topic.trim()) {
+                    showToast("Please enter a concurrent topic.", 'warning');
+                    $('input[name="topic"]').addClass('is-invalid');
+                    isValid = false;
+                }
+
+                // Check that academic unit is filled
+                const unit = $('#unit-select').val();
+                if (!unit) {
+                    showToast("Please select an academic unit.", 'warning');
+                    $('#unit-select').addClass('is-invalid');
+                    isValid = false;
+                }
+
                 // Check that teacher field is filled
                 const selectedTeachers = $('#teacher-checkboxes').val();
                 if (!selectedTeachers || selectedTeachers.length === 0) {
                     showToast("Please select at least one teacher.", 'warning');
                     $('#teacher-checkboxes').next('.btn-group').find('.multiselect').addClass('is-invalid');
+                    isValid = false;
+                }
+
+                // Check that date is filled
+                const dateVal = $('#datepicker').val();
+                if (!dateVal) {
+                    showToast("Please select a date.", 'warning');
+                    $('#datepicker').addClass('is-invalid');
+                    isValid = false;
+                }
+
+                // Check that start time is filled
+                const startTimeVal = $('input[name="start_time"]').val();
+                if (!startTimeVal) {
+                    showToast("Please select a start time.", 'warning');
+                    $('input[name="start_time"]').addClass('is-invalid');
+                    isValid = false;
+                }
+
+                // Check that end time is filled
+                const endTimeVal = $('input[name="end_time"]').val();
+                if (!endTimeVal) {
+                    showToast("Please select an end time.", 'warning');
+                    $('input[name="end_time"]').addClass('is-invalid');
                     isValid = false;
                 }
 
