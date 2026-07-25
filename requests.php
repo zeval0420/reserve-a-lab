@@ -111,13 +111,8 @@
             $desc = !empty($m['description']) ? htmlspecialchars($m['description']) : '';
             $qty = $m['quantity'];
 
-            // ✅ TABLE VERSION (simple)
-            $materials[$m['formID']][] = "
-                <div class='material-line'>
-                    <span class='bullet'>•</span>
-                    <span class='material-text'>{$item}</span>
-                </div>
-            ";
+            // ✅ TABLE VERSION (simple) — store as array for show-all toggle
+            $materials[$m['formID']][] = $m;  // store full row
 
             // ✅ MODAL VERSION (detailed)
             $materialsDetailed[$m['formID']][] = "
@@ -167,6 +162,8 @@
             .badge-success { background: #28a745; color: #fff; }
             .badge-danger { background: #dc3545; color: #fff; }
             .badge-warning { background: #ffc107; color: #212529; }
+            .toggle-materials { font-size: 12px; color: #2B55C4; cursor: pointer; text-decoration: none; }
+            .toggle-materials:hover { text-decoration: underline; }
             .material-line {
                 display: flex;
                 align-items: flex-start;
@@ -261,9 +258,42 @@
                                 <td><?= htmlspecialchars($row['subjectTopic']) ?></td>
                                 <td><?= htmlspecialchars($row['inclusiveDate'])." (".$row['inclusiveTime'].")" ?></td>
                                 <?php
-                                    $materialText = isset($materials[$row['id']]) 
-                                        ? implode("", $materials[$row['id']]) 
-                                        : '—';
+                                    $allMats = $materials[$row['id']] ?? [];
+                                    $totalMats = count($allMats);
+                                    $visibleMats = array_slice($allMats, 0, 3);
+                                    $hiddenMats = array_slice($allMats, 3);
+
+                                    $materialText = '';
+                                    foreach ($visibleMats as $m) {
+                                        $item = htmlspecialchars($m['item']);
+                                        $materialText .= "
+                                            <div class='material-line'>
+                                                <span class='bullet'>•</span>
+                                                <span class='material-text'>{$item}</span>
+                                            </div>
+                                        ";
+                                    }
+                                    if ($hiddenMats) {
+                                        $materialText .= "
+                                            <div class='materials-hidden' style='display:none;'>
+                                        ";
+                                        foreach ($hiddenMats as $m) {
+                                            $item = htmlspecialchars($m['item']);
+                                            $materialText .= "
+                                                <div class='material-line'>
+                                                    <span class='bullet'>•</span>
+                                                    <span class='material-text'>{$item}</span>
+                                                </div>
+                                            ";
+                                        }
+                                        $materialText .= "</div>";
+                                        $materialText .= "
+                                            <a href='javascript:void(0)' class='toggle-materials' data-formid='{$row['id']}'>
+                                                Show all ({$totalMats})
+                                            </a>
+                                        ";
+                                    }
+                                    $materialText = $totalMats ? $materialText : '—';
 
                                     $materialsDetailedText = isset($materialsDetailed[$row['id']]) 
                                         ? implode("", $materialsDetailed[$row['id']]) 
@@ -383,6 +413,18 @@
 
                 if (status === 'Pending') {
                     window.location.href = 'supervisor_approve.php?id=' + data.id;
+                }
+            });
+
+            $(document).on('click', '.toggle-materials', function () {
+                const $link = $(this);
+                const $hidden = $link.siblings('.materials-hidden');
+                if ($hidden.is(':visible')) {
+                    $hidden.hide();
+                    $link.text('Show all (' + $hidden.children('.material-line').length + ')');
+                } else {
+                    $hidden.show();
+                    $link.text('Show less');
                 }
             });
         });
