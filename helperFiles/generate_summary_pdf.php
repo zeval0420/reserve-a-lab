@@ -43,12 +43,16 @@ $sql = "
         a.firstname,
         a.middlename,
         a.lastname,
+        st.firstname AS student_firstname,
+        st.middlename AS student_middlename,
+        st.lastname AS student_lastname,
         fr.inclusiveDate,
         fr.inclusiveTime
     FROM scilab_material_requests mr
     JOIN scilab_form_requests fr ON mr.formID = fr.id
     LEFT JOIN scilab_inventory si ON mr.item = si.item
     LEFT JOIN accounts a ON fr.requesterEmployeeID = a.employeeID
+    LEFT JOIN student st ON fr.requesterEmployeeID = st.LRN
     WHERE fr.statusScilabPersonnel = 'Approved'
     AND fr.inclusiveDate BETWEEN ? AND ?
 ";
@@ -242,7 +246,11 @@ if (empty($categorizedItems)) {
         foreach ($items as $item) {
             $description = $item['description'] ? htmlspecialchars($item['description']) : 'N/A';
             $unit = $item['unit'] ? ' ' . htmlspecialchars($item['unit']) : '';
-            $requestorName = trim($item['firstname'] . ' ' . $item['middlename'] . ' ' . $item['lastname']);
+            $requestorName = trim(
+                COALESCE($item['firstname'], $item['student_firstname']) . ' ' .
+                COALESCE($item['middlename'], $item['student_middlename']) . ' ' .
+                COALESCE($item['lastname'], $item['student_lastname'])
+            );
 
             $html .= "
             <tr>

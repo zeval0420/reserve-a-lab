@@ -327,7 +327,13 @@
                                         $fullName = $employeeID;
                                         if ($nameQuery && $nameRow = $nameQuery->fetch_assoc()) {
                                             $fullName = $nameRow['firstname'].' '.$nameRow['middlename'].' '.$nameRow['lastname'];
+                                        } else {
+                                            $studentQuery = $conn->query("SELECT firstname, middlename, lastname FROM student WHERE LRN = '$employeeID'");
+                                            if ($studentQuery && $studentRow = $studentQuery->fetch_assoc()) {
+                                                $fullName = $studentRow['firstname'].' '.$studentRow['middlename'].' '.$studentRow['lastname'];
+                                            }
                                         }
+                                        $row['requesterName'] = $fullName;
                                         $formID = $row['id'];
                                         $materialText = isset($materials[$formID]) ? implode("", $materials[$formID]) : '—';
                                         $row['materialsDetailed'] = isset($materialsDetailed[$formID]) ? implode("", $materialsDetailed[$formID]) : '—';
@@ -511,7 +517,7 @@
                 $('#controlNumber').val('');
                 $('#approveRemarks').val('');
                 $('#approveDetails').html(`
-                    <p><strong>Requester:</strong> ${data.requesterEmployeeID}</p>
+                    <p><strong>Requester:</strong> ${data.requesterName || data.requesterEmployeeID}</p>
                     <p><strong>Subject:</strong> ${data.subject}</p>
                     <p><strong>Topic:</strong> ${data.subjectTopic}</p>
                     <p><strong>Date of Use:</strong> ${data.inclusiveDate}</p>
@@ -579,7 +585,7 @@
             $('.reject-btn').click(function () {
                 const data = $(this).data('request');
                 $('#rejectSummaryContent').html(`
-                    <p><strong>Requester:</strong> ${data.requesterEmployeeID}</p>
+                    <p><strong>Requester:</strong> ${data.requesterName || data.requesterEmployeeID}</p>
                     <p><strong>Subject:</strong> ${data.subject}</p>
                     <p><strong>Topic:</strong> ${data.subjectTopic}</p>
                     <p><strong>Date of Use:</strong> ${data.inclusiveDate}</p>

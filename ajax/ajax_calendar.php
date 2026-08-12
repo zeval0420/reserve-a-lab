@@ -65,9 +65,10 @@ if (isset($_POST['action']) && $_POST['action'] === 'get_calendar_events') {
 if (isset($_POST['action']) && $_POST['action'] === 'get_request_details') {
     $id = $_POST['id'];
     $stmt = $conn->prepare("
-        SELECT r.*, CONCAT(a.firstname, ' ', a.lastname) as requesterName 
+        SELECT r.*, CONCAT_WS(' ', COALESCE(a.firstname, st.firstname), COALESCE(a.middlename, st.middlename), COALESCE(a.lastname, st.lastname)) AS requesterName 
         FROM scilab_form_requests r
         LEFT JOIN accounts a ON r.requesterEmployeeID = a.employeeID
+        LEFT JOIN student st ON r.requesterEmployeeID = st.LRN
         WHERE r.id = ?
     ");
     $stmt->bind_param("i", $id);

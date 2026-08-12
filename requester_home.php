@@ -58,8 +58,19 @@
             $pendingRequestsHtml .= '<thead><tr><th>Requester</th><th>Lab Name</th><th>Date of Use</th><th>Time of Use</th><th>Action</th></tr></thead>';
             $pendingRequestsHtml .= '<tbody>';
             foreach ($requests as $request) {
+                $requesterID = $request['requesterEmployeeID'];
+                $nameQuery = $conn->query("SELECT firstname, middlename, lastname FROM accounts WHERE employeeID = '$requesterID'");
+                $requesterName = $requesterID;
+                if ($nameQuery && $nameRow = $nameQuery->fetch_assoc()) {
+                    $requesterName = $nameRow['firstname'].' '.$nameRow['middlename'].' '.$nameRow['lastname'];
+                } else {
+                    $studentQuery = $conn->query("SELECT firstname, middlename, lastname FROM student WHERE LRN = '$requesterID'");
+                    if ($studentQuery && $studentRow = $studentQuery->fetch_assoc()) {
+                        $requesterName = $studentRow['firstname'].' '.$studentRow['middlename'].' '.$studentRow['lastname'];
+                    }
+                }
                 $pendingRequestsHtml .= '<tr>';
-                $pendingRequestsHtml .= '<td>' . htmlspecialchars($request['requesterEmployeeID']) . '</td>';
+                $pendingRequestsHtml .= '<td>' . htmlspecialchars($requesterName) . '</td>';
                 $pendingRequestsHtml .= '<td>' . htmlspecialchars($request['scilabName']) . '</td>';
                 $pendingRequestsHtml .= '<td>' . htmlspecialchars($request['inclusiveDate']) . '</td>';
                 $pendingRequestsHtml .= '<td>' . htmlspecialchars($request['inclusiveTime']) . '</td>';

@@ -66,9 +66,10 @@
         $query = "
             SELECT fr.id, fr.scilabName, fr.gradeLevel, fr.sections AS sections, fr.subject, fr.subjectTopic,
                 fr.inclusiveDate, fr.inclusiveTime, fr.dateRequested, fr.teacherInCharge,
-                CONCAT(a.firstname, ' ', a.lastname) AS requesterName
+                CONCAT_WS(' ', COALESCE(a.firstname, st.firstname), COALESCE(a.middlename, st.middlename), COALESCE(a.lastname, st.lastname)) AS requesterName
             FROM scilab_form_requests fr
             LEFT JOIN accounts a ON a.employeeID = fr.requesterEmployeeID
+            LEFT JOIN student st ON fr.requesterEmployeeID = st.LRN
             WHERE fr.statusScilabPersonnel = 'Pending' AND fr.sy = ?
             ORDER BY fr.dateRequested DESC
             LIMIT 15";

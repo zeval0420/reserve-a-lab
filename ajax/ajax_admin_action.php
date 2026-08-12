@@ -195,6 +195,9 @@
                     a.firstname,
                     a.middlename,
                     a.lastname,
+                    st.firstname AS student_firstname,
+                    st.middlename AS student_middlename,
+                    st.lastname AS student_lastname,
                     fr.inclusiveDate,
                     fr.inclusiveTime,
                     fr.id AS formID
@@ -202,6 +205,7 @@
                 JOIN scilab_form_requests fr ON mr.formID = fr.id
                 LEFT JOIN scilab_inventory si ON mr.item = si.item
                 LEFT JOIN accounts a ON fr.requesterEmployeeID = a.employeeID
+                LEFT JOIN student st ON fr.requesterEmployeeID = st.LRN
                 WHERE fr.statusScilabPersonnel = 'Approved'
                 AND fr.inclusiveDate BETWEEN ? AND ?
             ";
@@ -239,7 +243,11 @@
                     $categorizedItems[$classification] = [];
                 }
                 
-                $requestorName = trim($row['firstname'] . ' ' . $row['middlename'] . ' ' . $row['lastname']);
+                $requestorName = trim(
+                    COALESCE($row['firstname'], $row['student_firstname']) . ' ' .
+                    COALESCE($row['middlename'], $row['student_middlename']) . ' ' .
+                    COALESCE($row['lastname'], $row['student_lastname'])
+                );
                 
                 // Add the item to its category
                 $categorizedItems[$classification][] = [
