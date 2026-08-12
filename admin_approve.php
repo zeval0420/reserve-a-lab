@@ -750,7 +750,7 @@
                     return;
                 }
 
-                const url = `helperFiles/generate_summary_pdf.php?startDate=${startDate}&endDate=${endDate}&classification=${classification}`;
+                const url = `helperFiles/generate_summary_pdf.php?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}&classification=${encodeURIComponent(classification)}`;
                 window.open(url, '_blank');
             });
         });

@@ -1,6 +1,15 @@
 <?php
+// Start output buffering to prevent stray output/warnings from corrupting the PDF binary stream
+ob_start();
+
 require_once '../vendor/autoload.php';
-include('db_connection.php');
+
+try {
+    include('db_connection.php');
+} catch (Throwable $e) {
+    while (ob_get_level()) { ob_end_clean(); }
+    die("Database Connection Error: " . $e->getMessage());
+}
 
 use Dompdf\Dompdf;
 use Dompdf\Options;
@@ -11,6 +20,7 @@ $endDate = $_GET['endDate'] ?? null;
 $classificationFilter = $_GET['classification'] ?? 'all';
 
 if (!$startDate || !$endDate) {
+    while (ob_get_level()) { ob_end_clean(); }
     die('Error: Start and end dates are required.');
 }
 
@@ -53,13 +63,19 @@ $sql .= " ORDER BY COALESCE(si.classification, 'Uncategorized') ASC, mr.item ASC
 $stmt = $conn->prepare($sql);
 
 if ($stmt === false) {
+    while (ob_get_level()) { ob_end_clean(); }
     die('Database query preparation failed.');
 }
 
 if ($filterByClassification) {
     $bindTypes = 'ss' . str_repeat('s', count($classifications));
     $bindParams = array_merge([$startDate, $endDate], $classifications);
-    $stmt->bind_param($bindTypes, ...$bindParams);
+    $refs = [];
+    $refs[0] = $bindTypes;
+    foreach ($bindParams as $key => $value) {
+        $refs[$key + 1] = &$bindParams[$key];
+    }
+    call_user_func_array([$stmt, 'bind_param'], $refs);
 } else {
     $stmt->bind_param('ss', $startDate, $endDate);
 }
@@ -75,9 +91,16 @@ while ($row = $result->fetch_assoc()) {
 $stmt->close();
 $conn->close();
 
-// Fix image path for Dompdf
-$logoPath = $_SERVER['DOCUMENT_ROOT'] . "/img/logo.png";
+// Prepare logo using base64 for reliable rendering in Dompdf without filesystem or URL path issues
+// Only include <img> if PHP GD extension is installed, since Dompdf requires GD to process images
+$logoPath = dirname(__DIR__) . "/img/logo.png";
+$logoSrc = '';
+if (extension_loaded('gd') && file_exists($logoPath)) {
+    $logoData = base64_encode(file_get_contents($logoPath));
+    $logoSrc = 'data:image/png;base64,' . $logoData;
+}
 
+$logoHtml = $logoSrc ? "<img src='{$logoSrc}' alt='Logo'>" : "";
 
 // Build HTML
 $html = "
@@ -188,7 +211,7 @@ $html = "
 <body>
 
     <div class='header'>
-        <!--img src='$logoPath'-->
+        {$logoHtml}
         <h1>SCIENCE LABORATORY USAGE SUMMARY</h1>
         <div class='subheader'>Philippine Science High School – Ilocos Region Campus</div>
         <div class='subheader'>San Ildefonso, Ilocos Sur</div>
@@ -245,13 +268,29 @@ $html .= "
 ";
 
 // Generate PDF
-$options = new Options();
-$options->set('isHtml5ParserEnabled', true);
-$options->set('isRemoteEnabled', true);
+try {
+    $options = new Options();
+    $options->set('isHtml5ParserEnabled', true);
+    $options->set('isRemoteEnabled', true);
+    $options->set('chroot', dirname(__DIR__));
+    $options->set('tempDir', sys_get_temp_dir());
 
-$dompdf = new Dompdf($options);
-$dompdf->loadHtml($html);
-$dompdf->setPaper('A4', 'portrait');
-$dompdf->render();
-$dompdf->stream("SciLab_Summary_{$startDate}_to_{$endDate}.pdf", ["Attachment" => false]);
+    $dompdf = new Dompdf($options);
+    $dompdf->loadHtml($html);
+    $dompdf->setPaper('A4', 'portrait');
+    $dompdf->render();
+
+    // Clean output buffer completely before streaming PDF headers
+    while (ob_get_level()) {
+        ob_end_clean();
+    }
+
+    $dompdf->stream("SciLab_Summary_{$startDate}_to_{$endDate}.pdf", ["Attachment" => false]);
+    exit();
+} catch (Throwable $e) {
+    while (ob_get_level()) {
+        ob_end_clean();
+    }
+    die("PDF Generation Error: " . $e->getMessage());
+}
 ?>
