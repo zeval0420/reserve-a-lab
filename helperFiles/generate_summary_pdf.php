@@ -5,7 +5,7 @@ ob_start();
 require_once '../vendor/autoload.php';
 
 try {
-    include('db_connection.php');
+    include('../../scilab/helperFiles/db_connection.php');
 } catch (Throwable $e) {
     while (ob_get_level()) { ob_end_clean(); }
     die("Database Connection Error: " . $e->getMessage());
