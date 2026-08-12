@@ -487,21 +487,6 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
         exit();
     }
 
-    $conflictStmt = $conn->prepare("SELECT * FROM scilab_form_requests 
-        WHERE scilabName = ? AND inclusiveDate = ? AND (
-            (CONVERT(inclusiveTime USING utf8mb4) COLLATE utf8mb4_bin LIKE CONCAT('%', ?, '%')) OR
-            (CONVERT(inclusiveTime USING utf8mb4) COLLATE utf8mb4_bin LIKE CONCAT('%', ?, '%'))
-        ) AND statusScilabPersonnel != 'Rejected'");
-
-    $conflictStmt->bind_param("ssss", $scilabName, $startDate, $startTime, $endTime);
-    $conflictStmt->execute();
-    $conflictResult = $conflictStmt->get_result();
-
-    if ($conflictResult->num_rows > 0) {
-        echo "conflict";
-        exit();
-    }
-
     $syResult = $conn->query("SELECT value FROM current WHERE description = 'School Year' ORDER BY id DESC LIMIT 1");
     $schoolYear = ($syResult && $syResult->num_rows > 0) ? $syResult->fetch_assoc()['value'] : 'N/A';
 

@@ -859,16 +859,12 @@
                     startTime: start,
                     endTime: end
                 }, function(res) {
-                    if (res.conflict_type === 'approved') {
-                        showToast('An approved request already exists for this timeframe. Please choose a different schedule.', 'error');
-                        return;
-                    }
-                    
                     let conflictAlert = '';
-                    if (res.conflict_type === 'pending') {
+                    if (res.conflict_type === 'approved' || res.conflict_type === 'pending') {
+                        const conflictWord = res.conflict_type === 'approved' ? 'approved' : 'pending';
                         conflictAlert = `
                             <div class="alert alert-warning" style="margin-bottom: 15px;">
-                                <strong>Pending Conflict:</strong> A pending request exists for this timeframe (${res.details.time} - ${res.details.subject}). Are you sure you want to proceed and submit?
+                                <strong>Schedule Conflict:</strong> An <b>${conflictWord}</b> request already exists for this timeframe (${res.details.time} - ${res.details.subject}). Approval is to the discretion of the Science Laboratory Personnel.
                             </div>
                         `;
                     }
@@ -1052,9 +1048,6 @@
                                 showToast("Request submitted successfully!", 'success');
                                 resetForm();
                                 location.reload();
-                            } else if (res === "conflict_approved" || res === "conflict") {
-                                console.log("Submission Error: Schedule conflict");
-                                showToast("Schedule conflict. An approved request exists for this timeframe.", 'error');
                             } else if (res === "invalid_scilab") {
                                 console.log("Submission Error: Invalid laboratory selected");
                                 showToast("Invalid laboratory selected.", 'error');
@@ -1126,8 +1119,8 @@
                         if (res.status === 'success') {
                             if (res.conflict_type === 'approved') {
                                 $('#conflict-warning-container').html(`
-                                    <div class="alert alert-danger" style="margin-bottom:0; padding:10px; border-radius:8px;">
-                                        <strong><i class="glyphicon glyphicon-ban-circle"></i> Schedule Conflict:</strong> An <b>approved</b> request already exists for this timeframe (${res.details.time}). You cannot submit this request.
+                                    <div class="alert alert-warning" style="margin-bottom:0; padding:10px; border-radius:8px;">
+                                        <strong><i class="glyphicon glyphicon-warning-sign"></i> Schedule Conflict:</strong> An <b>approved</b> request already exists for this timeframe (${res.details.time}). Approval is to the discretion of the Science Laboratory Personnel.
                                     </div>
                                 `).fadeIn();
                             } else if (res.conflict_type === 'pending') {
