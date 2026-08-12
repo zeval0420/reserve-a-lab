@@ -12,7 +12,7 @@ require_once '../vendor/autoload.php';
 if (!file_exists('../helperFiles/db_connection.php')) {
     die('Error: helperFiles/db_connection.php not found. Check directory case sensitivity (helperFiles vs helperfiles).');
 }
-include('../helperFiles/db_connection.php');
+include('../../scilab/helperFiles/db_connection.php');
 
 use Dompdf\Dompdf;
 use Dompdf\Options;
