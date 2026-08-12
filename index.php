@@ -25,7 +25,27 @@ if (isset($_POST['local_login']) && $_POST['local_login'] === 'true') {
  * Detects existing valid sessions and routes the returning user to their respective dashboard instead of showing the login display.
  */
 $sessionRedirectScript = "";
+
+/* Validate an optional post-login redirect target to prevent open-redirect abuse. */
+$redirectTarget = '';
+if (isset($_GET['redirect'])) {
+    $candidate = trim($_GET['redirect']);
+    if (
+        $candidate !== ''
+        && strpos($candidate, '://') === false
+        && $candidate[0] !== '/'
+        && strpos($candidate, '//') !== 0
+    ) {
+        $redirectTarget = $candidate;
+    }
+}
+
 if (isset($_SESSION['role'])) {
+    /* Honor a validated post-login redirect target for returning sessions. */
+    if ($redirectTarget !== '') {
+        header("Location: " . $redirectTarget);
+        exit();
+    }
     if ($_SESSION['role'] === 'admin') {
         header("Location: admin_home.php");
         exit();
@@ -1054,6 +1074,9 @@ if (isset($_SESSION['role'])) {
     <script>
         const $ = id => document.getElementById(id);
 
+        /* Post-login redirect target (validated server-side) passed from ?redirect= */
+        const loginRedirect = <?= json_encode($redirectTarget ?? '') ?>;
+
         /* ── Modal Automation Logic ── */
         function openModal(id) {
             $(id).classList.add('open');
@@ -1395,9 +1418,9 @@ if (isset($_SESSION['role'])) {
                             setValidationState(passwordField, 'invalid');
                             showAlert('Incorrect password.', 'error');
                         } else if (response === "admin") {
-                            window.location.href = "admin_home.php";
+                            window.location.href = loginRedirect || "admin_home.php";
                         } else if (response === "requester" || response === "teacher" || response === "guest") {
-                            window.location.href = "requester_home.php"; // Redirect guest/requester properly
+                            window.location.href = loginRedirect || "requester_home.php"; // Redirect guest/requester properly
                         } else {
                             showAlert('Unexpected response: ' + response, 'error');
                         }

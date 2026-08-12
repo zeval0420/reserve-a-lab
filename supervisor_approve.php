@@ -11,6 +11,12 @@ if (!$requestId) {
     die("Please provide a request ID.");
 }
 
+if (!isset($_SESSION['role'])) {
+    $target = 'redirect=' . urlencode('supervisor_approve.php?id=' . $requestId);
+    header('Location: index.php?' . $target);
+    exit();
+}
+
 $stmt = $conn->prepare("SELECT * FROM scilab_form_requests WHERE id = ?");
 $stmt->bind_param("i", $requestId);
 $stmt->execute();
