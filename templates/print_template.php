@@ -39,7 +39,8 @@ $stmt = $conn->prepare("
         fr.inclusiveTime,
         fr.requesterEmployeeID,
         fr.dateRequested,
-        fr.statusScilabPersonnel
+        fr.statusScilabPersonnel,
+        fr.subjectAcademicUnit
     FROM scilab_form_requests fr
     WHERE fr.id = ?
 ");
@@ -359,8 +360,68 @@ $html = "
             margin-top: 16pt;
         }
     </style>
+
+    <style>
+        .page-main {
+            font-size: 8pt;
+        }
+
+        .page-labres {
+            font-size: 9pt;
+            page-break-before: always;
+        }
+
+        .page-permit {
+            font-size: 9pt;
+            page-break-before: always;
+        }
+
+        /* ============ Page 2: Laboratory Reservation Form ============ */
+        .labres-header { margin-bottom: 18pt; }
+        .labres-header h3 { font-size: 10pt; font-weight: bold; margin-bottom: 6pt; }
+        .labres-line { border-bottom: 1px solid #000; display: inline-block; min-width: 180pt; height: 12pt; }
+        .labres-title { font-size: 11pt; font-weight: bold; margin-bottom: 20pt; }
+        .labres-row { width: 100%; margin-bottom: 10pt; display: table; }
+        .labres-field { display: table-cell; vertical-align: top; }
+        .labres-label { white-space: nowrap; }
+        .labres-value { border-bottom: 1px solid #000; display: inline-block; min-width: 180pt; min-height: 14pt; padding: 0 4pt; margin-left: 6pt; }
+        .labres-w-25 { width: 25%; }
+        .labres-w-50 { width: 50%; }
+        .labres-w-100 { width: 100%; }
+        .labres-student-list { margin-top: 14pt; }
+        .labres-student-list p { margin-bottom: 6pt; }
+        .labres-student-item { margin-bottom: 6pt; }
+        .labres-student-line { border-bottom: 1px solid #000; min-width: 300pt; display: inline-block; min-height: 14pt; }
+        .labres-signature-section { margin-top: 18pt; }
+        .labres-signature-line { border-bottom: 1px solid #000; min-width: 200pt; min-height: 14pt; display: inline-block; padding: 0 4pt; margin-left: 6pt; }
+        .labres-signature-label { display: block; font-size: 8pt; margin-left: 110pt; margin-top: 2pt; }
+        .labres-footer-text { margin-top: 20pt; font-size: 9pt; }
+
+        /* ============ Page 3: Science Laboratory Work Permit ============ */
+        .permit-header { display: table; width: 100%; margin-bottom: 12pt; }
+        .permit-logo { display: table-cell; width: 70px; vertical-align: top; }
+        .permit-logo img { width: 60px; height: auto; }
+        .permit-header-text { display: table-cell; vertical-align: top; padding-left: 10pt; }
+        .permit-header-text p { margin-bottom: 2pt; font-weight: bold; }
+        .permit-title { text-align: center; font-weight: bold; margin: 16pt 0 10pt 0; font-size: 11pt; }
+        .permit-value { border-bottom: 1px solid #000; display: inline-block; min-width: 120pt; min-height: 12pt; padding: 0 4pt; }
+        .permit-row { width: 100%; display: table; margin-bottom: 8pt; }
+        .permit-field { display: table-cell; vertical-align: top; }
+        .permit-w-50 { width: 50%; }
+        .permit-w-100 { width: 100%; }
+        .permit-line-block { margin-bottom: 6pt; }
+        .permit-multi-lines span { display: block; border-bottom: 1px solid #000; min-height: 14pt; margin-bottom: 4pt; }
+        .permit-note { font-size: 9pt; margin: 2pt 0; font-style: italic; }
+        .permit-signature-section { margin-top: 10pt; }
+        .permit-signature-line { border-bottom: 1px solid #000; min-width: 200pt; min-height: 14pt; display: inline-block; }
+        .permit-signature-label { display: block; font-size: 8pt; margin-top: 2pt; }
+        .permit-approval-block { margin-top: 14pt; }
+        .permit-footer-text { font-size: 8pt; margin-top: 20pt; }
+    </style>
 </head>
 <body>
+
+    <div class='page page-main'>
 
     <div class='header'>
         <h3>PHILIPPINE SCIENCE HIGH SCHOOL SYSTEM</h3>
@@ -413,7 +474,7 @@ $html = "
     <div class='form-row'>
         <div class='form-field w-60'>
             <label>Unit:</label>
-            <span class='value' style='min-width: 150pt;'>Chemical Reactions</span>
+            <span class='value' style='min-width: 150pt;'>" . htmlspecialchars($formData['subjectAcademicUnit'] ?? '') . "</span>
         </div>
         <div class='form-field w-40'>
             <label>Teacher In-Charge:</label>
@@ -587,42 +648,270 @@ $html .= "
         <p>PSHS-00-F-CIID-20-Ver02-Rev1-10/18/20</p>
     </div>
 
+    </div>
+
+    <div class='page page-labres'>
+
+        <div class='labres-header'>
+            <h3>PHILIPPINE SCIENCE HIGH SCHOOL SYSTEM</h3>
+            <div style='font-weight: bold;'>
+                CAMPUS: <span class='labres-line' style='min-width: 180pt;'>ILOCOS REGION</span>
+            </div>
+        </div>
+
+        <div class='labres-title'>
+            LABORATORY RESERVATION FORM
+        </div>
+
+        <div class='labres-row'>
+            <div class='labres-field labres-w-50'></div>
+            <div class='labres-field labres-w-25'>
+                <span class='labres-label'>Control No:</span>
+                <span class='labres-value' style='min-width: 80pt;'>" . htmlspecialchars($formData['controlNumber'] ?? '') . "</span>
+            </div>
+            <div class='labres-field labres-w-25'>
+                <span class='labres-label'>SY:</span>
+                <span class='labres-value' style='min-width: 120pt;'>" . htmlspecialchars($formData['sy'] ?? '') . "</span>
+            </div>
+        </div>
+
+        <div class='labres-row'>
+            <div class='labres-field labres-w-50'>
+                <span class='labres-label'>Grade Level and Section:</span>
+                <span class='labres-value'>" . htmlspecialchars('Grade ' . $formData['gradeLevel'] . ' - ' . $formData['sections']) . "</span>
+            </div>
+            <div class='labres-field labres-w-50'>
+                <span class='labres-label'>Number of Students:</span>
+                <span class='labres-value' style='min-width: 80pt;'>" . count($students) . "</span>
+            </div>
+        </div>
+
+        <div class='labres-row'>
+            <div class='labres-field labres-w-50'>
+                <span class='labres-label'>Subject:</span>
+                <span class='labres-value'>" . htmlspecialchars($formData['subject'] ?? '') . "</span>
+            </div>
+            <div class='labres-field labres-w-50'>
+                <span class='labres-label'>Teacher In-Charge:</span>
+                <span class='labres-value'>" . htmlspecialchars($formData['teacherInCharge'] ?? '') . "</span>
+            </div>
+        </div>
+
+        <div class='labres-row'>
+            <div class='labres-field labres-w-50'>
+                <span class='labres-label'>Date/Inclusive Dates:</span>
+                <span class='labres-value'>" . htmlspecialchars($formData['inclusiveDate'] ?? '') . "</span>
+            </div>
+            <div class='labres-field labres-w-50'>
+                <span class='labres-label'>Inclusive Time of Use:</span>
+                <span class='labres-value'>" . htmlspecialchars($formData['inclusiveTime'] ?? '') . "</span>
+            </div>
+        </div>
+
+        <div class='labres-row'>
+            <div class='labres-field labres-w-100'>
+                <span class='labres-label'>Preferred Lab Room:</span>
+                <span class='labres-value' style='min-width: 350pt;'>" . htmlspecialchars($formData['scilabName'] ?? '') . "</span>
+            </div>
+        </div>
+
+        <div class='labres-row'>
+            <div class='labres-field labres-w-50'>
+                <span class='labres-label'>Requested by:</span>
+                <span class='labres-value' style='min-width: 200pt;'>" . htmlspecialchars($requesterName) . "</span>
+            </div>
+            <div class='labres-field labres-w-50'>
+                <span class='labres-label'>Date Requested:</span>
+                <span class='labres-value' style='min-width: 160pt;'>" . htmlspecialchars($dateRequested) . "</span>
+            </div>
+        </div>
+
+        <div class='labres-student-list'>
+            <p>If user of the lab is a group, list down the names of students.</p>
+            __LABRES_STUDENTS__
+        </div>
+
+        <div class='labres-signature-section'>
+            <div class='labres-row'>
+                <div class='labres-field labres-w-100'>
+                    <span class='labres-label'>Endorsed by:</span>
+                    <span class='labres-signature-line'>" . htmlspecialchars($formData['teacherInCharge'] ?? '') . "</span>
+                    <span class='labres-signature-label'>Subject Teacher/Unit Head</span>
+                </div>
+            </div>
+            <div class='labres-row' style='margin-top: 20px;'>
+                <div class='labres-field labres-w-100'>
+                    <span class='labres-label'>Approved by:</span>
+                    <span class='labres-signature-line'>" . htmlspecialchars($srsString) . "</span>
+                    <span class='labres-signature-label'>SRS / SRA</span>
+                </div>
+            </div>
+        </div>
+
+        <div class='labres-footer-text'>
+            PSHS-00-F-CID-05-Ver02-Rev1-10/18/20
+        </div>
+
+    </div>
+
+    <div class='page page-permit'>
+
+        <div class='permit-header'>
+            <div class='permit-logo'>
+                <img src='" . $logoPath . "' alt='Logo' style='width:60px; height:auto;'>
+            </div>
+            <div class='permit-header-text'>
+                <p>Republic of the Philippines</p>
+                <p>DEPARTMENT OF SCIENCE AND TECHNOLOGY</p>
+                <p>PHILIPPINE SCIENCE HIGH SCHOOL</p>
+                <p>ILOCOS REGION CAMPUS</p>
+            </div>
+        </div>
+
+        <div class='permit-title'>
+            SCIENCE LABORATORY WORK PERMIT No:
+            <span class='permit-value' style='min-width: 200pt;'>" . htmlspecialchars($formData['controlNumber'] ?? '') . "</span>
+        </div>
+
+        <div class='permit-row'>
+            <div class='permit-field permit-w-50'>
+                Date:
+                <span class='permit-value' style='min-width: 140pt;'>" . htmlspecialchars($dateRequested) . "</span>
+            </div>
+            <div class='permit-field permit-w-50'></div>
+        </div>
+
+        <div class='permit-line-block'>
+            Name/s:
+            <span class='permit-value' style='min-width: 400pt;'>" . htmlspecialchars($requesterName) . "</span>
+        </div>
+        __PERMIT_NAMES__
+
+        <div class='permit-row'>
+            <div class='permit-field permit-w-50'>
+                Year and Section:
+                <span class='permit-value' style='min-width: 180pt;'>" . htmlspecialchars('Grade ' . $formData['gradeLevel'] . ' - ' . $formData['sections']) . "</span>
+            </div>
+            <div class='permit-field permit-w-50'></div>
+        </div>
+
+        <div class='permit-line-block'>
+            Inclusive Date/s of Activity:
+            <span class='permit-value' style='min-width: 300pt;'>" . htmlspecialchars(($formData['inclusiveDate'] ?? '') . (!empty($formData['inclusiveTime']) ? ' (' . $formData['inclusiveTime'] . ')' : '')) . "</span>
+        </div>
+
+        <br>
+        <div class='permit-note'>
+            (To be filled out by the Students)
+        </div>
+
+        <div class='permit-line-block'>
+            <strong>Specific Laboratory Activities to be Undertaken Schedule (date and time)</strong>
+        </div>
+
+        <div class='permit-multi-lines'>
+            <span>" . htmlspecialchars($formData['subjectTopic'] ?? '') . "</span>
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+
+        <div class='permit-note' style='font-weight: bold;'>
+            (STRICTLY follow the scheduled activities. For changes inform the Science Research Specialists/Assistant)
+        </div>
+
+        <br>
+        <div class='permit-signature-section'>
+            Signature of Student/s:
+            <div class='permit-multi-lines'>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+
+        <br>
+        <div class='permit-note'>
+            (To be filled out by the Subject Teacher)
+        </div>
+
+        <div class='permit-row'>
+            <div class='permit-field permit-w-50'>
+                Designated Supervisor:
+                <span class='permit-signature-line'></span>
+                <span class='permit-signature-label' style='margin-left: 170pt;'>Name/Signature</span>
+            </div>
+            <div class='permit-field permit-w-50' style='text-align: right;'>
+                <span class='permit-signature-line'></span>
+                <span class='permit-signature-label'>Signature over Printed Name of Subject Teacher</span>
+            </div>
+        </div>
+
+        <div class='permit-approval-block'>
+            <div class='permit-line-block'>
+                Noted:
+            </div>
+            <br>
+            <div class='permit-line-block' style='font-weight: bold;'>
+                PISANDAGAN / MRAGASA / EPURISIMA
+            </div>
+            <div class='permit-line-block'>
+                S.R.S.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                S.R.S.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                S.R.A.
+            </div>
+            <br>
+            <div class='permit-line-block' style='margin-top: 10pt;'>
+                Approved:
+            </div>
+            <br><br>
+            <div class='permit-line-block'>
+                <strong>MARY ANN R. LAGUA</strong>
+            </div>
+            <div class='permit-line-block'>
+                CID Chief
+            </div>
+        </div>
+
+        <div class='permit-footer-text'>
+            PSHS-08-F-CID-13-Rev0-11/07/19
+        </div>
+
+    </div>
 
 </body>
 </html>
 ";
 
+// Fill reservation form student lines (up to 5)
+$labresStudents = '';
+for ($i = 1; $i <= 5; $i++) {
+    $studentValue = htmlspecialchars($students[$i - 1] ?? '');
+    $labresStudents .= "<div class='labres-student-item'>{$i}. <span class='labres-student-line'>{$studentValue}</span></div>";
+}
+$html = str_replace('__LABRES_STUDENTS__', $labresStudents, $html);
+
+// Fill work permit remaining name lines with student names
+$permitNames = '';
+if (!empty($students)) {
+    $permitNames = "<div class='permit-line-block'><span class='permit-value' style='min-width: 400pt;'>" . htmlspecialchars(implode(', ', $students)) . "</span></div>";
+}
+$html = str_replace('__PERMIT_NAMES__', $permitNames, $html);
+
 // Generate PDF
 $options = new Options();
 $options->set('isHtml5ParserEnabled', true);
 $options->set('isRemoteEnabled', true);
-try {
-    $options = new Options();
-    $options->set('isHtml5ParserEnabled', true);
-    $options->set('isRemoteEnabled', true);
-    // Set a temp directory for Dompdf, which can help on restricted hosting environments
-    $options->set('tempDir', sys_get_temp_dir());
-    // Set chroot to the project root for security and to help resolve local file paths
-    $options->set('chroot', dirname(__DIR__));
-} catch (Exception $e) {
-    die("PDF Generation Error: " . $e->getMessage());
-}
+// Set a temp directory for Dompdf, which can help on restricted hosting environments
+$options->set('tempDir', sys_get_temp_dir());
+// Set chroot to the project root for security and to help resolve local file paths
+$options->set('chroot', dirname(__DIR__));
+
 $dompdf = new Dompdf($options);
 $dompdf->loadHtml($html);
 $dompdf->setPaper('A4', 'portrait');
 $dompdf->render();
-try {
-    $dompdf = new Dompdf($options);
-    $dompdf->loadHtml($html);
-    $dompdf->setPaper('A4', 'portrait');
-    $dompdf->render();
 
 $filename = "Lab_Request_Form_" . ($formData['controlNumber'] ?? $formID) . ".pdf";
 $dompdf->stream($filename, ["Attachment" => false]);
-    $filename = "Lab_Request_Form_" . ($formData['controlNumber'] ?? $formID) . ".pdf";
-    $dompdf->stream($filename, ["Attachment" => false]);
-} catch (Exception $e) {
-    die("PDF Generation Error: " . $e->getMessage());
-}
 
 ?>
