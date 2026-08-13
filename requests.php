@@ -224,6 +224,7 @@
             .timeframe-buttons .btn {
                 font-size: 13px;
                 padding: 6px 12px;
+                border-color: #2B55C4;
             }
 
             .timeframe-buttons .btn.active {
