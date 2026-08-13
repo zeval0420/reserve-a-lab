@@ -538,7 +538,7 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
     $stmt->bind_param(
-        "sisssssssssssss",
+        "sissssssssssssss",
         $scilabName,
         $grade,
         $sections,
