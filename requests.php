@@ -263,8 +263,9 @@
               /* ===== ADDED: Timeframe header and toggle ===== */
                 .timeframe-header {
                     display: flex;
-                    justify-content: space-between;
+                    justify-content: flex-end;
                     align-items: center;
+                    gap: 10px;
                     margin-bottom: 12px;
                 }
 
