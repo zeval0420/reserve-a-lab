@@ -1,4 +1,8 @@
 <?php
+
+    error_reporting(E_ALL);
+    ini_set('display_errors', 1);
+
     include('../scilab/helperFiles/db_connection.php');
     include('helperFiles/session_handler.php');
 
@@ -19,7 +23,70 @@
     $syResult = $conn->query("SELECT value FROM current WHERE description = 'School Year' ORDER BY id DESC LIMIT 1");
     $currentSY = ($syResult && $syResult->num_rows > 0) ? $syResult->fetch_assoc()['value'] : null;
 
-    $sql = "SELECT * FROM scilab_form_requests WHERE statusScilabPersonnel = '$statusFilter' AND sy = '$currentSY' ORDER BY dateRequested DESC";
+
+
+    // ===== ADDED: Time frame / manual date filter =====
+    $filterMode = $_GET['filterMode'] ?? 'timeframe';
+
+    // Only allow these two modes
+    if (!in_array($filterMode, ['timeframe', 'manual'])) {
+        $filterMode = 'timeframe';
+    }
+
+    $timeFrame = $_GET['timeframe'] ?? 'month';
+
+    $timeFrameDays = [
+        'month' => 30,
+        '3months' => 90,
+        'year' => 365
+    ];
+
+    if (!isset($timeFrameDays[$timeFrame])) {
+        $timeFrame = 'month';
+    }
+
+    $days = $timeFrameDays[$timeFrame];
+
+    $fromDate = $_GET['fromDate'] ?? '';
+    $toDate = $_GET['toDate'] ?? '';
+
+
+    // ===== ADDED: Build date filter =====
+    if (
+        $filterMode === 'manual' &&
+        !empty($fromDate) &&
+        !empty($toDate)
+    ) {
+
+        // From Date starts at 12:00 AM
+        // To Date includes the entire day
+        $dateFilter = "
+            AND dateRequested >= '$fromDate 00:00:00'
+            AND dateRequested < DATE_ADD('$toDate', INTERVAL 1 DAY)
+        ";
+
+    } elseif ($filterMode === 'manual') {
+
+        // Manual mode but dates have not been selected yet
+        // Do not display any requests
+        $dateFilter = "AND 1 = 0";
+
+    } else {
+
+        // Automatic timeframe mode
+        $dateFilter = "
+            AND dateRequested >= DATE_SUB(NOW(), INTERVAL $days DAY)
+        ";
+    }
+    // ===== END ADDED =====
+
+    $sql = "
+        SELECT *
+        FROM scilab_form_requests
+        WHERE statusScilabPersonnel = '$statusFilter'
+        $dateFilter
+        ORDER BY dateRequested DESC
+    ";
     $result = $conn->query($sql);
 
     $requests = [];
@@ -39,6 +106,8 @@
     $countQuery = $conn->query("
         SELECT statusScilabPersonnel AS status, COUNT(*) AS total
         FROM scilab_form_requests
+        WHERE 1 = 1
+        $dateFilter
         GROUP BY statusScilabPersonnel
     ");
 
@@ -270,6 +339,184 @@
             .multiselect-container > li.active > a input[type="checkbox"]:checked::after {
                 border-color: #2B55C4;
             }
+
+            /* ===== ADDED: Request timeframe filter ===== */
+            .requests-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                width: 100%;
+                margin-bottom: 15px;
+            }
+
+            .requests-header h2 {
+                margin: 0;
+            }
+
+            .timeframe-header {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-end;
+                gap: 8px;
+                margin: 0;
+            }
+
+            .timeframe-top {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .timeframe-title {
+                font-size: 15px;
+                font-weight: 600;
+                color: #333;
+                margin: 0;
+                white-space: nowrap;
+            }
+
+            .timeframe-buttons {
+                display: flex;
+                justify-content: flex-end;
+                gap: 8px;
+                margin: 0 0 15px 0;
+            }
+
+            .timeframe-buttons .btn {
+                font-size: 13px;
+                padding: 6px 12px;
+                border-color: #2B55C4;
+            }
+
+            .timeframe-buttons .btn.active {
+                background: #2B55C4;
+                color: white;
+                border-color: #2B55C4;
+            }
+
+
+            /* Pill toggle */
+
+            .timeframe-toggle {
+                position: relative;
+                display: inline-block;
+                width: 48px;
+                height: 24px;
+            }
+
+            .timeframe-toggle input {
+                opacity: 0;
+                width: 0;
+                height: 0;
+            }
+
+            .timeframe-slider {
+                position: absolute;
+                cursor: pointer;
+                inset: 0;
+                background-color: #ccc;
+                border-radius: 24px;
+                transition: 0.2s;
+            }
+
+            .timeframe-slider:before {
+                content: "";
+                position: absolute;
+                height: 18px;
+                width: 18px;
+                left: 3px;
+                top: 3px;
+                background-color: white;
+                border-radius: 50%;
+                transition: 0.2s;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            }
+
+            .timeframe-toggle input:checked + .timeframe-slider {
+                background-color: #2B55C4;
+            }
+
+            .timeframe-toggle input:checked + .timeframe-slider:before {
+                transform: translateX(24px);
+            }
+
+
+            /* Manual date range */
+
+            .manual-date-container {
+                display: flex;
+                justify-content: flex-end;
+                align-items: flex-end;
+                gap: 10px;
+                margin-bottom: 15px;
+            }
+
+            .manual-date-group {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+            }
+
+            .manual-date-group label {
+                font-size: 12px;
+                font-weight: 600;
+                color: #555;
+            }
+
+            .manual-date-group input {
+                font-size: 13px;
+                padding: 6px 8px;
+                border: 1px solid #ccc;
+                border-radius: 5px;
+            }
+
+            .manual-date-submit {
+                height: 34px;
+                padding: 5px 14px;
+                border: none;
+                border-radius: 5px;
+                background-color: #2B55C4;
+                color: white;
+                cursor: pointer;
+            }
+
+            .manual-date-submit:hover {
+                background-color: #21449f;
+            }
+
+
+            @media (max-width: 768px) {
+
+                .requests-header {
+                    flex-direction: column;
+                    gap: 10px;
+                }
+
+                .timeframe-header {
+                    width: 100%;
+                    align-items: flex-start;
+                }
+
+                .timeframe-top {
+                    flex-wrap: wrap;
+                }
+
+                .timeframe-title {
+                    white-space: normal;
+                }
+
+                .timeframe-buttons {
+                    justify-content: flex-start;
+                    flex-wrap: wrap;
+                }
+
+                .manual-date-container {
+                    justify-content: flex-start;
+                    flex-wrap: wrap;
+                }
+            }
+
+            /* ===== END ADDED ===== */
         </style>
     </head>
     <body>
@@ -279,20 +526,152 @@
             
             <div class="form-container">
                 <div class="action-header">
-                    <h2>Request Forms Management</h2>
-                    <div>
-                        <button id="scanBarcodeBtn" class="btn-scan">Generate Summary</button>
+                    <div class="requests-header">
+                        <h2>Request Forms Management</h2>
+                        <div>
+                            <button id="scanBarcodeBtn" class="btn-scan">Generate Summary</button>
+                        </div>
+
+                        <!-- ===== UPDATED: Request header with timeframe controls ===== -->
+                        <div class="timeframe-header">
+                            <!-- Heading + Toggle -->
+                            <div class="timeframe-top">
+
+                                <h5 class="timeframe-title">
+                                    Display Past Requests within Timeframe:
+                                </h5>
+
+                                <form method="GET" id="filterModeForm">
+
+                                    <input type="hidden"
+                                        name="status"
+                                        value="<?= htmlspecialchars($statusFilter) ?>">
+
+                                    <input type="hidden"
+                                        name="timeframe"
+                                        value="<?= htmlspecialchars($timeFrame) ?>">
+
+                                    <input type="hidden"
+                                        name="fromDate"
+                                        value="<?= htmlspecialchars($fromDate) ?>">
+
+                                    <input type="hidden"
+                                        name="toDate"
+                                        value="<?= htmlspecialchars($toDate) ?>">
+
+                                    <input
+                                        type="hidden"
+                                        name="filterMode"
+                                        id="filterMode"
+                                        value="<?= htmlspecialchars($filterMode) ?>"
+                                    >
+
+                                    <label class="timeframe-toggle">
+
+                                        <input
+                                            type="checkbox"
+                                            id="timeframeToggle"
+                                            <?= $filterMode === 'timeframe' ? 'checked' : '' ?>
+                                        >
+
+                                        <span class="timeframe-slider"></span>
+
+                                    </label>
+
+                                </form>
+
+                            </div>
+
+
+                            <?php if ($filterMode === 'timeframe'): ?>
+
+                                <!-- ===== ON: Simple timeframe buttons ===== -->
+
+                                <div class="timeframe-buttons">
+
+                                    <a href="?status=<?= urlencode($statusFilter) ?>&filterMode=timeframe&timeframe=month"
+                                    class="btn btn-outline-primary <?= $timeFrame === 'month' ? 'active' : '' ?>">
+                                        Month
+                                    </a>
+
+                                    <a href="?status=<?= urlencode($statusFilter) ?>&filterMode=timeframe&timeframe=3months"
+                                    class="btn btn-outline-primary <?= $timeFrame === '3months' ? 'active' : '' ?>">
+                                        3 Months
+                                    </a>
+
+                                    <a href="?status=<?= urlencode($statusFilter) ?>&filterMode=timeframe&timeframe=year"
+                                    class="btn btn-outline-primary <?= $timeFrame === 'year' ? 'active' : '' ?>">
+                                        Year
+                                    </a>
+
+                                </div>
+
+                            <?php else: ?>
+
+                                <!-- ===== OFF: Manual date range ===== -->
+
+                                <form method="GET" class="manual-date-container">
+
+                                    <input type="hidden"
+                                        name="status"
+                                        value="<?= htmlspecialchars($statusFilter) ?>">
+
+                                    <input type="hidden"
+                                        name="filterMode"
+                                        value="manual">
+
+                                    <div class="manual-date-group">
+
+                                        <label for="fromDate">
+                                            From Date
+                                        </label>
+
+                                        <input
+                                            type="date"
+                                            id="fromDate"
+                                            name="fromDate"
+                                            value="<?= htmlspecialchars($fromDate) ?>"
+                                            required
+                                        >
+
+                                    </div>
+
+                                    <div class="manual-date-group">
+
+                                        <label for="toDate">
+                                            To Date
+                                        </label>
+
+                                        <input
+                                            type="date"
+                                            id="toDate"
+                                            name="toDate"
+                                            value="<?= htmlspecialchars($toDate) ?>"
+                                            required
+                                        >
+
+                                    </div>
+
+                                    <button type="submit" class="manual-date-submit">
+                                        Apply
+                                    </button>
+
+                                </form>
+
+                            <?php endif; ?>
+
+                        </div>
+                        <!-- ===== END UPDATED ===== -->
                     </div>
                 </div>
 
                 <div class="status-buttons mb-3">
-                    <a href="?status=Pending" class="btn-liquid <?= $statusFilter === 'Pending' ? 'active' : '' ?>">
+                    <a href="?status=Pending&filterMode=<?= urlencode($filterMode) ?>&timeframe=<?= urlencode($timeFrame) ?>&fromDate=<?= urlencode($fromDate) ?>&toDate=<?= urlencode($toDate) ?>" class="btn-liquid <?= $statusFilter === 'Pending' ? 'active' : '' ?>">
                         <span class="badge badge-pill badge-secondary"><?= $counts['Pending'] ?></span> Pending
                     </a>
-                    <a href="?status=Approved" class="btn-liquid-success <?= $statusFilter === 'Approved' ? 'active' : '' ?>">
-                        <span class="badge badge-pill badge-secondary"><?= $counts['Approved'] ?></span> Approved
+                    <a href="?status=Approved&filterMode=<?= urlencode($filterMode) ?>&timeframe=<?= urlencode($timeFrame) ?>&fromDate=<?= urlencode($fromDate) ?>&toDate=<?= urlencode($toDate) ?>" class="btn-liquid-success <?= $statusFilter === 'Approved' ? 'active' : '' ?>"><span class="badge badge-pill badge-secondary"><?= $counts['Approved'] ?></span> Approved
                     </a>
-                    <a href="?status=Rejected" class="btn-liquid-danger <?= $statusFilter === 'Rejected' ? 'active' : '' ?>">
+                    <a href="?status=Rejected&filterMode=<?= urlencode($filterMode) ?>&timeframe=<?= urlencode($timeFrame) ?>&fromDate=<?= urlencode($fromDate) ?>&toDate=<?= urlencode($toDate) ?>" class="btn-liquid-danger <?= $statusFilter === 'Rejected' ? 'active' : '' ?>">
                         <span class="badge badge-pill badge-secondary"><?= $counts['Rejected'] ?></span> Rejected
                     </a>
                 </div>
@@ -763,5 +1142,18 @@
                 window.open(url, '_blank');
             });
         });
+
+        // ===== ADDED: Timeframe toggle =====
+        $('#timeframeToggle').on('change', function () {
+
+            if ($(this).is(':checked')) {
+                $('#filterMode').val('timeframe');
+            } else {
+                $('#filterMode').val('manual');
+            }
+
+            $('#filterModeForm').submit();
+        });
+        // ===== END ADDED =====
     </script>
 </html>
