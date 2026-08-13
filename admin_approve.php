@@ -82,7 +82,7 @@
         SELECT *
         FROM scilab_form_requests
         WHERE $dateFilter
-        statusScilabPersonnel = '$statusFilter'
+        AND statusScilabPersonnel = '$statusFilter'
         ORDER BY dateRequested DESC
     ";
     $result = $conn->query($sql);
