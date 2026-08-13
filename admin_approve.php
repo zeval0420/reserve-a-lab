@@ -61,19 +61,21 @@
         // From Date starts at 12:00 AM
         // To Date includes the entire day
         $dateFilter = "
-            dateRequested >= '$fromDate 00:00:00'
-            dateRequested < DATE_ADD('$toDate', INTERVAL 1 DAY)
+            AND dateRequested >= '$fromDate 00:00:00'
+            AND dateRequested < DATE_ADD('$toDate', INTERVAL 1 DAY)
         ";
 
     } elseif ($filterMode === 'manual') {
+
         // Manual mode but dates have not been selected yet
         // Do not display any requests
-        $dateFilter = "1 = 0";
+        $dateFilter = "AND 1 = 0";
 
     } else {
+
         // Automatic timeframe mode
         $dateFilter = "
-            dateRequested >= DATE_SUB(NOW(), INTERVAL $days DAY)
+            AND dateRequested >= DATE_SUB(NOW(), INTERVAL $days DAY)
         ";
     }
     // ===== END ADDED =====
@@ -81,8 +83,8 @@
     $sql = "
         SELECT *
         FROM scilab_form_requests
-        WHERE $dateFilter
-        AND statusScilabPersonnel = '$statusFilter'
+        WHERE statusScilabPersonnel = '$statusFilter'
+        $dateFilter
         ORDER BY dateRequested DESC
     ";
     $result = $conn->query($sql);
@@ -104,7 +106,8 @@
     $countQuery = $conn->query("
         SELECT statusScilabPersonnel AS status, COUNT(*) AS total
         FROM scilab_form_requests
-        WHERE $dateFilter
+        WHERE 1 = 1
+        $dateFilter
         GROUP BY statusScilabPersonnel
     ");
 
