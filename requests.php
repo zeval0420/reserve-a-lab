@@ -47,7 +47,7 @@
     $timeFrame = $_GET['timeframe'] ?? 'month';
 
     $timeFrameDays = [
-        'month' => 2,
+        'month' => 30,
         '3months' => 90,
         'year' => 365
     ];
@@ -56,7 +56,7 @@
         $timeFrame = 'month';
     }
 
-    $cutoffDate = date('Y-m-d H:i:s', strtotime("-{$timeFrameDays[$timeFrame]} days"));
+    $days = $timeFrameDays[$timeFrame];
     // ===== END ADDED =====
 
     // requests
@@ -66,7 +66,7 @@
         WHERE requesterEmployeeID='$userID'
         AND sy='$currentSY'
         AND statusScilabPersonnel='$statusFilter'
-        AND dateRequested >= '$cutoffDate'
+        AND dateRequested >= DATE_SUB(NOW(), INTERVAL $days DAY)
         ORDER BY dateRequested DESC
     ";
     $result = $conn->query($sql);
