@@ -43,6 +43,22 @@
     // status filter
     $statusFilter = $_GET['status'] ?? 'Pending';
 
+    // ===== ADDED: Time frame filter =====
+    $timeFrame = $_GET['timeframe'] ?? 'month';
+
+    $timeFrameDays = [
+        'month' => 30,
+        '3months' => 90,
+        'year' => 365
+    ];
+
+    if (!isset($timeFrameDays[$timeFrame])) {
+        $timeFrame = 'month';
+    }
+
+    $cutoffDate = date('Y-m-d H:i:s', strtotime("-{$timeFrameDays[$timeFrame]} days"));
+    // ===== END ADDED =====
+
     // requests
     $sql = "
         SELECT *
@@ -50,6 +66,7 @@
         WHERE requesterEmployeeID='$userID'
         AND sy='$currentSY'
         AND statusScilabPersonnel='$statusFilter'
+        AND dateRequested >= '$cutoffDate'
         ORDER BY dateRequested DESC
     ";
     $result = $conn->query($sql);
@@ -193,10 +210,34 @@
                 font-weight: 600;
             }
 
-            .material-line-detailed .material-text {
-                flex: 1;
-                line-height: 1.4;
+            .material-line-detailed .material-text {flex: 1;line-height: 1.4;}
+
+            /* ===== ADDED: Time frame buttons ===== */
+            .timeframe-buttons {
+                display: flex;
+                justify-content: flex-end;
+                gap: 8px;
+                margin-bottom: 15px;
             }
+
+            .timeframe-buttons .btn {
+                font-size: 13px;
+                padding: 6px 12px;
+            }
+
+            .timeframe-buttons .btn.active {
+                background: #2B55C4;
+                color: white;
+                border-color: #2B55C4;
+            }
+
+            @media (max-width: 768px) {
+                .timeframe-buttons {
+                    justify-content: flex-start;
+                    flex-wrap: wrap;
+                }
+            }
+            /* ===== END ADDED ===== */
         </style>
     </head>
 
@@ -208,16 +249,35 @@
 
                 <h2>My Requests</h2>
 
+                <!-- ===== ADDED: Time frame filter buttons ===== -->
+                <div class="timeframe-buttons">
+                    <a href="?status=<?= urlencode($statusFilter) ?>&timeframe=month"
+                    class="btn btn-outline-primary <?= $timeFrame === 'month' ? 'active' : '' ?>">
+                        Month
+                    </a>
+
+                    <a href="?status=<?= urlencode($statusFilter) ?>&timeframe=3months"
+                    class="btn btn-outline-primary <?= $timeFrame === '3months' ? 'active' : '' ?>">
+                        3 Months
+                    </a>
+
+                    <a href="?status=<?= urlencode($statusFilter) ?>&timeframe=year"
+                    class="btn btn-outline-primary <?= $timeFrame === 'year' ? 'active' : '' ?>">
+                        Year
+                    </a>
+                </div>
+                <!-- ===== END ADDED ===== -->
+
                 <br>
 
                 <div class="status-buttons mb-3">
-                    <a href="?status=Pending" class="btn-liquid <?= $statusFilter==='Pending'?'active':'' ?>">
+                    <a href="?status=Pending&timeframe=<?= urlencode($timeFrame) ?>" class="btn-liquid <?= $statusFilter==='Pending'?'active':'' ?>">
                         <span class="badge badge-secondary"><?= $counts['Pending'] ?></span> Pending
                     </a>
-                    <a href="?status=Approved" class="btn-liquid-success <?= $statusFilter==='Approved'?'active':'' ?>">
+                    <a href="?status=Approved&timeframe=<?= urlencode($timeFrame) ?>" class="btn-liquid-success <?= $statusFilter==='Approved'?'active':'' ?>">
                         <span class="badge badge-secondary"><?= $counts['Approved'] ?></span> Approved
                     </a>
-                    <a href="?status=Rejected" class="btn-liquid-danger <?= $statusFilter==='Rejected'?'active':'' ?>">
+                    <a href="?status=Rejected&timeframe=<?= urlencode($timeFrame) ?>" class="btn-liquid-danger <?= $statusFilter==='Rejected'?'active':'' ?>">
                         <span class="badge badge-secondary"><?= $counts['Rejected'] ?></span> Rejected
                     </a>
                 </div>
