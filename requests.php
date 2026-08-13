@@ -47,7 +47,7 @@
     $timeFrame = $_GET['timeframe'] ?? 'month';
 
     $timeFrameDays = [
-        'month' => 5,
+        'month' => 3,
         '3months' => 90,
         'year' => 365
     ];
