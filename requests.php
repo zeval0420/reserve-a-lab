@@ -396,7 +396,7 @@
                         Display Past Requests within Timeframe:
                     </h5>
 
-                    <!-- Toggle -->
+                    <!-- ===== UPDATED: Timeframe toggle ===== -->
                     <form method="GET" id="filterModeForm">
 
                         <input type="hidden" name="status" value="<?= htmlspecialchars($statusFilter) ?>">
@@ -404,19 +404,25 @@
                         <input type="hidden" name="fromDate" value="<?= htmlspecialchars($fromDate) ?>">
                         <input type="hidden" name="toDate" value="<?= htmlspecialchars($toDate) ?>">
 
+                        <!-- This hidden field ALWAYS gets submitted -->
+                        <input
+                            type="hidden"
+                            name="filterMode"
+                            id="filterMode"
+                            value="<?= htmlspecialchars($filterMode) ?>"
+                        >
+
                         <label class="timeframe-toggle">
                             <input
                                 type="checkbox"
-                                name="filterMode"
-                                value="timeframe"
+                                id="timeframeToggle"
                                 <?= $filterMode === 'timeframe' ? 'checked' : '' ?>
-                                onchange="this.form.submit()"
                             >
                             <span class="timeframe-slider"></span>
                         </label>
 
                     </form>
-
+                    <!-- ===== END UPDATED ===== -->
                 </div>
 
 
@@ -499,6 +505,7 @@
                     class="btn-liquid-danger <?= $statusFilter==='Rejected'?'active':'' ?>">
                         <span class="badge badge-secondary"><?= $counts['Rejected'] ?></span> Rejected
                     </a>
+
                 </div>
 
                 <br>
@@ -707,5 +714,17 @@
                 }
             });
         });
+        // ===== ADDED: Timeframe toggle =====
+        $('#timeframeToggle').on('change', function () {
+
+            if ($(this).is(':checked')) {
+                $('#filterMode').val('timeframe');
+            } else {
+                $('#filterMode').val('manual');
+            }
+
+            $('#filterModeForm').submit();
+        });
+        // ===== END ADDED =====
     </script>
 </html>
