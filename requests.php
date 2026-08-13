@@ -218,6 +218,7 @@
                 justify-content: flex-end;
                 gap: 8px;
                 margin-bottom: 15px;
+                border-color: #2B55C4;
             }
 
             .timeframe-buttons .btn {
