@@ -102,7 +102,6 @@
         SELECT *
         FROM scilab_form_requests
         WHERE requesterEmployeeID='$userID'
-        AND sy='$currentSY'
         AND statusScilabPersonnel='$statusFilter'
         $dateFilter
         ORDER BY dateRequested DESC
@@ -115,7 +114,6 @@
         SELECT statusScilabPersonnel AS status, COUNT(*) AS total
         FROM scilab_form_requests
         WHERE requesterEmployeeID='$userID'
-        AND sy='$currentSY'
         $dateFilter
         GROUP BY statusScilabPersonnel
     ");
