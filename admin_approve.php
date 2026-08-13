@@ -1,4 +1,8 @@
 <?php
+
+    error_reporting(E_ALL);
+    ini_set('display_errors', 1);
+
     include('../scilab/helperFiles/db_connection.php');
     include('helperFiles/session_handler.php');
 
@@ -57,21 +61,19 @@
         // From Date starts at 12:00 AM
         // To Date includes the entire day
         $dateFilter = "
-            AND dateRequested >= '$fromDate 00:00:00'
-            AND dateRequested < DATE_ADD('$toDate', INTERVAL 1 DAY)
+            dateRequested >= '$fromDate 00:00:00'
+            dateRequested < DATE_ADD('$toDate', INTERVAL 1 DAY)
         ";
 
     } elseif ($filterMode === 'manual') {
-
         // Manual mode but dates have not been selected yet
         // Do not display any requests
-        $dateFilter = "AND 1 = 0";
+        $dateFilter = "1 = 0";
 
     } else {
-
         // Automatic timeframe mode
         $dateFilter = "
-            AND dateRequested >= DATE_SUB(NOW(), INTERVAL $days DAY)
+            dateRequested >= DATE_SUB(NOW(), INTERVAL $days DAY)
         ";
     }
     // ===== END ADDED =====
@@ -79,8 +81,8 @@
     $sql = "
         SELECT *
         FROM scilab_form_requests
-        WHERE statusScilabPersonnel = '$statusFilter'
-        $dateFilter
+        WHERE $dateFilter
+        statusScilabPersonnel = '$statusFilter'
         ORDER BY dateRequested DESC
     ";
     $result = $conn->query($sql);
