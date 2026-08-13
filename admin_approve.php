@@ -104,7 +104,7 @@
     $countQuery = $conn->query("
         SELECT statusScilabPersonnel AS status, COUNT(*) AS total
         FROM scilab_form_requests
-        $dateFilter
+        WHERE $dateFilter
         GROUP BY statusScilabPersonnel
     ");
 
