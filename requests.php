@@ -252,6 +252,19 @@
             .material-line-detailed .material-text {flex: 1;line-height: 1.4;}
 
             /* ===== ADDED: Time frame buttons ===== */
+
+            .requests-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                width: 100%;
+                margin-bottom: 15px;
+            }
+
+            .requests-header h2 {
+                margin: 0;
+            }
+
             .timeframe-buttons {
                 display: flex;
                 justify-content: flex-end;
