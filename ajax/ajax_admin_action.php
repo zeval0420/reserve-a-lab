@@ -135,6 +135,18 @@
                 exit();
             }
 
+            // Check for control number duplication
+            $checkStmt = $conn->prepare("SELECT id FROM scilab_form_requests WHERE controlNumber = ? AND id != ?");
+            $checkStmt->bind_param("ii", $controlNumber, $id);
+            $checkStmt->execute();
+            $checkResult = $checkStmt->get_result();
+            if ($checkResult->num_rows > 0) {
+                echo "Control number already exists.";
+                $checkStmt->close();
+                exit();
+            }
+            $checkStmt->close();
+
             $stmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Approved', supervisor_status = 'approved', subject_teacher_status = 'approved', lab_personnel_status = 'approved', cid_chief_status = 'approved', controlNumber = ?, feedback = ? WHERE id = ?");
             $stmt->bind_param("isi", $controlNumber, $remarks, $id);
             $stmt->execute();

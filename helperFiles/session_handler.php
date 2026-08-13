@@ -6,7 +6,11 @@
         session_unset();
         session_destroy();
         $_SESSION['session_expired'] = true;
-        header("Location: index.php");
+        $redirect = '';
+        if (basename($_SERVER['PHP_SELF']) !== 'index.php') {
+            $redirect = '?redirect=' . urlencode(basename($_SERVER['REQUEST_URI']));
+        }
+        header("Location: index.php" . $redirect);
         exit();
     }
     $_SESSION['last_activity'] = time();
