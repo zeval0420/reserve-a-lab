@@ -414,45 +414,45 @@
 
         <div class="main-wrapper">
             <div class="form-container">
+                <div class="requests-header">
+                    <h2>My Requests</h2>
 
-                <h2>My Requests</h2>
+                    <!-- ===== ADDED: Timeframe controls ===== -->
+                    <div class="timeframe-header">
 
-                <!-- ===== ADDED: Timeframe controls ===== -->
-                <div class="timeframe-header">
+                        <h5 class="timeframe-title">
+                            Display Past Requests within Timeframe:
+                        </h5>
 
-                    <h5 class="timeframe-title">
-                        Display Past Requests within Timeframe:
-                    </h5>
+                        <!-- ===== UPDATED: Timeframe toggle ===== -->
+                        <form method="GET" id="filterModeForm">
 
-                    <!-- ===== UPDATED: Timeframe toggle ===== -->
-                    <form method="GET" id="filterModeForm">
+                            <input type="hidden" name="status" value="<?= htmlspecialchars($statusFilter) ?>">
+                            <input type="hidden" name="timeframe" value="<?= htmlspecialchars($timeFrame) ?>">
+                            <input type="hidden" name="fromDate" value="<?= htmlspecialchars($fromDate) ?>">
+                            <input type="hidden" name="toDate" value="<?= htmlspecialchars($toDate) ?>">
 
-                        <input type="hidden" name="status" value="<?= htmlspecialchars($statusFilter) ?>">
-                        <input type="hidden" name="timeframe" value="<?= htmlspecialchars($timeFrame) ?>">
-                        <input type="hidden" name="fromDate" value="<?= htmlspecialchars($fromDate) ?>">
-                        <input type="hidden" name="toDate" value="<?= htmlspecialchars($toDate) ?>">
-
-                        <!-- This hidden field ALWAYS gets submitted -->
-                        <input
-                            type="hidden"
-                            name="filterMode"
-                            id="filterMode"
-                            value="<?= htmlspecialchars($filterMode) ?>"
-                        >
-
-                        <label class="timeframe-toggle">
+                            <!-- This hidden field ALWAYS gets submitted -->
                             <input
-                                type="checkbox"
-                                id="timeframeToggle"
-                                <?= $filterMode === 'timeframe' ? 'checked' : '' ?>
+                                type="hidden"
+                                name="filterMode"
+                                id="filterMode"
+                                value="<?= htmlspecialchars($filterMode) ?>"
                             >
-                            <span class="timeframe-slider"></span>
-                        </label>
 
-                    </form>
-                    <!-- ===== END UPDATED ===== -->
+                            <label class="timeframe-toggle">
+                                <input
+                                    type="checkbox"
+                                    id="timeframeToggle"
+                                    <?= $filterMode === 'timeframe' ? 'checked' : '' ?>
+                                >
+                                <span class="timeframe-slider"></span>
+                            </label>
+
+                        </form>
+                        <!-- ===== END UPDATED ===== -->
+                    </div>
                 </div>
-
 
                 <?php if ($filterMode === 'timeframe'): ?>
 
