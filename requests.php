@@ -47,8 +47,8 @@
     $timeFrame = $_GET['timeframe'] ?? 'month';
 
     $timeFrameDays = [
-        'month' => 2,
-        '3months' => 90,
+        'month' => 30,
+        '3months' => 200,
         'year' => 365
     ];
 
@@ -78,6 +78,7 @@
         FROM scilab_form_requests
         WHERE requesterEmployeeID='$userID'
         AND sy='$currentSY'
+        AND dateRequested >= DATE_SUB(NOW(), INTERVAL $days DAY)
         GROUP BY statusScilabPersonnel
     ");
 
