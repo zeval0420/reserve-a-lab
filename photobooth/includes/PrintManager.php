@@ -22,12 +22,12 @@ class PrintManager
      * current settings. Returns a result array that callers persist onto
      * the session's metadata.json via SessionManager::recordPrintStatus().
      */
-    public static function printFile(string $absoluteImagePath): array
+    public static function printFile(string $absoluteImagePath, ?string $paperSizeOverride = null): array
     {
         $printing = Settings::get('printing', []);
         $copies = max(1, (int)($printing['copies'] ?? 1));
         $printer = trim($printing['printer_name'] ?? '');
-        $paperSize = $printing['paper_size'] ?? '4x6';
+        $paperSize = $paperSizeOverride ?? ($printing['paper_size'] ?? '4x6');
         $marginsMm = (float)($printing['margins_mm'] ?? 0);
         $scalePercent = (int)($printing['scale_percent'] ?? 100);
 
@@ -89,6 +89,7 @@ class PrintManager
             '5x7' => 'Custom.5x7in',
             '2x6' => 'Custom.2x6in',
             'A4' => 'A4',
+            'A5' => 'A5',
             'Letter' => 'Letter',
         ];
         $media = $mediaMap[$paperSize] ?? $paperSize;
@@ -122,6 +123,32 @@ class PrintManager
      */
     public static function listPrinters(): array
     {
+        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            $output = [];
+            @exec('powershell -Command "Get-Printer | Select-Object -ExpandProperty Name"', $output);
+            $printers = [];
+            foreach ($output as $line) {
+                $line = trim($line);
+                if ($line === '') {
+                    continue;
+                }
+                // Filter out ASCII art / neofetch / shell profile output lines
+                if (preg_match('/[\x{2800}-\x{28FF}]/u', $line)) {
+                    continue;
+                }
+                if (strpos($line, 'valde@') !== false ||
+                    strpos($line, 'Intel') !== false ||
+                    strpos($line, 'Windows') !== false ||
+                    strpos($line, 'GiB') !== false ||
+                    strpos($line, '●') !== false ||
+                    strpos($line, 'X1402ZA') !== false) {
+                    continue;
+                }
+                $printers[] = $line;
+            }
+            return $printers;
+        }
+
         if (trim((string)@shell_exec('command -v lpstat 2>/dev/null')) === '') {
             return [];
         }

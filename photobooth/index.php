@@ -36,9 +36,12 @@ require_once __DIR__ . '/includes/bootstrap.php';
     <div class="topbar">
       <div class="brand" id="brand-logo"><span class="brand__dot"></span></div>
       <h2>Choose a Frame</h2>
-      <button class="btn btn--ghost btn-camera-picker__btn" id="btn-camera-picker" title="Preview camera">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-      </button>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <select id="select-printer-dropdown" title="Select printer" style="padding: 6px 12px; border-radius: 20px; border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); font-size: 14px; font-weight: 500; cursor: pointer; outline: none; transition: border-color 0.2s; max-width: 160px;"></select>
+        <button class="btn btn--ghost btn-camera-picker__btn" id="btn-camera-picker" title="Preview camera">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        </button>
+      </div>
     </div>
     <div class="screen__inner">
       <div class="scroll-region">

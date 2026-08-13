@@ -22,5 +22,7 @@ json_response([
         'dark_mode' => Settings::get('ui.dark_mode', 'auto'),
         'idle_return_seconds' => (int)Settings::get('ui.idle_return_seconds', 20),
         'default_template' => Settings::get('templates.default_template', null),
+        'current_printer' => Settings::get('printing.printer_name', ''),
+        'available_printers' => PrintManager::listPrinters(),
     ],
 ]);

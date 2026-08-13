@@ -28,13 +28,19 @@ if (empty($meta['strip'])) {
 }
 
 $meta['accepted_at'] = date('c');
+
+// Generate the A5 side-by-side strip
+try {
+    $relativeA5StripPath = Compositor::generateA5SideBySide($sessionId, $meta['strip']);
+    $meta['strip_a5'] = $relativeA5StripPath;
+} catch (Exception $e) {
+    json_error('Failed to generate A5 side-by-side strip: ' . $e->getMessage(), 500);
+}
+
 SessionManager::saveMetadata($sessionId, $meta);
 
-$printResult = ['status' => 'skipped', 'reason' => 'Auto print disabled in Settings'];
-if (Settings::get('printing.auto_print', false)) {
-    $absoluteStripPath = SessionManager::dir($sessionId) . '/' . $meta['strip'];
-    $printResult = PrintManager::printFile($absoluteStripPath);
-}
+$absoluteStripPath = SessionManager::dir($sessionId) . '/' . $meta['strip_a5'];
+$printResult = PrintManager::printFile($absoluteStripPath, 'A5');
 
 SessionManager::recordPrintStatus($sessionId, $printResult['status'], $printResult);
 
