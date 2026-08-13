@@ -725,6 +725,6 @@
 
             $('#filterModeForm').submit();
         });
-        // ===== END ADDED =====
+        // ===== END ADDED ======
     </script>
 </html>
