@@ -43,45 +43,59 @@
     // status filter
     $statusFilter = $_GET['status'] ?? 'Pending';
 
-    // ===== ADDED: Time frame filter =====
-    $filterMode = $_GET['filterMode'] ?? 'timeframe';
+    // ===== UPDATED: Time frame / manual date filter =====
+        $filterMode = $_GET['filterMode'] ?? 'timeframe';
 
-    // Default mode is timeframe
-    if (!in_array($filterMode, ['timeframe', 'manual'])) {
-        $filterMode = 'timeframe';
-    }
+        // Only allow these two modes
+        if (!in_array($filterMode, ['timeframe', 'manual'])) {
+            $filterMode = 'timeframe';
+        }
 
-    $timeFrame = $_GET['timeframe'] ?? 'month';
+        $timeFrame = $_GET['timeframe'] ?? 'month';
 
-    $timeFrameDays = [
-        'month' => 30,
-        '3months' => 90,
-        'year' => 365
-    ];
+        $timeFrameDays = [
+            'month' => 30,
+            '3months' => 90,
+            'year' => 365
+        ];
 
-    if (!isset($timeFrameDays[$timeFrame])) {
-        $timeFrame = 'month';
-    }
+        if (!isset($timeFrameDays[$timeFrame])) {
+            $timeFrame = 'month';
+        }
 
-    $days = $timeFrameDays[$timeFrame];
+        $days = $timeFrameDays[$timeFrame];
 
-    // Manual date range
-    $fromDate = $_GET['fromDate'] ?? '';
-    $toDate = $_GET['toDate'] ?? '';
+        $fromDate = $_GET['fromDate'] ?? '';
+        $toDate = $_GET['toDate'] ?? '';
 
-    // Build the date filter
-    if ($filterMode === 'manual' && !empty($fromDate) && !empty($toDate)) {
+        // ===== UPDATED: Build date filter =====
+        if (
+            $filterMode === 'manual' &&
+            !empty($fromDate) &&
+            !empty($toDate)
+        ) {
 
-        // Include the entire "To Date"
-        $dateFilter = "AND dateRequested >= '$fromDate 00:00:00'
-                    AND dateRequested <= '$toDate 23:59:59'";
+            // From Date starts at 12:00 AM
+            // To Date includes the entire day
+            $dateFilter = "
+                AND dateRequested >= '$fromDate 00:00:00'
+                AND dateRequested < DATE_ADD('$toDate', INTERVAL 1 DAY)
+            ";
 
-    } else {
+        } elseif ($filterMode === 'manual') {
 
-        // Default timeframe filter
-        $dateFilter = "AND dateRequested >= DATE_SUB(NOW(), INTERVAL $days DAY)";
-    }
-    // ===== END ADDED =====
+            // Manual mode but dates have not been selected yet
+            // Do not display any requests
+            $dateFilter = "AND 1 = 0";
+
+        } else {
+
+            // Automatic timeframe mode
+            $dateFilter = "
+                AND dateRequested >= DATE_SUB(NOW(), INTERVAL $days DAY)
+            ";
+        }
+        // ===== END UPDATED =====
 
     // requests
     $sql = "
