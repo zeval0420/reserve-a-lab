@@ -576,8 +576,11 @@
                 }
 
                 $.post('ajax/ajax_admin_action.php', { action: 'approve', id: id, controlNumber: control, remarks: remarks }, function (response) {
-                    showToast(response, response.toLowerCase().includes('approved') ? 'success' : 'error');
-                    location.reload();
+                    const isSuccess = response.toLowerCase().includes('approved');
+                    showToast(response, isSuccess ? 'success' : 'error');
+                    if (isSuccess) {
+                        setTimeout(() => location.reload(), 1500);
+                    }
                 });
             });
 

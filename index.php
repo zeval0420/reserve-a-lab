@@ -49,7 +49,7 @@ if (isset($_SESSION['role'])) {
     if ($_SESSION['role'] === 'admin') {
         header("Location: admin_home.php");
         exit();
-    } elseif ($_SESSION['role'] === 'requester' || $_SESSION['role'] === 'teacher') {
+    } elseif (in_array($_SESSION['role'], ['requester', 'teacher', 'guest'])) {
         header("Location: requester_home.php");
         exit();
     }
@@ -1296,7 +1296,7 @@ if (isset($_SESSION['role'])) {
                     if (xhr.status === 200) {
                         if (xhr.responseText.trim() === 'success') {
                             closeModal('modal-register');
-                            showAlert('Account created successfully. You can now log in.', 'success');
+                            window.location.href = loginRedirect || "requester_home.php";
                         } else {
                             showAlert(xhr.responseText.trim(), 'error');
                         }
@@ -1357,7 +1357,7 @@ if (isset($_SESSION['role'])) {
                     xhrLocal.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
                     xhrLocal.onload = function () {
                         if (xhrLocal.status === 200 && xhrLocal.responseText.trim() === 'success') {
-                            window.location.href = "controller_dashboard.php";
+                            window.location.href = loginRedirect || "controller_dashboard.php";
                         } else {
                             setValidationState(passwordField, 'invalid');
                             showAlert('Incorrect password.', 'error');
