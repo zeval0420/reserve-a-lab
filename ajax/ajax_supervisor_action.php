@@ -504,7 +504,7 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
         if ($typeRow = $typeResult->fetch_assoc()) {
             $accountType = strtolower(trim($typeRow['type'] ?? ''));
 
-            if ($accountType === 'faculty' || $accountType === 'sysadmin') {
+            if ($accountType === 'faculty' || $accountType === 'sysadmin' || $accountType === 'staff') {
                 $isFacultyOrSysadmin = true;
             }
         }
