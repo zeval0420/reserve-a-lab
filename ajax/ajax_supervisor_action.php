@@ -514,9 +514,9 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
     $statusScilabPersonnel = 'Pending';
     $initialLabPersonnelStatus = 'pending';
     $initialCidChiefStatus = 'pending';
+    $initialSubjectTeacherStatus = 'pending';
 
     $initialSupervisorStatus = $isFacultyOrSysadmin ? 'approved' : 'pending';
-    $initialSubjectTeacherStatus = $isFacultyOrSysadmin ? 'approved' : 'pending';
 
     $stmt = $conn->prepare("INSERT INTO scilab_form_requests (
         scilabName,

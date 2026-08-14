@@ -1006,7 +1006,7 @@ function getStepIcon($class)
                     <div class="step <?= $s2Class ?>" data-step="2">
                         <div class="step-dot"><?= getStepIcon($s2Class) ?></div>
                         <div class="step-info">
-                            <div class="step-role">Subject Teacher</div>
+                            <div class="step-role">Subject Teacher/Unit Head</div>
                             <span
                                 class="step-status"><?= getStepStatusText($subject_teacher_status, $supervisor_status) ?></span>
                         </div>
