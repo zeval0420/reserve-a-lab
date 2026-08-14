@@ -50,7 +50,7 @@ if (isset($_SESSION['role'])) {
     if ($_SESSION['role'] === 'admin') {
         header("Location: admin_home.php");
         exit();
-    } elseif (in_array($_SESSION['role'], ['requester', 'teacher', 'guest'])) {
+    } else {
         header("Location: requester_home.php");
         exit();
     }
