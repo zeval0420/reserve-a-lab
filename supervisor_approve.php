@@ -789,7 +789,7 @@ function getStepIcon($class)
             margin-top: 5px;
             display: none;
         }
-    
+
         .reject-error.visible {
             display: block;
         }
@@ -1365,13 +1365,13 @@ function getStepIcon($class)
                 const data = await response.json();
                 if (data.status === 'success') {
                     closeModal();
-                    showToast('✓ ' + data.message, 'success');
+                    showApprovalToast('✓ ' + data.message, 'success');
                     setTimeout(() => location.reload(), 1500);
                 } else {
-                    showToast('✗ ' + data.message, 'error');
+                    showApprovalToast('✗ ' + data.message, 'error');
                 }
             } catch (error) {
-                showToast('✗ Network error occurred.', 'error');
+                showApprovalToast('✗ Network error occurred.', 'error');
             }
         }
 
@@ -1444,7 +1444,7 @@ function getStepIcon($class)
         const toast = document.getElementById('toast');
         let toastTimer;
 
-        function showToast(message, type = 'default') {
+        function showApprovalToast(message, type = 'default') {
             clearTimeout(toastTimer);
             toast.textContent = message;
             toast.className = 'toast ' + (type === 'success' ? 'success' : type === 'error' ? 'error' : '');

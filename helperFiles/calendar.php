@@ -11,7 +11,7 @@
             width:100%;
             height:100%;
             background: rgba(0,0,0,0.6);
-            z-index: 98;
+            z-index: 9800;
         }
 
         /* Modal container */
@@ -29,7 +29,7 @@
             width: 95%;
             max-width: 1200px;
             max-height: 90vh; /* limit height to viewport */
-            z-index: 99;
+            z-index: 9900;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
             flex-direction: column;
         }
@@ -110,7 +110,7 @@
             width: 100%;
             height: 100%;
             background: rgba(0,0,0,0.5);
-            z-index: 1000;
+            z-index: 10000;
             justify-content: center;
             align-items: center;
             backdrop-filter: blur(5px);
