@@ -23,6 +23,7 @@ set_error_handler(function($severity, $message, $file, $line) {
 
 include('../../scilab/helperFiles/db_connection.php');
 include('../helperFiles/session_handler.php');
+include('../helperFiles/variableDeclarations.php');
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
@@ -48,7 +49,7 @@ function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails
     }
 
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
-    $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/reserve-a-lab";
+    $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/" . $active_server;
     $approvalLink = $baseURL . "/supervisor_approve.php?id=" . $formID;
 
     $replacements = [
@@ -206,7 +207,14 @@ function sendNotificationToAdmins($conn, $requestID) {
 
                 $mail->isHTML(true);
                 $mail->Subject = $subjectLine;
-                $mail->Body = $bodyTemplate;
+                
+                // Inject ActionLink
+                $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
+                $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/" . $active_server;
+                $actionLink = $baseURL . "/admin_approve.php";
+                $personalizedBody = str_replace("[ActionLink]", $actionLink, $bodyTemplate);
+                
+                $mail->Body = $personalizedBody;
 
                 $mail->send();
             } catch (Exception $e) {
@@ -289,7 +297,7 @@ function sendNotificationToSubjectTeacher($conn, $requestID) {
     }
 
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
-    $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/reserve-a-lab";
+    $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/" . $active_server;
     $approvalLink = $baseURL . "/supervisor_approve.php?id=" . $requestID;
 
     $replacements = [
