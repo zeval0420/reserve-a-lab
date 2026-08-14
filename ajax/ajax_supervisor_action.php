@@ -501,12 +501,70 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
     $requesterID = $_SESSION['employeeID'] ?? $_SESSION['student_lrn'] ?? '';
     $dateRequested = date('Y-m-d H:i:s');
 
-    $stmt = $conn->prepare("INSERT INTO scilab_form_requests (
-        scilabName, gradeLevel, sections, subject, subjectTopic, inclusiveDate, inclusiveTime, dateRequested, requesterEmployeeID, sy, teacherInCharge, statusScilabPersonnel, supervisor_status, subject_teacher_status, lab_personnel_status, cid_chief_status) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', 'pending', 'pending', 'pending', 'pending')");
+    $isFacultyOrSysadmin = false;
+    $requesterEmail = $_SESSION['email'] ?? '';
+    if (!empty($requesterEmail)) {
+        $typeStmt = $conn->prepare("SELECT type FROM accounts WHERE email = ? LIMIT 1");
+        $typeStmt->bind_param("s", $requesterEmail);
+        $typeStmt->execute();
+        $typeResult = $typeStmt->get_result();
 
-    $stmt->bind_param("sisssssssss", $scilabName, $grade, $sections, $subject, $topic, $startDate, $formattedTime, $dateRequested, $requesterID, $schoolYear, $teacher);
-    
+        if ($typeRow = $typeResult->fetch_assoc()) {
+            $accountType = strtolower(trim($typeRow['type'] ?? ''));
+
+            if ($accountType === 'faculty' || $accountType === 'sysadmin' || $accountType === 'staff') {
+                $isFacultyOrSysadmin = true;
+            }
+        }
+        $typeStmt->close();
+    }
+
+    $statusScilabPersonnel = 'Pending';
+    $initialLabPersonnelStatus = 'pending';
+    $initialCidChiefStatus = 'pending';
+
+    $initialSupervisorStatus = $isFacultyOrSysadmin ? 'approved' : 'pending';
+    $initialSubjectTeacherStatus = $isFacultyOrSysadmin ? 'approved' : 'pending';
+
+    $stmt = $conn->prepare("INSERT INTO scilab_form_requests (
+        scilabName,
+        gradeLevel,
+        sections,
+        subject,
+        subjectTopic,
+        inclusiveDate,
+        inclusiveTime,
+        dateRequested,
+        requesterEmployeeID,
+        sy,
+        teacherInCharge,
+        statusScilabPersonnel,
+        supervisor_status,
+        subject_teacher_status,
+        lab_personnel_status,
+        cid_chief_status
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+
+    $stmt->bind_param(
+        "sissssssssssssss",
+        $scilabName,
+        $grade,
+        $sections,
+        $subject,
+        $topic,
+        $startDate,
+        $formattedTime,
+        $dateRequested,
+        $requesterID,
+        $schoolYear,
+        $teacher,
+        $statusScilabPersonnel,
+        $initialSupervisorStatus,
+        $initialSubjectTeacherStatus,
+        $initialLabPersonnelStatus,
+        $initialCidChiefStatus
+    );
+
     if (!$stmt->execute()) {
         echo "error";
         exit();
