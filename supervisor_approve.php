@@ -789,7 +789,7 @@ function getStepIcon($class)
             margin-top: 5px;
             display: none;
         }
-
+    
         .reject-error.visible {
             display: block;
         }

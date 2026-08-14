@@ -159,9 +159,14 @@
             $isFaculty = false;
 
             if ($requester) {
-                $isFaculty = (strtolower(trim($requester['type'])) === 'faculty');
-            }
+                $requesterType = strtolower(trim($requester['type'] ?? ''));
 
+                $isFaculty = in_array($requesterType, [
+                    'faculty',
+                    'staff',
+                    'sysadmin'
+                ], true);
+            }
 
             // ---------------------------------------------------------
             // Check for control number duplication
