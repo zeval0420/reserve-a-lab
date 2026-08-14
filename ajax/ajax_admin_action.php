@@ -126,8 +126,7 @@
 
             echo "no_conflict";
             exit();
-        }
-        elseif ($_POST['action'] === 'approve') {
+        }elseif ($_POST['action'] === 'approve') {
             $controlNumber = isset($_POST['controlNumber']) ? (int) $_POST['controlNumber'] : 0;
             $remarks = $_POST['remarks'] ?? '';
 
@@ -136,128 +135,31 @@
                 exit();
             }
 
-            // ---------------------------------------------------------
-            // Get requester type from accounts table
-            // ---------------------------------------------------------
-            $requesterStmt = $conn->prepare("
-                SELECT a.type
-                FROM scilab_form_requests r
-                INNER JOIN accounts a
-                    ON r.requesterEmployeeID = a.employeeID
-                WHERE r.id = ?
-                LIMIT 1
-            ");
-
-            $requesterStmt->bind_param("i", $id);
-            $requesterStmt->execute();
-
-            $requesterResult = $requesterStmt->get_result();
-            $requester = $requesterResult->fetch_assoc();
-
-            $requesterStmt->close();
-
-            if (!$requester) {
-                echo "Requester account not found.";
-                exit();
-            }
-
-            $requesterType = strtolower(trim($requester['type'] ?? ''));
-
-            // Faculty/staff/sysadmin requests can be fully approved
-            $canSkipApproval = in_array($requesterType, [
-                'faculty',
-                'staff',
-                'sysadmin'
-            ], true);
-
-
-            // ---------------------------------------------------------
             // Check for control number duplication
-            // ---------------------------------------------------------
-            $checkStmt = $conn->prepare("
-                SELECT id
-                FROM scilab_form_requests
-                WHERE controlNumber = ?
-                AND id != ?
-            ");
-
+            $checkStmt = $conn->prepare("SELECT id FROM scilab_form_requests WHERE controlNumber = ? AND id != ?");
             $checkStmt->bind_param("ii", $controlNumber, $id);
             $checkStmt->execute();
-
             $checkResult = $checkStmt->get_result();
-
             if ($checkResult->num_rows > 0) {
                 echo "Control number already exists.";
                 $checkStmt->close();
                 exit();
             }
-
             $checkStmt->close();
 
-
-            // ---------------------------------------------------------
-            // Update approval statuses
-            // ---------------------------------------------------------
-
-            if ($canSkipApproval) {
-
-                // FACULTY / STAFF / SYSADMIN
-                // Approve all statuses
-
-                $stmt = $conn->prepare("
-                    UPDATE scilab_form_requests
-                    SET
-                        statusScilabPersonnel = 'Approved',
-                        supervisor_status = 'approved',
-                        subject_teacher_status = 'approved',
-                        lab_personnel_status = 'approved',
-                        cid_chief_status = 'approved',
-                        controlNumber = ?,
-                        feedback = ?
-                    WHERE id = ?
-                ");
-
-            } else {
-
-                // STUDENT / OTHER REQUESTER
-                // Do NOT approve SciLab Personnel or CID Chief.
-                // Only the other approval steps are approved.
-
-                $stmt = $conn->prepare("
-                    UPDATE scilab_form_requests
-                    SET
-                        supervisor_status = 'approved',
-                        subject_teacher_status = 'approved',
-                        lab_personnel_status = 'approved',
-                        controlNumber = ?,
-                        feedback = ?
-                    WHERE id = ?
-                ");
-            }
-
+            $stmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Approved', supervisor_status = 'approved', subject_teacher_status = 'approved', lab_personnel_status = 'approved', cid_chief_status = 'approved', controlNumber = ?, feedback = ? WHERE id = ?");
             $stmt->bind_param("isi", $controlNumber, $remarks, $id);
             $stmt->execute();
 
             if ($stmt->affected_rows > 0) {
-
-                sendNotificationEmail(
-                    $conn,
-                    $id,
-                    'approved',
-                    $controlNumber
-                );
-
+                sendNotificationEmail($conn, $id, 'approved', $controlNumber);
                 echo "Request approved.";
-
             } else {
-
                 echo "Update failed.";
             }
-
             $stmt->close();
             exit();
-        }
-elseif ($_POST['action'] === 'reject') {
+        }elseif ($_POST['action'] === 'reject') {
             $feedback = $_POST['feedback'] ?? '';
             $stmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Rejected', supervisor_status = 'rejected', subject_teacher_status = 'rejected', lab_personnel_status = 'rejected', cid_chief_status = 'rejected', controlNumber = NULL, feedback = ? WHERE id = ?");
             $stmt->bind_param("si", $feedback, $id);
