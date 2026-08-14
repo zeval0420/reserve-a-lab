@@ -126,8 +126,8 @@
 
             echo "no_conflict";
             exit();
-        } elseif ($_POST['action'] === 'approve') {
-
+        }
+        elseif ($_POST['action'] === 'approve') {
             $controlNumber = isset($_POST['controlNumber']) ? (int) $_POST['controlNumber'] : 0;
             $remarks = $_POST['remarks'] ?? '';
 
@@ -137,13 +137,13 @@
             }
 
             // ---------------------------------------------------------
-            // Check if the requester is a faculty member
+            // Get requester type from accounts table
             // ---------------------------------------------------------
             $requesterStmt = $conn->prepare("
                 SELECT a.type
                 FROM scilab_form_requests r
-                LEFT JOIN accounts a
-                    ON a.employeeID = r.requesterEmployeeID
+                INNER JOIN accounts a
+                    ON r.requesterEmployeeID = a.employeeID
                 WHERE r.id = ?
                 LIMIT 1
             ");
@@ -156,17 +156,20 @@
 
             $requesterStmt->close();
 
-            $isFaculty = false;
-
-            if ($requester) {
-                $requesterType = strtolower(trim($requester['type'] ?? ''));
-
-                $isFaculty = in_array($requesterType, [
-                    'faculty',
-                    'staff',
-                    'sysadmin'
-                ], true);
+            if (!$requester) {
+                echo "Requester account not found.";
+                exit();
             }
+
+            $requesterType = strtolower(trim($requester['type'] ?? ''));
+
+            // Faculty/staff/sysadmin requests can be fully approved
+            $canSkipApproval = in_array($requesterType, [
+                'faculty',
+                'staff',
+                'sysadmin'
+            ], true);
+
 
             // ---------------------------------------------------------
             // Check for control number duplication
@@ -196,11 +199,10 @@
             // Update approval statuses
             // ---------------------------------------------------------
 
-            if ($isFaculty) {
+            if ($canSkipApproval) {
 
-                // FACULTY
-                // Faculty requests skip the entire approval process.
-                // All statuses are automatically approved.
+                // FACULTY / STAFF / SYSADMIN
+                // Approve all statuses
 
                 $stmt = $conn->prepare("
                     UPDATE scilab_form_requests
@@ -217,9 +219,9 @@
 
             } else {
 
-                // NON-FACULTY
-                // Only the applicable approval steps are approved.
-                // SciLab Personnel and CID Chief remain unchanged.
+                // STUDENT / OTHER REQUESTER
+                // Do NOT approve SciLab Personnel or CID Chief.
+                // Only the other approval steps are approved.
 
                 $stmt = $conn->prepare("
                     UPDATE scilab_form_requests
@@ -254,7 +256,8 @@
 
             $stmt->close();
             exit();
-        } elseif ($_POST['action'] === 'reject') {
+        }
+elseif ($_POST['action'] === 'reject') {
             $feedback = $_POST['feedback'] ?? '';
             $stmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Rejected', supervisor_status = 'rejected', subject_teacher_status = 'rejected', lab_personnel_status = 'rejected', cid_chief_status = 'rejected', controlNumber = NULL, feedback = ? WHERE id = ?");
             $stmt->bind_param("si", $feedback, $id);
