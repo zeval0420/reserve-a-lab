@@ -51,18 +51,18 @@ function createMailer()
     $mail->Password = 'wxzmkkrffptfchcc';
     $mail->SMTPSecure = 'tls';
     $mail->Port = 587;
-    $mail->setFrom('pshsircscilab@gmail.com', 'SciLab Notification System');
+    $mail->setFrom('pshsircscilab@gmail.com', 'PSHS-IRC SciLab');
     $mail->isHTML(true);
     return $mail;
 }
 
-function sendSubmissionNotificationToAdmins($conn, $data)
+function sendSubmissionNotificationToAdmins($conn, $data, $formID)
 {
     $admins = $conn->query("SELECT email FROM accounts WHERE status = 'active' AND (position = 'Sci. Res. Assist.' OR position = 'Sci. Research Specialist I')");
     if ($admins->num_rows === 0)
         return;
 
-    $subjectLine = "New SciLab Request Submitted";
+    $subjectLine = "New SciLab Request Submitted - SLR-" . $formID;
     $templatePath = __DIR__ . "/../templates/request_email_template.html";
 
     if (file_exists($templatePath)) {
@@ -72,6 +72,7 @@ function sendSubmissionNotificationToAdmins($conn, $data)
     }
 
     $replacements = [
+        "[Request ID]" => "SLR-" . $formID,
         "[Facility]" => $data['scilabName'],
         "[Grade Level]" => $data['gradeLevel'],
         "[Section]" => $data['section'],
@@ -117,7 +118,7 @@ function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails
     if (empty($supervisorEmails))
         return;
 
-    $subjectLine = "Action Required: New SciLab Request for Approval";
+    $subjectLine = "Action Required: New SciLab Request for Approval - SLR-" . $formID;
     $templatePath = __DIR__ . "/../templates/supervisor_request_email_template.html";
 
     if (file_exists($templatePath)) {
@@ -344,8 +345,7 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
         'materials' => implode("; ", $materials),
         'students' => $studentList,
         'requester' => $requesterName
-    ]);
-
+    ], $formID);
 
     echo "success";
     $stmt->close();

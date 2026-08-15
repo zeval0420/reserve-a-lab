@@ -63,11 +63,11 @@
             $mail->SMTPSecure = 'tls';
             $mail->Port = 587;
 
-            $mail->setFrom('pshsircscilab@gmail.com', 'SciLab Admin');
+            $mail->setFrom('pshsircscilab@gmail.com', 'PSHS-IRC SciLab');
             $mail->addAddress($email, $fullName);
 
             $mail->isHTML(true);
-            $mail->Subject = "SciLab Request - " . ucfirst($status);
+            $mail->Subject = "SciLab Request - " . ucfirst($status) . " - SLR-" . $requestID;
             $mail->Body    = $bodyTemplate;
 
             $mail->send();

@@ -112,8 +112,8 @@ $organization = "Department of Science and Technology (DOST)";
 
 // EMAIL SETTINGS
 $email_sender = "pshsircscilab@gmail.com";
-$email_sender_name = "SciLab Admin";
-$email_display_name = "SciLab Admin";
+$email_sender_name = "PSHS-IRC SciLab";
+$email_display_name = "PSHS-IRC SciLab";
 $email_smtp_host = "smtp.gmail.com";
 $email_smtp_port = 587;
 $email_smtp_user = "pshsircscilab@gmail.com";
