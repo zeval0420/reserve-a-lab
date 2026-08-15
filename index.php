@@ -5,6 +5,7 @@
  */
 include('../scilab/helperFiles/db_connection.php');
 include('helperFiles/session_handler.php');
+include('helperFiles/variableDeclarations.php'); // $active_server is declared here
 
 if (isset($_POST['local_login']) && $_POST['local_login'] === 'true') {
     $u = $_POST['username'] ?? '';
@@ -49,7 +50,7 @@ if (isset($_SESSION['role'])) {
     if ($_SESSION['role'] === 'admin') {
         header("Location: admin_home.php");
         exit();
-    } elseif (in_array($_SESSION['role'], ['requester', 'teacher', 'guest'])) {
+    } else {
         header("Location: requester_home.php");
         exit();
     }

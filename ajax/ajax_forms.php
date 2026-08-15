@@ -34,6 +34,7 @@ require '../PHPMailer/src/SMTP.php';
  */
 include('../../scilab/helperFiles/db_connection.php');
 include('../helperFiles/session_handler.php');
+include('../helperFiles/variableDeclarations.php');
 
 function formatTime($time)
 {
@@ -95,7 +96,14 @@ function sendSubmissionNotificationToAdmins($conn, $data)
                 $mail = createMailer();
                 $mail->addAddress($admin['email']);
                 $mail->Subject = $subjectLine;
-                $mail->Body = $bodyTemplate;
+                
+                // Inject ActionLink
+                $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
+                $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/" . $active_server;
+                $actionLink = $baseURL . "/admin_approve.php";
+                $personalizedBody = str_replace("[ActionLink]", $actionLink, $bodyTemplate);
+                
+                $mail->Body = $personalizedBody;
                 $mail->send();
             } catch (Exception $e) {
                 error_log("Admin email failed to {$admin['email']}: " . $e->getMessage());
@@ -119,7 +127,7 @@ function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails
     }
 
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
-    $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/beta";
+    $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/" . $active_server;
     $approvalLink = $baseURL . "/supervisor_approve.php?id=" . $formID;
 
     $replacements = [

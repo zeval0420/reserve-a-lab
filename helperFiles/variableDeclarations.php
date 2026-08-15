@@ -3,6 +3,8 @@
 // Centralized configuration file
 // Edit ONLY this file (and db_connection.php) to adapt the system to new setups.
 
+$active_server = "beta"; // Change this to "scilab", "reserve-a-lab", etc. when switching environments.
+
 // SESSION VARIABLE KEYS
 $session_employeeID = "employeeID";
 $session_email = "email";
