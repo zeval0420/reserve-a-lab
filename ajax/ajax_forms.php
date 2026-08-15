@@ -127,8 +127,7 @@ function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails
     }
 
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
-    $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/" . $active_server;
-    $approvalLink = $baseURL . "/supervisor_approve.php?id=" . $formID;
+    $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/beta";
 
     $replacements = [
         "[Facility]" => $data['scilabName'],
@@ -143,7 +142,6 @@ function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails
         "[End Date]" => $data['inclusiveTime'],
         "[Materials]" => $data['materials'],
         "[Group Members]" => $data['students'],
-        "[ApprovalLink]" => $approvalLink,
     ];
 
     foreach ($replacements as $key => $val) {
@@ -156,7 +154,11 @@ function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails
                 $mail = createMailer();
                 $mail->addAddress($email);
                 $mail->Subject = $subjectLine;
-                $mail->Body = $bodyTemplate;
+
+                $approvalLink = $baseURL . "/supervisor_approve.php?id=" . $formID . "&token=" . urlencode(scilab_approval_token($formID, 'supervisor'));
+                $personalizedBody = str_replace("[ApprovalLink]", $approvalLink, $bodyTemplate);
+
+                $mail->Body = $personalizedBody;
                 $mail->send();
             } catch (Exception $e) {
                 error_log("Supervisor email failed to {$email}: " . $e->getMessage());

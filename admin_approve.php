@@ -878,7 +878,7 @@
                 pageLength: 10,
                 lengthChange: true,
                 searching: true,
-                order: [],
+                ordering: true,
                 info: true
             });
 

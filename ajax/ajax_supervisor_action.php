@@ -49,8 +49,7 @@ function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails
     }
 
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
-    $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/" . $active_server;
-    $approvalLink = $baseURL . "/supervisor_approve.php?id=" . $formID;
+    $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/beta";
 
     $replacements = [
         "[Facility]" => $data['scilabName'],
@@ -65,7 +64,6 @@ function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails
         "[End Date]" => $data['inclusiveTime'],
         "[Materials]" => $data['materials'],
         "[Group Members]" => $data['students'],
-        "[ApprovalLink]" => $approvalLink,
     ];
 
     foreach ($replacements as $key => $val) {
@@ -89,7 +87,10 @@ function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails
 
                 $mail->isHTML(true);
                 $mail->Subject = $subjectLine;
-                $mail->Body = $bodyTemplate;
+
+                $approvalLink = $baseURL . "/supervisor_approve.php?id=" . $formID . "&token=" . urlencode(scilab_approval_token($formID, 'supervisor'));
+                $personalizedBody = str_replace("[ApprovalLink]", $approvalLink, $bodyTemplate);
+                $mail->Body = $personalizedBody;
 
                 $mail->send();
             } catch (Exception $e) {
@@ -208,10 +209,10 @@ function sendNotificationToAdmins($conn, $requestID) {
                 $mail->isHTML(true);
                 $mail->Subject = $subjectLine;
                 
-                // Inject ActionLink
+                // Inject ActionLink (direct passwordless action link for Lab Personnel)
                 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
                 $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/" . $active_server;
-                $actionLink = $baseURL . "/admin_approve.php";
+                $actionLink = $baseURL . "/supervisor_approve.php?id=" . $requestID . "&token=" . urlencode(scilab_approval_token($requestID, 'lab_personnel'));
                 $personalizedBody = str_replace("[ActionLink]", $actionLink, $bodyTemplate);
                 
                 $mail->Body = $personalizedBody;
@@ -298,7 +299,6 @@ function sendNotificationToSubjectTeacher($conn, $requestID) {
 
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
     $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/" . $active_server;
-    $approvalLink = $baseURL . "/supervisor_approve.php?id=" . $requestID;
 
     $replacements = [
         "[Facility]"         => $data['scilabName'],
@@ -313,7 +313,6 @@ function sendNotificationToSubjectTeacher($conn, $requestID) {
         "[End Date]"         => $data['inclusiveTime'],
         "[Materials]"        => $materialsStr,
         "[Group Members]"    => $studentsStr,
-        "[ApprovalLink]"     => $approvalLink,
     ];
 
     foreach ($replacements as $key => $val) {
@@ -336,7 +335,11 @@ function sendNotificationToSubjectTeacher($conn, $requestID) {
                 $mail->addAddress($teacher['email']);
                 $mail->isHTML(true);
                 $mail->Subject = $subjectLine;
-                $mail->Body = $bodyTemplate;
+
+                $approvalLink = $baseURL . "/supervisor_approve.php?id=" . $requestID . "&token=" . urlencode(scilab_approval_token($requestID, 'subject_teacher'));
+                $personalizedBody = str_replace("[ApprovalLink]", $approvalLink, $bodyTemplate);
+                $mail->Body = $personalizedBody;
+
                 $mail->send();
             } catch (Exception $e) {
                 error_log("Subject Teacher email failed to {$teacher['email']}: {$mail->ErrorInfo}");
@@ -385,11 +388,14 @@ function sendNotificationToCIDChief($conn, $requestID) {
     if ($cidChiefs->num_rows === 0) return;
 
     $subjectLine = "Action Required: CID Chief Final Approval Needed";
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
+    $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/" . $active_server;
+    $approvalLink = $baseURL . "/supervisor_approve.php?id=" . $requestID . "&token=" . urlencode(scilab_approval_token($requestID, 'cid_chief'));
     $bodyTemplate = "A new request has passed Lab Personnel review and requires final CID Chief approval. 
         <br><br><strong>Facility:</strong> " . htmlspecialchars($data['scilabName']) . "
         <br><strong>Requested By:</strong> " . htmlspecialchars($requesterName) . "
         <br><strong>Date/Time:</strong> " . htmlspecialchars($data['inclusiveDate']) . " " . htmlspecialchars($data['inclusiveTime']) . "
-        <br><br>Please log in to the system to review and approve.";
+        <br><br>Review and act on this request directly: <a href='" . $approvalLink . "'>Review Request</a>";
 
     while ($admin = $cidChiefs->fetch_assoc()) {
         if (filter_var($admin['email'], FILTER_VALIDATE_EMAIL)) {
@@ -651,13 +657,7 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
 
 header('Content-Type: application/json');
 
-// Check if user is logged in
-if (!isset($_SESSION['username'])) {
-    echo json_encode(['success' => false, 'message' => 'Unauthorized access']);
-    exit;
-}
-
-$username = $_SESSION['username'];
+$username = $_SESSION['username'] ?? null;
 
 $input = json_decode(file_get_contents('php://input'), true);
 
@@ -698,6 +698,18 @@ if ($action === 'force_approve_override') {
     $fieldPrefix = 'cid_chief';
 } else {
     echo json_encode(['success' => false, 'message' => 'No pending approval stage found or request is already completed.']);
+    exit;
+}
+
+// Authorize: a logged-in session OR a valid passwordless approval token for this stage.
+$authorized = false;
+if ($username !== null) {
+    $authorized = true;
+} elseif (isset($input['token']) && $fieldPrefix !== 'force_approve' && hash_equals(scilab_approval_token($requestId, $fieldPrefix), $input['token'])) {
+    $authorized = true;
+}
+if (!$authorized) {
+    echo json_encode(['success' => false, 'message' => 'Unauthorized access']);
     exit;
 }
 

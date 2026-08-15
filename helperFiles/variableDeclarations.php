@@ -134,4 +134,16 @@ $date_format = "F j, Y";
 $enable_email_notifications = true;
 $enable_activity_logging = true;
 $default_request_status = "Pending";
+
+if (!function_exists('scilab_approval_token')) {
+    /**
+     * Stateless magic-link token for passwordless approval actions.
+     * Bound to the request ID and the approval stage so a link sent for
+     * one stage cannot be reused at a later stage.
+     */
+    function scilab_approval_token($requestId, $stage)
+    {
+        return hash_hmac('sha256', intval($requestId) . '|' . $stage, 'SciLabApprovalLink2026');
+    }
+}
 ?>
