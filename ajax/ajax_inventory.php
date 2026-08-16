@@ -90,7 +90,7 @@ function checkInventoryThresholdAndNotify($conn, $itemId) {
                     $mail->SMTPSecure = 'tls';
                     $mail->Port = 587;
 
-                    $mail->setFrom('pshsircscilab@gmail.com', 'SciLab Admin');
+                    $mail->setFrom('pshsircscilab@gmail.com', 'PSHS-IRC SciLab');
                     $mail->addAddress($admin['email'], $adminName);
 
                     $mail->isHTML(true);

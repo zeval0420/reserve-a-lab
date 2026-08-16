@@ -3,6 +3,8 @@
 // Centralized configuration file
 // Edit ONLY this file (and db_connection.php) to adapt the system to new setups.
 
+$active_server = "beta"; // Change this to "scilab", "reserve-a-lab", etc. when switching environments.
+
 // SESSION VARIABLE KEYS
 $session_employeeID = "employeeID";
 $session_email = "email";
@@ -110,8 +112,8 @@ $organization = "Department of Science and Technology (DOST)";
 
 // EMAIL SETTINGS
 $email_sender = "pshsircscilab@gmail.com";
-$email_sender_name = "SciLab Admin";
-$email_display_name = "SciLab Admin";
+$email_sender_name = "PSHS-IRC SciLab";
+$email_display_name = "PSHS-IRC SciLab";
 $email_smtp_host = "smtp.gmail.com";
 $email_smtp_port = 587;
 $email_smtp_user = "pshsircscilab@gmail.com";
@@ -132,4 +134,80 @@ $date_format = "F j, Y";
 $enable_email_notifications = true;
 $enable_activity_logging = true;
 $default_request_status = "Pending";
+
+if (!function_exists('scilab_approval_token')) {
+    /**
+     * Stateless magic-link token for passwordless approval actions.
+     * Bound to the request ID and the approval stage so a link sent for
+     * one stage cannot be reused at a later stage.
+     */
+    function scilab_approval_token($requestId, $stage)
+    {
+        return hash_hmac('sha256', intval($requestId) . '|' . $stage, 'SciLabApprovalLink2026');
+    }
+}
+
+if (!function_exists('scilab_auh_designation')) {
+    /**
+     * Resolve the Area Unit Head (AUH) designation for a given subject.
+     * The request's subject column is a 25-char truncated copy of subjectCode,
+     * so an exact join is unreliable; use ordered keyword rules first, then
+     * a prefix match against the subject table.
+     *
+     * Returns "AUH-<unit>" or null when the subject cannot be mapped.
+     */
+    function scilab_auh_designation($conn, $subject, $gradeLevel = null)
+    {
+        $subject = trim((string)$subject);
+        if ($subject === '') {
+            return null;
+        }
+
+        // Ordered keyword rules (case-insensitive). More specific terms first.
+        $rules = [
+            'Computer Science' => 'AUH-Computer Science',
+            'Integrated Science' => 'AUH-Integrated Science',
+            'Social Science' => 'AUH-Social Science/Values Education',
+            'Values Education' => 'AUH-Social Science/Values Education',
+            'Chemistry' => 'AUH-Chemistry',
+            'Chem' => 'AUH-Chemistry',
+            'Physics' => 'AUH-Physics',
+            'Biology' => 'AUH-Biology',
+            'Mathematics' => 'AUH-Mathematics',
+            'Math' => 'AUH-Mathematics',
+            'Research' => 'AUH-Research',
+            'SCALE' => 'AUH-SCALE',
+            'Technology' => 'AUH-Technology',
+            'English' => 'AUH-English',
+            'Filipino' => 'AUH-Filipino',
+            'PEHM' => 'AUH-PEHM',
+        ];
+
+        foreach ($rules as $keyword => $designation) {
+            if (stripos($subject, $keyword) !== false) {
+                return $designation;
+            }
+        }
+
+        // Fallback: match the (possibly truncated) subject code against the subject table.
+        if ($conn) {
+            $like = $subject . '%';
+            $stmt = $conn->prepare("SELECT subjectAcademicUnit FROM subject WHERE subjectCode LIKE ? AND status = 'active' ORDER BY CHAR_LENGTH(subjectCode) ASC LIMIT 1");
+            if ($stmt) {
+                $stmt->bind_param("s", $like);
+                $stmt->execute();
+                $res = $stmt->get_result();
+                if ($row = $res->fetch_assoc()) {
+                    $unit = trim($row['subjectAcademicUnit'] ?? '');
+                    if ($unit !== '') {
+                        return 'AUH-' . $unit;
+                    }
+                }
+                $stmt->close();
+            }
+        }
+
+        return null;
+    }
+}
 ?>

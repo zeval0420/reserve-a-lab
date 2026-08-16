@@ -31,4 +31,8 @@ export const SessionClient = {
   acceptStrip(sessionId) {
     return apiPost('api/strip_accept.php', { session_id: sessionId });
   },
+
+  setPrinter(printerName) {
+    return apiPost('api/set_printer.php', { printer_name: printerName });
+  },
 };

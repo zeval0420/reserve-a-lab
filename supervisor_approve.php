@@ -1,20 +1,16 @@
 <?php
 include('../scilab/helperFiles/db_connection.php');
 include('helperFiles/session_handler.php');
+include('helperFiles/variableDeclarations.php');
 
 $email = $_SESSION['email'] ?? null;
 $username = $_SESSION['username'] ?? null;
 
 $requestId = $_GET['id'] ?? null;
+$token = $_GET['token'] ?? null;
 
 if (!$requestId) {
     die("Please provide a request ID.");
-}
-
-if (!isset($_SESSION['role'])) {
-    $target = 'redirect=' . urlencode('supervisor_approve.php?id=' . $requestId);
-    header('Location: index.php?' . $target);
-    exit();
 }
 
 $stmt = $conn->prepare("SELECT * FROM scilab_form_requests WHERE id = ?");
@@ -70,6 +66,40 @@ $subject_teacher_status = $request['subject_teacher_status'] ?? 'pending';
 $lab_personnel_status = $request['lab_personnel_status'] ?? 'pending';
 $cid_chief_status = $request['cid_chief_status'] ?? 'pending';
 
+if ($supervisor_status === 'pending') {
+    $currentStage = 'supervisor';
+} elseif ($supervisor_status === 'approved' && $subject_teacher_status === 'pending') {
+    $currentStage = 'subject_teacher';
+} elseif ($subject_teacher_status === 'approved' && $lab_personnel_status === 'pending') {
+    $currentStage = 'lab_personnel';
+} elseif ($lab_personnel_status === 'approved' && $cid_chief_status === 'pending') {
+    $currentStage = 'cid_chief';
+} else {
+    $currentStage = '';
+}
+
+$tokenValidStage = '';
+if ($token) {
+    foreach (['supervisor', 'subject_teacher', 'lab_personnel', 'cid_chief'] as $stageName) {
+        if (hash_equals(scilab_approval_token($requestId, $stageName), $token)) {
+            $tokenValidStage = $stageName;
+            break;
+        }
+    }
+}
+
+if (!isset($_SESSION['role']) && $tokenValidStage === '') {
+    $target = 'redirect=' . urlencode('supervisor_approve.php?id=' . $requestId);
+    header('Location: index.php?' . $target);
+    exit();
+}
+
+if (!isset($_SESSION['role'])) {
+    $_SESSION['role'] = 'guest';
+    $_SESSION['username'] = 'Approval Link User';
+    $_SESSION['email'] = '';
+}
+
 $currentRole = $_SESSION['role'] ?? 'supervisor';
 
 // Check if current user is the Teacher in Charge
@@ -105,13 +135,17 @@ if ($supervisor_status === 'pending') {
     $currentApproverStep = 'Supervisor';
 } elseif ($supervisor_status === 'approved' && $subject_teacher_status === 'pending') {
     $canApproveCurrentStep = $isSubjectTeacher;
-    $currentApproverStep = 'Subject Teacher';
+    $currentApproverStep = 'Area Unit Head (AUH)';
 } elseif ($subject_teacher_status === 'approved' && $lab_personnel_status === 'pending') {
     $canApproveCurrentStep = $isLabPersonnel;
     $currentApproverStep = 'Lab Personnel';
 } elseif ($lab_personnel_status === 'approved' && $cid_chief_status === 'pending') {
     $canApproveCurrentStep = $isCIDChief;
     $currentApproverStep = 'CID Chief';
+}
+
+if ($tokenValidStage !== '' && $tokenValidStage === $currentStage) {
+    $canApproveCurrentStep = true;
 }
 
 $materials = [];
@@ -1001,12 +1035,12 @@ function getStepIcon($class)
                         </div>
                     </div>
 
-                    <!-- Step 2: Subject Teacher -->
+                    <!-- Step 2: Area Unit Head (AUH) -->
                     <?php $s2Class = getStepClass($subject_teacher_status, $supervisor_status); ?>
                     <div class="step <?= $s2Class ?>" data-step="2">
                         <div class="step-dot"><?= getStepIcon($s2Class) ?></div>
                         <div class="step-info">
-                            <div class="step-role">Subject Teacher/Unit Head</div>
+                            <div class="step-role">Area Unit Head (AUH)</div>
                             <span
                                 class="step-status"><?= getStepStatusText($subject_teacher_status, $supervisor_status) ?></span>
                         </div>
@@ -1236,7 +1270,7 @@ function getStepIcon($class)
            ROLE SIMULATION
            Change `currentUserRole` to test different states:
              "Supervisor"        — can approve/reject (current approver)
-             "Subject Teacher"   — not yet the approver
+             "Area Unit Head (AUH)" — not yet the approver
              "Laboratory Personnel"
              "CID Chief"
              "Student"           — requester / viewer only
@@ -1244,6 +1278,7 @@ function getStepIcon($class)
         const canApprove = <?= $canApproveCurrentStep ? 'true' : 'false' ?>;
         const currentApprover = "<?= $currentApproverStep ?>";
         const requestId = <?= json_encode($requestId) ?>;
+        const approvalToken = <?= json_encode($token ?? '') ?>;
 
         /* ============================================================
            TRACKER PROGRESS BAR WIDTH
@@ -1360,7 +1395,7 @@ function getStepIcon($class)
                 const response = await fetch('ajax/ajax_supervisor_action.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ request_id: requestId, action: action, reason: reason })
+                    body: JSON.stringify({ request_id: requestId, action: action, reason: reason, token: approvalToken })
                 });
                 const data = await response.json();
                 if (data.status === 'success') {

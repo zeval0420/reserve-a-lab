@@ -72,14 +72,47 @@ class PhotoboothApp {
 
     this.reviewGrid.onRetake = (slotNumber) => this.retakePhoto(slotNumber);
 
+    // List devices and restore camera from saved storage
+    const devices = await CameraController.listDevices();
     const saved = localStorage.getItem('photobooth_camera');
-    if (saved) {
-      const devices = await CameraController.listDevices();
-      if (devices.some((d) => d.deviceId === saved)) {
-        this.camera.deviceId = saved;
+    if (saved && devices.some((d) => d.deviceId === saved)) {
+      this.camera.deviceId = saved;
+    } else if (saved) {
+      localStorage.removeItem('photobooth_camera');
+    }
+
+    // Populate printer dropdown
+    const dropdown = $('#select-printer-dropdown');
+    if (dropdown) {
+      dropdown.innerHTML = '';
+      const availablePrinters = this.config.available_printers || [];
+      const currentPrinter = this.config.current_printer || '';
+      
+      if (availablePrinters.length === 0) {
+        const optVal = currentPrinter || '';
+        const optLabel = currentPrinter ? `Printer: ${currentPrinter}` : '— None / Simulate —';
+        dropdown.appendChild(el('option', { value: optVal }, optLabel));
       } else {
-        localStorage.removeItem('photobooth_camera');
+        dropdown.appendChild(el('option', { value: '' }, '— None / Simulate —'));
+        availablePrinters.forEach((p) => {
+          const active = p === currentPrinter;
+          const option = el('option', { value: p, ...(active ? { selected: 'selected' } : {}) }, p);
+          dropdown.appendChild(option);
+        });
+        if (currentPrinter && !availablePrinters.includes(currentPrinter)) {
+          dropdown.appendChild(el('option', { value: currentPrinter, selected: 'selected' }, currentPrinter));
+        }
       }
+      
+      dropdown.addEventListener('change', async (e) => {
+        try {
+          await SessionClient.setPrinter(e.target.value);
+          this.config.current_printer = e.target.value;
+          toast('Printer updated successfully!');
+        } catch (err) {
+          toast('Could not save printer setting: ' + err.message, 'error');
+        }
+      });
     }
 
     this.bindEvents();

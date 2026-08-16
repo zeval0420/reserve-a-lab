@@ -160,4 +160,50 @@ class Compositor
             hexdec(substr($hex, 4, 2)),
         ];
     }
+
+    /**
+     * Creates a side-by-side version of the final strip and saves it.
+     * @param string $sessionId
+     * @param string $relativeStripPath
+     * @return string relative path to the side-by-side image
+     */
+    public static function generateA5SideBySide(string $sessionId, string $relativeStripPath): string
+    {
+        $sessionDir = SessionManager::dir($sessionId);
+        $stripPath = $sessionDir . '/' . $relativeStripPath;
+        
+        $src = self::loadAnyImage($stripPath);
+        if ($src === null) {
+            throw new Exception("Failed to load strip image for A5 side-by-side composition.");
+        }
+        
+        $w = imagesx($src);
+        $h = imagesy($src);
+        
+        // Two strips side-by-side
+        $outW = $w * 2;
+        $outH = $h;
+        
+        $canvas = imagecreatetruecolor($outW, $outH);
+        imagesavealpha($canvas, true);
+        imagealphablending($canvas, true);
+        $transparent = imagecolorallocatealpha($canvas, 0, 0, 0, 127);
+        imagefill($canvas, 0, 0, $transparent);
+        
+        // Copy the strip twice
+        imagecopy($canvas, $src, 0, 0, 0, 0, $w, $h);
+        imagecopy($canvas, $src, $w, 0, 0, 0, $w, $h);
+        
+        $finalDir = SessionManager::finalDir($sessionId);
+        if (!is_dir($finalDir)) {
+            mkdir($finalDir, 0775, true);
+        }
+        
+        $outputPath = $finalDir . '/strip_a5.png';
+        imagepng($canvas, $outputPath, 6);
+        imagedestroy($canvas);
+        imagedestroy($src);
+        
+        return 'final/strip_a5.png';
+    }
 }

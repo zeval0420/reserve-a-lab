@@ -21,8 +21,17 @@ if (empty($meta['strip'])) {
     json_error('This session has no generated strip to print', 404);
 }
 
-$absoluteStripPath = SessionManager::dir($sessionId) . '/' . $meta['strip'];
-$result = PrintManager::printFile($absoluteStripPath);
+if (empty($meta['strip_a5'])) {
+    try {
+        $meta['strip_a5'] = Compositor::generateA5SideBySide($sessionId, $meta['strip']);
+        SessionManager::saveMetadata($sessionId, $meta);
+    } catch (Exception $e) {
+        json_error('Failed to generate A5 side-by-side strip: ' . $e->getMessage(), 500);
+    }
+}
+
+$absoluteStripPath = SessionManager::dir($sessionId) . '/' . $meta['strip_a5'];
+$result = PrintManager::printFile($absoluteStripPath, 'A5');
 SessionManager::recordPrintStatus($sessionId, $result['status'], $result);
 
 json_response(['success' => true, 'print_result' => $result]);
