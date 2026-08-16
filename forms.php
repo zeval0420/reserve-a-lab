@@ -286,13 +286,21 @@
             }
             .liquid-input:focus { box-shadow: 0 8px 20px rgba(43, 85, 196, 0.2); border-color: rgba(43, 85, 196, 0.4) !important; outline: none; }
 
-            .multiselect-search {
+            .multiselect-container .filter .input-group-addon,
+            .multiselect-container .filter .multiselect-clear-filter {
+                display: none !important;
+            }
+            .multiselect-container .filter .multiselect-search {
                 border: 2px solid #2B55C4 !important;
                 border-radius: 10px !important;
                 background-color: rgba(255, 255, 255, 0.5) !important;
                 transition: all 0.2s ease;
+                margin: 8px 10px;
+                padding: 8px 12px;
+                width: calc(100% - 20px) !important;
+                box-sizing: border-box;
             }
-            .multiselect-search:focus {
+            .multiselect-container .filter .multiselect-search:focus {
                 box-shadow: 0 0 0 3px rgba(43, 85, 196, 0.2) !important;
                 border-color: #2B55C4 !important;
                 outline: none;
