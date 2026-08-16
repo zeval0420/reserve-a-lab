@@ -43,15 +43,17 @@ function formatTime($time)
 
 function createMailer()
 {
+    global $email_smtp_host, $email_smtp_user, $email_smtp_password, $email_smtp_secure, $email_smtp_port, $email_sender;
+
     $mail = new PHPMailer(true);
     $mail->isSMTP();
-    $mail->Host = 'smtp.gmail.com';
+    $mail->Host = $email_smtp_host;
     $mail->SMTPAuth = true;
-    $mail->Username = 'pshsircscilab@gmail.com';
-    $mail->Password = 'wxzmkkrffptfchcc';
-    $mail->SMTPSecure = 'tls';
-    $mail->Port = 587;
-    $mail->setFrom('pshsircscilab@gmail.com', 'PSHS-IRC SciLab');
+    $mail->Username = $email_smtp_user;
+    $mail->Password = $email_smtp_password;
+    $mail->SMTPSecure = $email_smtp_secure;
+    $mail->Port = $email_smtp_port;
+    $mail->setFrom($email_sender, 'PSHS-IRC SciLab');
     $mail->isHTML(true);
     return $mail;
 }
@@ -128,7 +130,7 @@ function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails
     }
 
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
-    $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/scilab";
+    $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/" . $active_server;
 
     $replacements = [
         "[Facility]" => $data['scilabName'],

@@ -6,6 +6,7 @@
 include('../scilab/helperFiles/db_connection.php');
 include('helperFiles/session_handler.php');
 include('helperFiles/variableDeclarations.php'); // $active_server is declared here
+$active_server = "beta";
 
 if (isset($_POST['local_login']) && $_POST['local_login'] === 'true') {
     $u = $_POST['username'] ?? '';

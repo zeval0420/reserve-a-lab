@@ -9,6 +9,7 @@
     // centralized db_connection and session_handler
     include('../../scilab/helperFiles/db_connection.php');
     include('../helperFiles/session_handler.php');
+    include('../helperFiles/variableDeclarations.php');
 
     // Get session data
     $email = $_SESSION['email'];
@@ -19,6 +20,8 @@
     }
 
     function sendNotificationEmail($conn, $requestID, $status, $controlNumber = null) {
+        global $email_smtp_host, $email_smtp_user, $email_smtp_password, $email_smtp_secure, $email_smtp_port, $email_sender;
+
         $stmt = $conn->prepare("SELECT r.*, a.email, a.firstname, a.middlename, a.lastname 
                                 FROM scilab_form_requests r
                                 JOIN accounts a ON r.requesterEmployeeID = a.employeeID
@@ -56,14 +59,14 @@
         $mail = new PHPMailer(true);
         try {
             $mail->isSMTP();
-            $mail->Host = 'smtp.gmail.com'; 
+            $mail->Host = $email_smtp_host; 
             $mail->SMTPAuth = true;
-            $mail->Username = 'pshsircscilab@gmail.com';
-            $mail->Password = 'wxzmkkrffptfchcc';
-            $mail->SMTPSecure = 'tls';
-            $mail->Port = 587;
+            $mail->Username = $email_smtp_user;
+            $mail->Password = $email_smtp_password;
+            $mail->SMTPSecure = $email_smtp_secure;
+            $mail->Port = $email_smtp_port;
 
-            $mail->setFrom('pshsircscilab@gmail.com', 'SciLab Admin');
+            $mail->setFrom($email_sender, 'SciLab Admin');
             $mail->addAddress($email, $fullName);
 
             $mail->isHTML(true);

@@ -23,6 +23,7 @@ set_error_handler(function($severity, $message, $file, $line) {
 
 include('../../scilab/helperFiles/db_connection.php');
 include('../helperFiles/session_handler.php');
+include('../helperFiles/variableDeclarations.php');
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
@@ -36,6 +37,8 @@ function formatTime($time) {
 }
 
 function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails, $formID) {
+    global $email_smtp_host, $email_smtp_user, $email_smtp_password, $email_smtp_secure, $email_smtp_port, $email_sender;
+
     if (empty($supervisorEmails)) return; 
 
     $subjectLine = "Action Required: New SciLab Request for Approval";
@@ -48,7 +51,7 @@ function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails
     }
 
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
-    $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/scilab";
+    $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/" . $active_server;
     $approvalLink = $baseURL . "/supervisor_approve.php?id=" . $formID;
 
     $replacements = [
@@ -76,14 +79,14 @@ function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails
             $mail = new PHPMailer(true);
             try {
                 $mail->isSMTP();
-                $mail->Host = 'smtp.gmail.com';
+                $mail->Host = $email_smtp_host;
                 $mail->SMTPAuth = true;
-                $mail->Username = 'pshsircscilab@gmail.com';
-                $mail->Password = 'wxzmkkrffptfchcc';
-                $mail->SMTPSecure = 'tls';
-                $mail->Port = 587;
+                $mail->Username = $email_smtp_user;
+                $mail->Password = $email_smtp_password;
+                $mail->SMTPSecure = $email_smtp_secure;
+                $mail->Port = $email_smtp_port;
 
-                $mail->setFrom('pshsircscilab@gmail.com', 'SciLab Notification System');
+                $mail->setFrom($email_sender, 'SciLab Notification System');
                 $mail->addAddress($email);
 
                 $mail->isHTML(true);
@@ -99,6 +102,8 @@ function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails
 }
 
 function sendNotificationToAdmins($conn, $requestID) {
+    global $email_smtp_host, $email_smtp_user, $email_smtp_password, $email_smtp_secure, $email_smtp_port, $email_sender;
+
     // Fetch request details
     $stmt = $conn->prepare("SELECT * FROM scilab_form_requests WHERE id = ?");
     $stmt->bind_param("i", $requestID);
@@ -194,14 +199,14 @@ function sendNotificationToAdmins($conn, $requestID) {
             $mail = new PHPMailer(true);
             try {
                 $mail->isSMTP();
-                $mail->Host = 'smtp.gmail.com';
+                $mail->Host = $email_smtp_host;
                 $mail->SMTPAuth = true;
-                $mail->Username = 'pshsircscilab@gmail.com';
-                $mail->Password = 'wxzmkkrffptfchcc';
-                $mail->SMTPSecure = 'tls';
-                $mail->Port = 587;
+                $mail->Username = $email_smtp_user;
+                $mail->Password = $email_smtp_password;
+                $mail->SMTPSecure = $email_smtp_secure;
+                $mail->Port = $email_smtp_port;
 
-                $mail->setFrom('pshsircscilab@gmail.com', 'SciLab Notification System');
+                $mail->setFrom($email_sender, 'SciLab Notification System');
                 $mail->addAddress($admin['email']);
 
                 $mail->isHTML(true);
@@ -217,6 +222,8 @@ function sendNotificationToAdmins($conn, $requestID) {
 }
 
 function sendNotificationToSubjectTeacher($conn, $requestID) {
+    global $email_smtp_host, $email_smtp_user, $email_smtp_password, $email_smtp_secure, $email_smtp_port, $email_sender;
+
     // Fetch request details
     $stmt = $conn->prepare("SELECT * FROM scilab_form_requests WHERE id = ?");
     $stmt->bind_param("i", $requestID);
@@ -289,7 +296,7 @@ function sendNotificationToSubjectTeacher($conn, $requestID) {
     }
 
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
-    $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/scilab";
+    $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/" . $active_server;
     $approvalLink = $baseURL . "/supervisor_approve.php?id=" . $requestID;
 
     $replacements = [
@@ -317,14 +324,14 @@ function sendNotificationToSubjectTeacher($conn, $requestID) {
             $mail = new PHPMailer(true);
             try {
                 $mail->isSMTP();
-                $mail->Host = 'smtp.gmail.com';
+                $mail->Host = $email_smtp_host;
                 $mail->SMTPAuth = true;
-                $mail->Username = 'pshsircscilab@gmail.com';
-                $mail->Password = 'wxzmkkrffptfchcc';
-                $mail->SMTPSecure = 'tls';
-                $mail->Port = 587;
+                $mail->Username = $email_smtp_user;
+                $mail->Password = $email_smtp_password;
+                $mail->SMTPSecure = $email_smtp_secure;
+                $mail->Port = $email_smtp_port;
 
-                $mail->setFrom('pshsircscilab@gmail.com', 'SciLab Notification System');
+                $mail->setFrom($email_sender, 'SciLab Notification System');
                 $mail->addAddress($teacher['email']);
                 $mail->isHTML(true);
                 $mail->Subject = $subjectLine;
@@ -338,6 +345,8 @@ function sendNotificationToSubjectTeacher($conn, $requestID) {
 }
 
 function sendNotificationToCIDChief($conn, $requestID) {
+    global $email_smtp_host, $email_smtp_user, $email_smtp_password, $email_smtp_secure, $email_smtp_port, $email_sender;
+
     // Fetch request details
     $stmt = $conn->prepare("SELECT * FROM scilab_form_requests WHERE id = ?");
     $stmt->bind_param("i", $requestID);
@@ -388,14 +397,14 @@ function sendNotificationToCIDChief($conn, $requestID) {
             $mail = new PHPMailer(true);
             try {
                 $mail->isSMTP();
-                $mail->Host = 'smtp.gmail.com';
+                $mail->Host = $email_smtp_host;
                 $mail->SMTPAuth = true;
-                $mail->Username = 'pshsircscilab@gmail.com';
-                $mail->Password = 'wxzmkkrffptfchcc';
-                $mail->SMTPSecure = 'tls';
-                $mail->Port = 587;
+                $mail->Username = $email_smtp_user;
+                $mail->Password = $email_smtp_password;
+                $mail->SMTPSecure = $email_smtp_secure;
+                $mail->Port = $email_smtp_port;
 
-                $mail->setFrom('pshsircscilab@gmail.com', 'SciLab Notification System');
+                $mail->setFrom($email_sender, 'SciLab Notification System');
                 $mail->addAddress($admin['email']);
                 $mail->isHTML(true);
                 $mail->Subject = $subjectLine;
@@ -409,6 +418,8 @@ function sendNotificationToCIDChief($conn, $requestID) {
 }
 
 function sendRejectionNotificationToRequester($conn, $request, $rejectionReason, $rejectedBy) {
+    global $email_smtp_host, $email_smtp_user, $email_smtp_password, $email_smtp_secure, $email_smtp_port, $email_sender;
+
     $requesterID = $request['requesterEmployeeID'];
     $requesterEmail = null;
 
@@ -443,14 +454,14 @@ function sendRejectionNotificationToRequester($conn, $request, $rejectionReason,
         try {
             $mail = new PHPMailer(true);
             $mail->isSMTP();
-            $mail->Host = 'smtp.gmail.com';
+            $mail->Host = $email_smtp_host;
             $mail->SMTPAuth = true;
-            $mail->Username = 'pshsircscilab@gmail.com';
-            $mail->Password = 'wxzmkkrffptfchcc';
-            $mail->SMTPSecure = 'tls';
-            $mail->Port = 587;
+            $mail->Username = $email_smtp_user;
+            $mail->Password = $email_smtp_password;
+            $mail->SMTPSecure = $email_smtp_secure;
+            $mail->Port = $email_smtp_port;
 
-            $mail->setFrom('pshsircscilab@gmail.com', 'SciLab Notification System');
+            $mail->setFrom($email_sender, 'SciLab Notification System');
             $mail->addAddress($requesterEmail);
             $mail->isHTML(true);
             $mail->Subject = $subjectLine;
@@ -814,14 +825,14 @@ if ($updateStmt->execute()) {
             try {
                 $mail = new PHPMailer(true);
                 $mail->isSMTP();
-                $mail->Host = 'smtp.gmail.com';
+                $mail->Host = $email_smtp_host;
                 $mail->SMTPAuth = true;
-                $mail->Username = 'pshsircscilab@gmail.com';
-                $mail->Password = 'wxzmkkrffptfchcc';
-                $mail->SMTPSecure = 'tls';
-                $mail->Port = 587;
+                $mail->Username = $email_smtp_user;
+                $mail->Password = $email_smtp_password;
+                $mail->SMTPSecure = $email_smtp_secure;
+                $mail->Port = $email_smtp_port;
 
-                $mail->setFrom('pshsircscilab@gmail.com', 'SciLab Notification System');
+                $mail->setFrom($email_sender, 'SciLab Notification System');
                 $mail->addAddress($requesterEmail);
                 $mail->isHTML(true);
                 $mail->Subject = 'SciLab Request Approved';
