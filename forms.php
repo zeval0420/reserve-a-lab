@@ -285,6 +285,18 @@
                 font-weight: 600;
             }
             .liquid-input:focus { box-shadow: 0 8px 20px rgba(43, 85, 196, 0.2); border-color: rgba(43, 85, 196, 0.4) !important; outline: none; }
+
+            .multiselect-search {
+                border: 2px solid #2B55C4 !important;
+                border-radius: 10px !important;
+                background-color: rgba(255, 255, 255, 0.5) !important;
+                transition: all 0.2s ease;
+            }
+            .multiselect-search:focus {
+                box-shadow: 0 0 0 3px rgba(43, 85, 196, 0.2) !important;
+                border-color: #2B55C4 !important;
+                outline: none;
+            }
             
             select.liquid-input {
                 appearance: none;
