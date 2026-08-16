@@ -135,7 +135,7 @@ if ($supervisor_status === 'pending') {
     $currentApproverStep = 'Supervisor';
 } elseif ($supervisor_status === 'approved' && $subject_teacher_status === 'pending') {
     $canApproveCurrentStep = $isSubjectTeacher;
-    $currentApproverStep = 'Subject Teacher';
+    $currentApproverStep = 'Area Unit Head (AUH)';
 } elseif ($subject_teacher_status === 'approved' && $lab_personnel_status === 'pending') {
     $canApproveCurrentStep = $isLabPersonnel;
     $currentApproverStep = 'Lab Personnel';
@@ -1035,12 +1035,12 @@ function getStepIcon($class)
                         </div>
                     </div>
 
-                    <!-- Step 2: Subject Teacher -->
+                    <!-- Step 2: Area Unit Head (AUH) -->
                     <?php $s2Class = getStepClass($subject_teacher_status, $supervisor_status); ?>
                     <div class="step <?= $s2Class ?>" data-step="2">
                         <div class="step-dot"><?= getStepIcon($s2Class) ?></div>
                         <div class="step-info">
-                            <div class="step-role">Subject Teacher/Unit Head</div>
+                            <div class="step-role">Area Unit Head (AUH)</div>
                             <span
                                 class="step-status"><?= getStepStatusText($subject_teacher_status, $supervisor_status) ?></span>
                         </div>
@@ -1270,7 +1270,7 @@ function getStepIcon($class)
            ROLE SIMULATION
            Change `currentUserRole` to test different states:
              "Supervisor"        — can approve/reject (current approver)
-             "Subject Teacher"   — not yet the approver
+             "Area Unit Head (AUH)" — not yet the approver
              "Laboratory Personnel"
              "CID Chief"
              "Student"           — requester / viewer only

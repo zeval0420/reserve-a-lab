@@ -146,4 +146,68 @@ if (!function_exists('scilab_approval_token')) {
         return hash_hmac('sha256', intval($requestId) . '|' . $stage, 'SciLabApprovalLink2026');
     }
 }
+
+if (!function_exists('scilab_auh_designation')) {
+    /**
+     * Resolve the Area Unit Head (AUH) designation for a given subject.
+     * The request's subject column is a 25-char truncated copy of subjectCode,
+     * so an exact join is unreliable; use ordered keyword rules first, then
+     * a prefix match against the subject table.
+     *
+     * Returns "AUH-<unit>" or null when the subject cannot be mapped.
+     */
+    function scilab_auh_designation($conn, $subject, $gradeLevel = null)
+    {
+        $subject = trim((string)$subject);
+        if ($subject === '') {
+            return null;
+        }
+
+        // Ordered keyword rules (case-insensitive). More specific terms first.
+        $rules = [
+            'Computer Science' => 'AUH-Computer Science',
+            'Integrated Science' => 'AUH-Integrated Science',
+            'Social Science' => 'AUH-Social Science/Values Education',
+            'Values Education' => 'AUH-Social Science/Values Education',
+            'Chemistry' => 'AUH-Chemistry',
+            'Chem' => 'AUH-Chemistry',
+            'Physics' => 'AUH-Physics',
+            'Biology' => 'AUH-Biology',
+            'Mathematics' => 'AUH-Mathematics',
+            'Math' => 'AUH-Mathematics',
+            'Research' => 'AUH-Research',
+            'SCALE' => 'AUH-SCALE',
+            'Technology' => 'AUH-Technology',
+            'English' => 'AUH-English',
+            'Filipino' => 'AUH-Filipino',
+            'PEHM' => 'AUH-PEHM',
+        ];
+
+        foreach ($rules as $keyword => $designation) {
+            if (stripos($subject, $keyword) !== false) {
+                return $designation;
+            }
+        }
+
+        // Fallback: match the (possibly truncated) subject code against the subject table.
+        if ($conn) {
+            $like = $subject . '%';
+            $stmt = $conn->prepare("SELECT subjectAcademicUnit FROM subject WHERE subjectCode LIKE ? AND status = 'active' ORDER BY CHAR_LENGTH(subjectCode) ASC LIMIT 1");
+            if ($stmt) {
+                $stmt->bind_param("s", $like);
+                $stmt->execute();
+                $res = $stmt->get_result();
+                if ($row = $res->fetch_assoc()) {
+                    $unit = trim($row['subjectAcademicUnit'] ?? '');
+                    if ($unit !== '') {
+                        return 'AUH-' . $unit;
+                    }
+                }
+                $stmt->close();
+            }
+        }
+
+        return null;
+    }
+}
 ?>

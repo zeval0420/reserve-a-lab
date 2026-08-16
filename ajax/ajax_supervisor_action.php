@@ -163,7 +163,7 @@ function sendNotificationToAdmins($conn, $requestID) {
     $admins = $conn->query("SELECT email FROM accounts WHERE status = 'active' AND (position = 'Sci. Res. Assist.' OR position = 'Sci. Research Specialist I')");
     if ($admins->num_rows === 0) return;
 
-    $subjectLine = "New SciLab Request Submitted (Approved by Subject Teacher) - SLR-" . $requestID;
+    $subjectLine = "New SciLab Request Submitted (Approved by Area Unit Head) - SLR-" . $requestID;
     $templatePath = __DIR__ . "/../templates/request_email_template.html";
     
     if (file_exists($templatePath)) {
@@ -225,7 +225,7 @@ function sendNotificationToAdmins($conn, $requestID) {
     }
 }
 
-function sendNotificationToSubjectTeacher($conn, $requestID) {
+function sendNotificationToAUH($conn, $requestID) {
     // Fetch request details
     $stmt = $conn->prepare("SELECT * FROM scilab_form_requests WHERE id = ?");
     $stmt->bind_param("i", $requestID);
@@ -234,7 +234,44 @@ function sendNotificationToSubjectTeacher($conn, $requestID) {
     $data = $res->fetch_assoc();
     $stmt->close();
 
-    if (!$data) return;
+    if (!$data) return false;
+
+    // Resolve the AUH designation for this request's subject
+    $designation = scilab_auh_designation($conn, $data['subject'] ?? '', $data['gradeLevel'] ?? null);
+    if ($designation === null) {
+        error_log("No AUH designation resolvable for request {$requestID} (subject: " . ($data['subject'] ?? '') . ')');
+        return false;
+    }
+
+    // Get current school year
+    $syResult = $conn->query("SELECT value FROM current WHERE description = 'School Year' ORDER BY id DESC LIMIT 1");
+    if (!$syResult || !$sy = $syResult->fetch_assoc()['value'] ?? null) {
+        error_log("Unable to resolve current school year for request {$requestID}");
+        return false;
+    }
+
+    // Find designated AUH employee(s) for this school year
+    $auhStmt = $conn->prepare("SELECT DISTINCT employeeID FROM designation WHERE sy = ? AND designation = ?");
+    $auhStmt->bind_param("ss", $sy, $designation);
+    $auhStmt->execute();
+    $auhRes = $auhStmt->get_result();
+    $auhEmails = [];
+    while ($auh = $auhRes->fetch_assoc()) {
+        $empStmt = $conn->prepare("SELECT email FROM accounts WHERE employeeID = ? AND status = 'active'");
+        $empStmt->bind_param("s", $auh['employeeID']);
+        $empStmt->execute();
+        $empRes = $empStmt->get_result();
+        if ($emp = $empRes->fetch_assoc()) {
+            $auhEmails[] = $emp['email'];
+        }
+        $empStmt->close();
+    }
+    $auhStmt->close();
+
+    if (empty($auhEmails)) {
+        error_log("No active AUH account found for {$designation} (SY {$sy})");
+        return false;
+    }
 
     $requesterID = $data['requesterEmployeeID'];
     $requesterName = $requesterID;
@@ -285,10 +322,7 @@ function sendNotificationToSubjectTeacher($conn, $requestID) {
     $studentsStr = implode(", ", $students);
     $studStmt->close();
 
-    $subjectTeachers = $conn->query("SELECT email FROM accounts WHERE status = 'active' AND position LIKE '%Teacher%'");
-    if ($subjectTeachers->num_rows === 0) return;
-
-    $subjectLine = "Action Required: Subject Teacher Approval Needed - SLR-" . $requestID;
+    $subjectLine = "Action Required: Area Unit Head (AUH) Approval Needed - SLR-" . $requestID;
     $templatePath = __DIR__ . "/../templates/supervisor_request_email_template.html";
 
     if (file_exists($templatePath)) {
@@ -320,8 +354,9 @@ function sendNotificationToSubjectTeacher($conn, $requestID) {
         $bodyTemplate = str_replace($key, htmlspecialchars($val), $bodyTemplate);
     }
 
-    while ($teacher = $subjectTeachers->fetch_assoc()) {
-        if (filter_var($teacher['email'], FILTER_VALIDATE_EMAIL)) {
+    $sent = false;
+    foreach (array_unique($auhEmails) as $email) {
+        if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $mail = new PHPMailer(true);
             try {
                 $mail->isSMTP();
@@ -333,7 +368,7 @@ function sendNotificationToSubjectTeacher($conn, $requestID) {
                 $mail->Port = 587;
 
                 $mail->setFrom('pshsircscilab@gmail.com', 'PSHS-IRC SciLab');
-                $mail->addAddress($teacher['email']);
+                $mail->addAddress($email);
                 $mail->isHTML(true);
                 $mail->Subject = $subjectLine;
 
@@ -342,11 +377,14 @@ function sendNotificationToSubjectTeacher($conn, $requestID) {
                 $mail->Body = $personalizedBody;
 
                 $mail->send();
+                $sent = true;
             } catch (Exception $e) {
-                error_log("Subject Teacher email failed to {$teacher['email']}: {$mail->ErrorInfo}");
+                error_log("AUH email failed to {$email}: {$mail->ErrorInfo}");
             }
         }
     }
+
+    return $sent;
 }
 
 function sendNotificationToCIDChief($conn, $requestID) {
@@ -684,7 +722,7 @@ if (!$request) {
 }
 
 // Determine which column to update based on current status flow
-// Priority: Supervisor -> Subject Teacher -> Lab Personnel -> CID Chief
+// Priority: Supervisor -> Area Unit Head (AUH) -> Lab Personnel -> CID Chief
 $fieldPrefix = '';
 
 if ($action === 'force_approve_override') {
@@ -824,7 +862,14 @@ if ($updateStmt->execute()) {
             }
         }
     } elseif ($fieldPrefix === 'supervisor' && $action === 'approve') {
-        sendNotificationToSubjectTeacher($conn, $requestId);
+        if (!sendNotificationToAUH($conn, $requestId)) {
+            // No AUH resolvable for this subject — auto-approve this stage and notify Lab Personnel.
+            $autoStmt = $conn->prepare("UPDATE scilab_form_requests SET subject_teacher_status = 'approved' WHERE id = ?");
+            $autoStmt->bind_param("i", $requestId);
+            $autoStmt->execute();
+            $autoStmt->close();
+            sendNotificationToAdmins($conn, $requestId);
+        }
     } elseif ($fieldPrefix === 'subject_teacher' && $action === 'approve') {
         sendNotificationToAdmins($conn, $requestId);
     } elseif ($fieldPrefix === 'lab_personnel' && $action === 'approve') {
