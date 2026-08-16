@@ -954,7 +954,7 @@
                     return;
                 }
 
-                $.post('ajax/ajax_admin_action.php', { action: 'approve', id: id, controlNumber: control, remarks: remarks }, function (response) {
+                $.post('ajax/ajax_admin_action.php', { action: 'force_approve', id: id, controlNumber: control, remarks: remarks }, function (response) {
                     const isSuccess = response.toLowerCase().includes('approved');
                     showToast(response, isSuccess ? 'success' : 'error');
                     if (isSuccess) {
