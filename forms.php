@@ -631,8 +631,22 @@
         }
 
         function createRowHtml(itemsObj, classification) {
+            const hasItems = Object.keys(itemsObj).length > 0;
             const itemOpts = buildItemOptions(itemsObj);
-            
+
+            let itemSelect = '';
+            if (hasItems) {
+                itemSelect = `
+                    <select class="form-control item-select liquid-input" name="item[]">
+                        <option value="">Select Item</option>${itemOpts}
+                    </select>`;
+            } else {
+                itemSelect = `
+                    <select class="form-control item-select liquid-input" name="item[]" disabled>
+                        <option value="">No item in inventory</option>
+                    </select>`;
+            }
+
             let descriptionField = '';
             if (classification === 'Reagent') {
                 descriptionField = `<input type="text" class="form-control description-input liquid-input" name="description[]" placeholder="Description (Optional)" disabled>`;
@@ -652,9 +666,7 @@
                         </div>
                     </td>
                     <td>
-                        <select class="form-control item-select liquid-input" name="item[]">
-                            <option value="">Select Item</option>${itemOpts}
-                        </select>
+                        ${itemSelect}
                     </td>
                     <td>
                         ${descriptionField}
@@ -1095,6 +1107,9 @@
             $('#teacher-checkboxes').multiselect({
                 includeSelectAllOption: false,
                 nonSelectedText: 'Select Teacher',
+                enableFiltering: true,
+                enableCaseInsensitiveFiltering: true,
+                filterPlaceholder: 'Search teacher...',
                 onChange: function() {
                     $('#teacher-checkboxes').next('.btn-group').find('.multiselect').removeClass('is-invalid');
                 }
