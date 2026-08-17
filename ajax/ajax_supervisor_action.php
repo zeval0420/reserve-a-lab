@@ -51,12 +51,8 @@ function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails
     }
 
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
-<<<<<<< HEAD
     $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/" . $active_server;
     $approvalLink = $baseURL . "/supervisor_approve.php?id=" . $formID;
-=======
-    $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/beta";
->>>>>>> parent of b55274c (NEW TEST)
 
     $replacements = [
         "[Facility]" => $data['scilabName'],
@@ -89,11 +85,7 @@ function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails
                 $mail->SMTPSecure = $email_smtp_secure;
                 $mail->Port = $email_smtp_port;
 
-<<<<<<< HEAD
                 $mail->setFrom($email_sender, 'SciLab Notification System');
-=======
-                $mail->setFrom('pshsircscilab@gmail.com', 'PSHS-IRC SciLab');
->>>>>>> parent of b55274c (NEW TEST)
                 $mail->addAddress($email);
 
                 $mail->isHTML(true);
@@ -216,11 +208,7 @@ function sendNotificationToAdmins($conn, $requestID) {
                 $mail->SMTPSecure = $email_smtp_secure;
                 $mail->Port = $email_smtp_port;
 
-<<<<<<< HEAD
                 $mail->setFrom($email_sender, 'SciLab Notification System');
-=======
-                $mail->setFrom('pshsircscilab@gmail.com', 'PSHS-IRC SciLab');
->>>>>>> parent of b55274c (NEW TEST)
                 $mail->addAddress($admin['email']);
 
                 $mail->isHTML(true);
@@ -242,13 +230,9 @@ function sendNotificationToAdmins($conn, $requestID) {
     }
 }
 
-<<<<<<< HEAD
 function sendNotificationToSubjectTeacher($conn, $requestID) {
     global $email_smtp_host, $email_smtp_user, $email_smtp_password, $email_smtp_secure, $email_smtp_port, $email_sender;
 
-=======
-function sendNotificationToAUH($conn, $requestID) {
->>>>>>> parent of b55274c (NEW TEST)
     // Fetch request details
     $stmt = $conn->prepare("SELECT * FROM scilab_form_requests WHERE id = ?");
     $stmt->bind_param("i", $requestID);
@@ -356,10 +340,7 @@ function sendNotificationToAUH($conn, $requestID) {
 
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
     $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/" . $active_server;
-<<<<<<< HEAD
     $approvalLink = $baseURL . "/supervisor_approve.php?id=" . $requestID;
-=======
->>>>>>> parent of b55274c (NEW TEST)
 
     $replacements = [
         "[Request ID]" => "SLR-" . $requestID,
@@ -394,13 +375,8 @@ function sendNotificationToAUH($conn, $requestID) {
                 $mail->SMTPSecure = $email_smtp_secure;
                 $mail->Port = $email_smtp_port;
 
-<<<<<<< HEAD
                 $mail->setFrom($email_sender, 'SciLab Notification System');
-                $mail->addAddress($teacher['email']);
-=======
-                $mail->setFrom('pshsircscilab@gmail.com', 'PSHS-IRC SciLab');
                 $mail->addAddress($email);
->>>>>>> parent of b55274c (NEW TEST)
                 $mail->isHTML(true);
                 $mail->Subject = $subjectLine;
 
@@ -482,11 +458,7 @@ function sendNotificationToCIDChief($conn, $requestID) {
                 $mail->SMTPSecure = $email_smtp_secure;
                 $mail->Port = $email_smtp_port;
 
-<<<<<<< HEAD
                 $mail->setFrom($email_sender, 'SciLab Notification System');
-=======
-                $mail->setFrom('pshsircscilab@gmail.com', 'PSHS-IRC SciLab');
->>>>>>> parent of b55274c (NEW TEST)
                 $mail->addAddress($admin['email']);
                 $mail->isHTML(true);
                 $mail->Subject = $subjectLine;
@@ -543,11 +515,7 @@ function sendRejectionNotificationToRequester($conn, $request, $rejectionReason,
             $mail->SMTPSecure = $email_smtp_secure;
             $mail->Port = $email_smtp_port;
 
-<<<<<<< HEAD
             $mail->setFrom($email_sender, 'SciLab Notification System');
-=======
-            $mail->setFrom('pshsircscilab@gmail.com', 'PSHS-IRC SciLab');
->>>>>>> parent of b55274c (NEW TEST)
             $mail->addAddress($requesterEmail);
             $mail->isHTML(true);
             $mail->Subject = $subjectLine;
@@ -889,11 +857,7 @@ if ($updateStmt->execute()) {
                 $mail->SMTPSecure = $email_smtp_secure;
                 $mail->Port = $email_smtp_port;
 
-<<<<<<< HEAD
                 $mail->setFrom($email_sender, 'SciLab Notification System');
-=======
-                $mail->setFrom('pshsircscilab@gmail.com', 'PSHS-IRC SciLab');
->>>>>>> parent of b55274c (NEW TEST)
                 $mail->addAddress($requesterEmail);
                 $mail->isHTML(true);
                 $mail->Subject = 'SciLab Request Approved - SLR-' . $requestId;
@@ -910,7 +874,7 @@ if ($updateStmt->execute()) {
             }
         }
     } elseif ($fieldPrefix === 'supervisor' && $action === 'approve') {
-        if (!sendNotificationToAUH($conn, $requestId)) {
+        if (!sendNotificationToSubjectTeacher($conn, $requestId)) {
             // No AUH resolvable for this subject — auto-approve this stage and notify Lab Personnel.
             $autoStmt = $conn->prepare("UPDATE scilab_form_requests SET subject_teacher_status = 'approved' WHERE id = ?");
             $autoStmt->bind_param("i", $requestId);

@@ -66,11 +66,7 @@
             $mail->SMTPSecure = $email_smtp_secure;
             $mail->Port = $email_smtp_port;
 
-<<<<<<< HEAD
             $mail->setFrom($email_sender, 'SciLab Admin');
-=======
-            $mail->setFrom('pshsircscilab@gmail.com', 'PSHS-IRC SciLab');
->>>>>>> parent of b55274c (NEW TEST)
             $mail->addAddress($email, $fullName);
 
             $mail->isHTML(true);
