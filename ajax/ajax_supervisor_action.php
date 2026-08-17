@@ -89,11 +89,7 @@ function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails
                 $mail->SMTPSecure = $email_smtp_secure;
                 $mail->Port = $email_smtp_port;
 
-<<<<<<< HEAD
-                $mail->setFrom($email_sender, 'SciLab Notification System');
-=======
                 $mail->setFrom('pshsircscilab@gmail.com', 'PSHS-IRC SciLab');
->>>>>>> parent of b55274c (NEW TEST)
                 $mail->addAddress($email);
 
                 $mail->isHTML(true);
@@ -216,11 +212,7 @@ function sendNotificationToAdmins($conn, $requestID) {
                 $mail->SMTPSecure = $email_smtp_secure;
                 $mail->Port = $email_smtp_port;
 
-<<<<<<< HEAD
-                $mail->setFrom($email_sender, 'SciLab Notification System');
-=======
                 $mail->setFrom('pshsircscilab@gmail.com', 'PSHS-IRC SciLab');
->>>>>>> parent of b55274c (NEW TEST)
                 $mail->addAddress($admin['email']);
 
                 $mail->isHTML(true);
@@ -394,13 +386,8 @@ function sendNotificationToAUH($conn, $requestID) {
                 $mail->SMTPSecure = $email_smtp_secure;
                 $mail->Port = $email_smtp_port;
 
-<<<<<<< HEAD
-                $mail->setFrom($email_sender, 'SciLab Notification System');
-                $mail->addAddress($teacher['email']);
-=======
                 $mail->setFrom('pshsircscilab@gmail.com', 'PSHS-IRC SciLab');
                 $mail->addAddress($email);
->>>>>>> parent of b55274c (NEW TEST)
                 $mail->isHTML(true);
                 $mail->Subject = $subjectLine;
 
@@ -482,11 +469,7 @@ function sendNotificationToCIDChief($conn, $requestID) {
                 $mail->SMTPSecure = $email_smtp_secure;
                 $mail->Port = $email_smtp_port;
 
-<<<<<<< HEAD
-                $mail->setFrom($email_sender, 'SciLab Notification System');
-=======
                 $mail->setFrom('pshsircscilab@gmail.com', 'PSHS-IRC SciLab');
->>>>>>> parent of b55274c (NEW TEST)
                 $mail->addAddress($admin['email']);
                 $mail->isHTML(true);
                 $mail->Subject = $subjectLine;
@@ -543,11 +526,7 @@ function sendRejectionNotificationToRequester($conn, $request, $rejectionReason,
             $mail->SMTPSecure = $email_smtp_secure;
             $mail->Port = $email_smtp_port;
 
-<<<<<<< HEAD
-            $mail->setFrom($email_sender, 'SciLab Notification System');
-=======
             $mail->setFrom('pshsircscilab@gmail.com', 'PSHS-IRC SciLab');
->>>>>>> parent of b55274c (NEW TEST)
             $mail->addAddress($requesterEmail);
             $mail->isHTML(true);
             $mail->Subject = $subjectLine;
@@ -889,11 +868,7 @@ if ($updateStmt->execute()) {
                 $mail->SMTPSecure = $email_smtp_secure;
                 $mail->Port = $email_smtp_port;
 
-<<<<<<< HEAD
-                $mail->setFrom($email_sender, 'SciLab Notification System');
-=======
                 $mail->setFrom('pshsircscilab@gmail.com', 'PSHS-IRC SciLab');
->>>>>>> parent of b55274c (NEW TEST)
                 $mail->addAddress($requesterEmail);
                 $mail->isHTML(true);
                 $mail->Subject = 'SciLab Request Approved - SLR-' . $requestId;
