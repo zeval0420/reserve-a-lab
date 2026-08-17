@@ -1,4 +1,3 @@
-@ -1,1283 +1,1298 @@
 <?php
     include('../scilab/helperFiles/db_connection.php');
     include('helperFiles/session_handler.php');
@@ -150,9 +149,9 @@
                 background-position: center; background-size: cover; background-repeat: no-repeat; padding: 30px 8%; text-align: center;
             }
             .form-title h4 { color: white; font-size: 2.7rem; font-weight: bold; }
-            .container { min-height: 150vh; }
+            .container { flex: 1; }
             .form-container {
-                min-height: 120vh; background-color: white; padding: 30px; margin: 20px 0 60px;
+                background-color: white; padding: 30px; margin: 20px 0 60px;
                 border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.07);
             }
             .form-containers h5 { margin-top: 30px; color: var(--main-blue); border-bottom: 2px solid var(--main-blue); padding-bottom: 5px; }
@@ -684,9 +683,6 @@
                         </div>
                     </td>
                     <td>
-                        <select class="form-control item-select liquid-input" name="item[]">
-                            <option value="">Select Item</option>${itemOpts}
-                        </select>
                         ${itemSelect}
                     </td>
                     <td>
