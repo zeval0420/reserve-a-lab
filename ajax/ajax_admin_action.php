@@ -66,15 +66,11 @@
             $mail->SMTPSecure = $email_smtp_secure;
             $mail->Port = $email_smtp_port;
 
-<<<<<<< HEAD
             $mail->setFrom($email_sender, 'SciLab Admin');
-=======
-            $mail->setFrom('pshsircscilab@gmail.com', 'PSHS-IRC SciLab');
->>>>>>> parent of b55274c (NEW TEST)
             $mail->addAddress($email, $fullName);
 
             $mail->isHTML(true);
-            $mail->Subject = "SciLab Request - " . ucfirst($status) . " - SLR-" . $requestID;
+            $mail->Subject = "SciLab Request - " . ucfirst($status);
             $mail->Body    = $bodyTemplate;
 
             $mail->send();
@@ -133,8 +129,7 @@
 
             echo "no_conflict";
             exit();
-        }
-        elseif ($_POST['action'] === 'approve') {
+        }elseif ($_POST['action'] === 'approve') {
             $controlNumber = isset($_POST['controlNumber']) ? (int) $_POST['controlNumber'] : 0;
             $remarks = $_POST['remarks'] ?? '';
 
@@ -167,42 +162,7 @@
             }
             $stmt->close();
             exit();
-        }
-        elseif ($_POST['action'] === 'force_approve') {
-            $controlNumber = isset($_POST['controlNumber']) ? (int) $_POST['controlNumber'] : 0;
-            $remarks = $_POST['remarks'] ?? '';
-
-            if ($controlNumber <= 0) {
-                echo "Invalid control number.";
-                exit();
-            }
-
-            // Check for control number duplication
-            $checkStmt = $conn->prepare("SELECT id FROM scilab_form_requests WHERE controlNumber = ? AND id != ?");
-            $checkStmt->bind_param("ii", $controlNumber, $id);
-            $checkStmt->execute();
-            $checkResult = $checkStmt->get_result();
-            if ($checkResult->num_rows > 0) {
-                echo "Control number already exists.";
-                $checkStmt->close();
-                exit();
-            }
-            $checkStmt->close();
-
-            $stmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Approved', supervisor_status = 'approved', subject_teacher_status = 'approved', lab_personnel_status = 'approved', cid_chief_status = 'approved', controlNumber = ?, feedback = ? WHERE id = ?");
-            $stmt->bind_param("isi", $controlNumber, $remarks, $id);
-            $stmt->execute();
-
-            if ($stmt->affected_rows > 0) {
-                sendNotificationEmail($conn, $id, 'approved', $controlNumber);
-                echo "Request approved.";
-            } else {
-                echo "Update failed.";
-            }
-            $stmt->close();
-            exit();
-        }
-        elseif ($_POST['action'] === 'reject') {
+        }elseif ($_POST['action'] === 'reject') {
             $feedback = $_POST['feedback'] ?? '';
             $stmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Rejected', supervisor_status = 'rejected', subject_teacher_status = 'rejected', lab_personnel_status = 'rejected', cid_chief_status = 'rejected', controlNumber = NULL, feedback = ? WHERE id = ?");
             $stmt->bind_param("si", $feedback, $id);
