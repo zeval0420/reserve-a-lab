@@ -51,12 +51,8 @@ function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails
     }
 
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
-<<<<<<< HEAD
     $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/" . $active_server;
     $approvalLink = $baseURL . "/supervisor_approve.php?id=" . $formID;
-=======
-    $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/beta";
->>>>>>> parent of b55274c (NEW TEST)
 
     $replacements = [
         "[Facility]" => $data['scilabName'],
@@ -234,13 +230,7 @@ function sendNotificationToAdmins($conn, $requestID) {
     }
 }
 
-<<<<<<< HEAD
-function sendNotificationToSubjectTeacher($conn, $requestID) {
-    global $email_smtp_host, $email_smtp_user, $email_smtp_password, $email_smtp_secure, $email_smtp_port, $email_sender;
-
-=======
 function sendNotificationToAUH($conn, $requestID) {
->>>>>>> parent of b55274c (NEW TEST)
     // Fetch request details
     $stmt = $conn->prepare("SELECT * FROM scilab_form_requests WHERE id = ?");
     $stmt->bind_param("i", $requestID);
@@ -348,10 +338,6 @@ function sendNotificationToAUH($conn, $requestID) {
 
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
     $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/" . $active_server;
-<<<<<<< HEAD
-    $approvalLink = $baseURL . "/supervisor_approve.php?id=" . $requestID;
-=======
->>>>>>> parent of b55274c (NEW TEST)
 
     $replacements = [
         "[Request ID]" => "SLR-" . $requestID,
