@@ -60,6 +60,7 @@ function createMailer()
 
 function sendSubmissionNotificationToAdmins($conn, $data, $formID)
 {
+    global $active_server;
     $admins = $conn->query("SELECT email FROM accounts WHERE status = 'active' AND (position = 'Sci. Res. Assist.' OR position = 'Sci. Research Specialist I')");
     if ($admins->num_rows === 0)
         return;
@@ -117,6 +118,7 @@ function sendSubmissionNotificationToAdmins($conn, $data, $formID)
 
 function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails, $formID)
 {
+    global $active_server;
     if (empty($supervisorEmails))
         return;
 

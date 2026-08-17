@@ -37,7 +37,7 @@ function formatTime($time) {
 }
 
 function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails, $formID) {
-    global $email_smtp_host, $email_smtp_user, $email_smtp_password, $email_smtp_secure, $email_smtp_port, $email_sender;
+    global $email_smtp_host, $email_smtp_user, $email_smtp_password, $email_smtp_secure, $email_smtp_port, $email_sender, $active_server;
 
     if (empty($supervisorEmails)) return; 
 
@@ -231,7 +231,7 @@ function sendNotificationToAdmins($conn, $requestID) {
 }
 
 function sendNotificationToSubjectTeacher($conn, $requestID) {
-    global $email_smtp_host, $email_smtp_user, $email_smtp_password, $email_smtp_secure, $email_smtp_port, $email_sender;
+    global $email_smtp_host, $email_smtp_user, $email_smtp_password, $email_smtp_secure, $email_smtp_port, $email_sender, $active_server;
     // Fetch request details
     $stmt = $conn->prepare("SELECT * FROM scilab_form_requests WHERE id = ?");
     $stmt->bind_param("i", $requestID);
@@ -395,7 +395,7 @@ function sendNotificationToSubjectTeacher($conn, $requestID) {
 }
 
 function sendNotificationToCIDChief($conn, $requestID) {
-    global $email_smtp_host, $email_smtp_user, $email_smtp_password, $email_smtp_secure, $email_smtp_port, $email_sender;
+    global $email_smtp_host, $email_smtp_user, $email_smtp_password, $email_smtp_secure, $email_smtp_port, $email_sender, $active_server;
 
     // Fetch request details
     $stmt = $conn->prepare("SELECT * FROM scilab_form_requests WHERE id = ?");
