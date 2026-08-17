@@ -85,7 +85,7 @@ function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails
                 $mail->SMTPSecure = $email_smtp_secure;
                 $mail->Port = $email_smtp_port;
 
-                $mail->setFrom($email_sender, 'SciLab Notification System');
+                $mail->setFrom($email_sender, 'PSHS-IRC SciLab');
                 $mail->addAddress($email);
 
                 $mail->isHTML(true);
@@ -208,7 +208,7 @@ function sendNotificationToAdmins($conn, $requestID) {
                 $mail->SMTPSecure = $email_smtp_secure;
                 $mail->Port = $email_smtp_port;
 
-                $mail->setFrom($email_sender, 'SciLab Notification System');
+                $mail->setFrom($email_sender, 'PSHS-IRC SciLab');
                 $mail->addAddress($admin['email']);
 
                 $mail->isHTML(true);
@@ -232,7 +232,6 @@ function sendNotificationToAdmins($conn, $requestID) {
 
 function sendNotificationToSubjectTeacher($conn, $requestID) {
     global $email_smtp_host, $email_smtp_user, $email_smtp_password, $email_smtp_secure, $email_smtp_port, $email_sender;
-
     // Fetch request details
     $stmt = $conn->prepare("SELECT * FROM scilab_form_requests WHERE id = ?");
     $stmt->bind_param("i", $requestID);
@@ -375,7 +374,7 @@ function sendNotificationToSubjectTeacher($conn, $requestID) {
                 $mail->SMTPSecure = $email_smtp_secure;
                 $mail->Port = $email_smtp_port;
 
-                $mail->setFrom($email_sender, 'SciLab Notification System');
+                $mail->setFrom($email_sender, 'PSHS-IRC SciLab');
                 $mail->addAddress($email);
                 $mail->isHTML(true);
                 $mail->Subject = $subjectLine;
@@ -458,7 +457,7 @@ function sendNotificationToCIDChief($conn, $requestID) {
                 $mail->SMTPSecure = $email_smtp_secure;
                 $mail->Port = $email_smtp_port;
 
-                $mail->setFrom($email_sender, 'SciLab Notification System');
+                $mail->setFrom($email_sender, 'PSHS-IRC SciLab');
                 $mail->addAddress($admin['email']);
                 $mail->isHTML(true);
                 $mail->Subject = $subjectLine;
@@ -515,7 +514,7 @@ function sendRejectionNotificationToRequester($conn, $request, $rejectionReason,
             $mail->SMTPSecure = $email_smtp_secure;
             $mail->Port = $email_smtp_port;
 
-            $mail->setFrom($email_sender, 'SciLab Notification System');
+            $mail->setFrom($email_sender, 'PSHS-IRC SciLab');
             $mail->addAddress($requesterEmail);
             $mail->isHTML(true);
             $mail->Subject = $subjectLine;
@@ -857,7 +856,7 @@ if ($updateStmt->execute()) {
                 $mail->SMTPSecure = $email_smtp_secure;
                 $mail->Port = $email_smtp_port;
 
-                $mail->setFrom($email_sender, 'SciLab Notification System');
+                $mail->setFrom($email_sender, 'PSHS-IRC SciLab');
                 $mail->addAddress($requesterEmail);
                 $mail->isHTML(true);
                 $mail->Subject = 'SciLab Request Approved - SLR-' . $requestId;

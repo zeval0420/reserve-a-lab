@@ -1,3 +1,4 @@
+@ -1,1283 +1,1298 @@
 <?php
     include('../scilab/helperFiles/db_connection.php');
     include('helperFiles/session_handler.php');
@@ -285,7 +286,7 @@
                 font-weight: 600;
             }
             .liquid-input:focus { box-shadow: 0 8px 20px rgba(43, 85, 196, 0.2); border-color: rgba(43, 85, 196, 0.4) !important; outline: none; }
-
+            
             .multiselect-container .filter .input-group-addon,
             .multiselect-container .filter .multiselect-clear-filter {
                 display: none !important;
@@ -295,17 +296,13 @@
                 border-radius: 10px !important;
                 background-color: rgba(255, 255, 255, 0.5) !important;
                 transition: all 0.2s ease;
-                margin: 8px 10px;
-                padding: 8px 12px;
-                width: calc(100% - 20px) !important;
-                box-sizing: border-box;
             }
             .multiselect-container .filter .multiselect-search:focus {
                 box-shadow: 0 0 0 3px rgba(43, 85, 196, 0.2) !important;
                 border-color: #2B55C4 !important;
                 outline: none;
             }
-            
+
             select.liquid-input {
                 appearance: none;
                 -webkit-appearance: none;
@@ -653,6 +650,7 @@
         function createRowHtml(itemsObj, classification) {
             const hasItems = Object.keys(itemsObj).length > 0;
             const itemOpts = buildItemOptions(itemsObj);
+            
 
             let itemSelect = '';
             if (hasItems) {
@@ -686,6 +684,9 @@
                         </div>
                     </td>
                     <td>
+                        <select class="form-control item-select liquid-input" name="item[]">
+                            <option value="">Select Item</option>${itemOpts}
+                        </select>
                         ${itemSelect}
                     </td>
                     <td>
