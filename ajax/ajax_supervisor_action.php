@@ -568,7 +568,7 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
         if ($typeRow = $typeResult->fetch_assoc()) {
             $accountType = strtolower(trim($typeRow['type'] ?? ''));
 
-            if ($accountType === 'faculty' || $accountType === 'sysadmin' || $accountType === 'staff') {
+            if ($accountType === 'faculty' || $accountType === 'sysadmin') {
                 $isFacultyOrSysadmin = true;
             }
         }
@@ -578,9 +578,9 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
     $statusScilabPersonnel = 'Pending';
     $initialLabPersonnelStatus = 'pending';
     $initialCidChiefStatus = 'pending';
+    $initialSubjectTeacherStatus = 'pending';
 
     $initialSupervisorStatus = $isFacultyOrSysadmin ? 'approved' : 'pending';
-    $initialSubjectTeacherStatus = $isFacultyOrSysadmin ? 'approved' : 'pending';
 
     $stmt = $conn->prepare("INSERT INTO scilab_form_requests (
         scilabName,
@@ -778,7 +778,8 @@ if ($fieldPrefix === 'force_approve') {
     $sql .= " WHERE id = ?";
     $params[] = $requestId;
     $types .= "i";
-} else {
+}
+else {
     $statusColumn = $fieldPrefix . '_status';
     $newStatus = ($action === 'approve') ? 'approved' : 'rejected';
 
