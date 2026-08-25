@@ -149,9 +149,9 @@
                 background-position: center; background-size: cover; background-repeat: no-repeat; padding: 30px 8%; text-align: center;
             }
             .form-title h4 { color: white; font-size: 2.7rem; font-weight: bold; }
-            .container { min-height: 150vh; }
+            .container { flex: 1; }
             .form-container {
-                min-height: 120vh; background-color: white; padding: 30px; margin: 20px 0 60px;
+                background-color: white; padding: 30px; margin: 20px 0 60px;
                 border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.07);
             }
             .form-containers h5 { margin-top: 30px; color: var(--main-blue); border-bottom: 2px solid var(--main-blue); padding-bottom: 5px; }
@@ -286,6 +286,22 @@
             }
             .liquid-input:focus { box-shadow: 0 8px 20px rgba(43, 85, 196, 0.2); border-color: rgba(43, 85, 196, 0.4) !important; outline: none; }
             
+            .multiselect-container .filter .input-group-addon,
+            .multiselect-container .filter .multiselect-clear-filter {
+                display: none !important;
+            }
+            .multiselect-container .filter .multiselect-search {
+                border: 2px solid #2B55C4 !important;
+                border-radius: 10px !important;
+                background-color: rgba(255, 255, 255, 0.5) !important;
+                transition: all 0.2s ease;
+            }
+            .multiselect-container .filter .multiselect-search:focus {
+                box-shadow: 0 0 0 3px rgba(43, 85, 196, 0.2) !important;
+                border-color: #2B55C4 !important;
+                outline: none;
+            }
+
             select.liquid-input {
                 appearance: none;
                 -webkit-appearance: none;
@@ -631,8 +647,23 @@
         }
 
         function createRowHtml(itemsObj, classification) {
+            const hasItems = Object.keys(itemsObj).length > 0;
             const itemOpts = buildItemOptions(itemsObj);
             
+
+            let itemSelect = '';
+            if (hasItems) {
+                itemSelect = `
+                    <select class="form-control item-select liquid-input" name="item[]">
+                        <option value="">Select Item</option>${itemOpts}
+                    </select>`;
+            } else {
+                itemSelect = `
+                    <select class="form-control item-select liquid-input" name="item[]" disabled>
+                        <option value="">No item in inventory</option>
+                    </select>`;
+            }
+
             let descriptionField = '';
             if (classification === 'Reagent') {
                 descriptionField = `<input type="text" class="form-control description-input liquid-input" name="description[]" placeholder="Description (Optional)" disabled>`;
@@ -652,9 +683,7 @@
                         </div>
                     </td>
                     <td>
-                        <select class="form-control item-select liquid-input" name="item[]">
-                            <option value="">Select Item</option>${itemOpts}
-                        </select>
+                        ${itemSelect}
                     </td>
                     <td>
                         ${descriptionField}
@@ -1095,6 +1124,9 @@
             $('#teacher-checkboxes').multiselect({
                 includeSelectAllOption: false,
                 nonSelectedText: 'Select Teacher',
+                enableFiltering: true,
+                enableCaseInsensitiveFiltering: true,
+                filterPlaceholder: 'Search teacher...',
                 onChange: function() {
                     $('#teacher-checkboxes').next('.btn-group').find('.multiselect').removeClass('is-invalid');
                 }

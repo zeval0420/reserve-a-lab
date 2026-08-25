@@ -9,6 +9,7 @@
     // centralized db_connection and session_handler
     include('../../scilab/helperFiles/db_connection.php');
     include('../helperFiles/session_handler.php');
+    include('../helperFiles/variableDeclarations.php');
 
     // Get session data
     $email = $_SESSION['email'];
@@ -19,6 +20,8 @@
     }
 
     function sendNotificationEmail($conn, $requestID, $status, $controlNumber = null) {
+        global $email_smtp_host, $email_smtp_user, $email_smtp_password, $email_smtp_secure, $email_smtp_port, $email_sender;
+
         $stmt = $conn->prepare("SELECT r.*, a.email, a.firstname, a.middlename, a.lastname 
                                 FROM scilab_form_requests r
                                 JOIN accounts a ON r.requesterEmployeeID = a.employeeID
@@ -56,18 +59,18 @@
         $mail = new PHPMailer(true);
         try {
             $mail->isSMTP();
-            $mail->Host = 'smtp.gmail.com'; 
+            $mail->Host = $email_smtp_host; 
             $mail->SMTPAuth = true;
-            $mail->Username = 'pshsircscilab@gmail.com';
-            $mail->Password = 'wxzmkkrffptfchcc';
-            $mail->SMTPSecure = 'tls';
-            $mail->Port = 587;
+            $mail->Username = $email_smtp_user;
+            $mail->Password = $email_smtp_password;
+            $mail->SMTPSecure = $email_smtp_secure;
+            $mail->Port = $email_smtp_port;
 
-            $mail->setFrom('pshsircscilab@gmail.com', 'SciLab Admin');
+            $mail->setFrom($email_sender, 'SciLab Admin');
             $mail->addAddress($email, $fullName);
 
             $mail->isHTML(true);
-            $mail->Subject = "SciLab Request - " . ucfirst($status);
+            $mail->Subject = "SciLab Request - " . ucfirst($status) . " - SLR-" . $requestID;
             $mail->Body    = $bodyTemplate;
 
             $mail->send();
@@ -126,7 +129,8 @@
 
             echo "no_conflict";
             exit();
-        }elseif ($_POST['action'] === 'approve') {
+        }
+        elseif ($_POST['action'] === 'approve') {
             $controlNumber = isset($_POST['controlNumber']) ? (int) $_POST['controlNumber'] : 0;
             $remarks = $_POST['remarks'] ?? '';
 
@@ -159,7 +163,42 @@
             }
             $stmt->close();
             exit();
-        }elseif ($_POST['action'] === 'reject') {
+        }
+        elseif ($_POST['action'] === 'force_approve') {
+            $controlNumber = isset($_POST['controlNumber']) ? (int) $_POST['controlNumber'] : 0;
+            $remarks = $_POST['remarks'] ?? '';
+
+            if ($controlNumber <= 0) {
+                echo "Invalid control number.";
+                exit();
+            }
+
+            // Check for control number duplication
+            $checkStmt = $conn->prepare("SELECT id FROM scilab_form_requests WHERE controlNumber = ? AND id != ?");
+            $checkStmt->bind_param("ii", $controlNumber, $id);
+            $checkStmt->execute();
+            $checkResult = $checkStmt->get_result();
+            if ($checkResult->num_rows > 0) {
+                echo "Control number already exists.";
+                $checkStmt->close();
+                exit();
+            }
+            $checkStmt->close();
+
+            $stmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Approved', supervisor_status = 'approved', subject_teacher_status = 'approved', lab_personnel_status = 'approved', cid_chief_status = 'approved', controlNumber = ?, feedback = ? WHERE id = ?");
+            $stmt->bind_param("isi", $controlNumber, $remarks, $id);
+            $stmt->execute();
+
+            if ($stmt->affected_rows > 0) {
+                sendNotificationEmail($conn, $id, 'approved', $controlNumber);
+                echo "Request approved.";
+            } else {
+                echo "Update failed.";
+            }
+            $stmt->close();
+            exit();
+        }
+        elseif ($_POST['action'] === 'reject') {
             $feedback = $_POST['feedback'] ?? '';
             $stmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Rejected', supervisor_status = 'rejected', subject_teacher_status = 'rejected', lab_personnel_status = 'rejected', cid_chief_status = 'rejected', controlNumber = NULL, feedback = ? WHERE id = ?");
             $stmt->bind_param("si", $feedback, $id);

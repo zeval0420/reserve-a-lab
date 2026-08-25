@@ -68,8 +68,8 @@ html, body {
 }
 
 body {
-    display: grid;
-    grid-template-rows: auto 1fr auto;
+    display: flex;
+    flex-direction: column;
     min-height: 100vh;
     background: radial-gradient(#c0c0c0, #FFFFFF, #c0c0c0);
     color: var(--color-text-primary);

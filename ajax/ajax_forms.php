@@ -43,26 +43,29 @@ function formatTime($time)
 
 function createMailer()
 {
+    global $email_smtp_host, $email_smtp_user, $email_smtp_password, $email_smtp_secure, $email_smtp_port, $email_sender;
+
     $mail = new PHPMailer(true);
     $mail->isSMTP();
-    $mail->Host = 'smtp.gmail.com';
+    $mail->Host = $email_smtp_host;
     $mail->SMTPAuth = true;
-    $mail->Username = 'pshsircscilab@gmail.com';
-    $mail->Password = 'wxzmkkrffptfchcc';
-    $mail->SMTPSecure = 'tls';
-    $mail->Port = 587;
-    $mail->setFrom('pshsircscilab@gmail.com', 'SciLab Notification System');
+    $mail->Username = $email_smtp_user;
+    $mail->Password = $email_smtp_password;
+    $mail->SMTPSecure = $email_smtp_secure;
+    $mail->Port = $email_smtp_port;
+    $mail->setFrom($email_sender, 'PSHS-IRC SciLab');
     $mail->isHTML(true);
     return $mail;
 }
 
-function sendSubmissionNotificationToAdmins($conn, $data)
+function sendSubmissionNotificationToAdmins($conn, $data, $formID)
 {
+    global $active_server;
     $admins = $conn->query("SELECT email FROM accounts WHERE status = 'active' AND (position = 'Sci. Res. Assist.' OR position = 'Sci. Research Specialist I')");
     if ($admins->num_rows === 0)
         return;
 
-    $subjectLine = "New SciLab Request Submitted";
+    $subjectLine = "New SciLab Request Submitted - SLR-" . $formID;
     $templatePath = __DIR__ . "/../templates/request_email_template.html";
 
     if (file_exists($templatePath)) {
@@ -72,6 +75,7 @@ function sendSubmissionNotificationToAdmins($conn, $data)
     }
 
     $replacements = [
+        "[Request ID]" => "SLR-" . $formID,
         "[Facility]" => $data['scilabName'],
         "[Grade Level]" => $data['gradeLevel'],
         "[Section]" => $data['section'],
@@ -114,10 +118,11 @@ function sendSubmissionNotificationToAdmins($conn, $data)
 
 function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails, $formID)
 {
+    global $active_server;
     if (empty($supervisorEmails))
         return;
 
-    $subjectLine = "Action Required: New SciLab Request for Approval";
+    $subjectLine = "Action Required: New SciLab Request for Approval - SLR-" . $formID;
     $templatePath = __DIR__ . "/../templates/supervisor_request_email_template.html";
 
     if (file_exists($templatePath)) {
@@ -128,7 +133,6 @@ function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails
 
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
     $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/" . $active_server;
-    $approvalLink = $baseURL . "/supervisor_approve.php?id=" . $formID;
 
     $replacements = [
         "[Facility]" => $data['scilabName'],
@@ -143,7 +147,6 @@ function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails
         "[End Date]" => $data['inclusiveTime'],
         "[Materials]" => $data['materials'],
         "[Group Members]" => $data['students'],
-        "[ApprovalLink]" => $approvalLink,
     ];
 
     foreach ($replacements as $key => $val) {
@@ -156,7 +159,11 @@ function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails
                 $mail = createMailer();
                 $mail->addAddress($email);
                 $mail->Subject = $subjectLine;
-                $mail->Body = $bodyTemplate;
+
+                $approvalLink = $baseURL . "/supervisor_approve.php?id=" . $formID . "&token=" . urlencode(scilab_approval_token($formID, 'supervisor'));
+                $personalizedBody = str_replace("[ApprovalLink]", $approvalLink, $bodyTemplate);
+
+                $mail->Body = $personalizedBody;
                 $mail->send();
             } catch (Exception $e) {
                 error_log("Supervisor email failed to {$email}: " . $e->getMessage());
@@ -342,8 +349,7 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
         'materials' => implode("; ", $materials),
         'students' => $studentList,
         'requester' => $requesterName
-    ]);
-
+    ], $formID);
 
     echo "success";
     $stmt->close();

@@ -279,7 +279,7 @@ if (isset($_POST["action"]) && $_POST["action"] === "forgotPassword") {
 
             /* Construct a stateless validation token by hashing key credentials along with the timestamp. */
             $token = md5($user['email'] . $user['password'] . 'SciLabSecretSalt2025' . $timestamp);
-            $link = "http://" . $_SERVER['HTTP_HOST'] . "/scilab/reset_password.php?email=" . urlencode($user['email']) . "&token=" . $token . "&ts=" . $timestamp;
+            $link = "http://" . $_SERVER['HTTP_HOST'] . "/" . $active_server . "/reset_password.php?email=" . urlencode($user['email']) . "&token=" . $token . "&ts=" . $timestamp;
             $mail->Body = "Hello " . $user['firstname'] . ",<br><br>You requested a password reset. Click the link below to proceed:<br><a href='$link'>$link</a><br><br>If you did not request this, please ignore this email.";
 
             $mail->send();

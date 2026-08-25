@@ -37,9 +37,11 @@ function formatTime($time) {
 }
 
 function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails, $formID) {
+    global $email_smtp_host, $email_smtp_user, $email_smtp_password, $email_smtp_secure, $email_smtp_port, $email_sender, $active_server;
+
     if (empty($supervisorEmails)) return; 
 
-    $subjectLine = "Action Required: New SciLab Request for Approval";
+    $subjectLine = "Action Required: New SciLab Request for Approval - SLR-" . $formID;
     $templatePath = __DIR__ . "/../templates/supervisor_request_email_template.html";
 
     if (file_exists($templatePath)) {
@@ -65,7 +67,6 @@ function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails
         "[End Date]" => $data['inclusiveTime'],
         "[Materials]" => $data['materials'],
         "[Group Members]" => $data['students'],
-        "[ApprovalLink]" => $approvalLink,
     ];
 
     foreach ($replacements as $key => $val) {
@@ -77,19 +78,22 @@ function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails
             $mail = new PHPMailer(true);
             try {
                 $mail->isSMTP();
-                $mail->Host = 'smtp.gmail.com';
+                $mail->Host = $email_smtp_host;
                 $mail->SMTPAuth = true;
-                $mail->Username = 'pshsircscilab@gmail.com';
-                $mail->Password = 'wxzmkkrffptfchcc';
-                $mail->SMTPSecure = 'tls';
-                $mail->Port = 587;
+                $mail->Username = $email_smtp_user;
+                $mail->Password = $email_smtp_password;
+                $mail->SMTPSecure = $email_smtp_secure;
+                $mail->Port = $email_smtp_port;
 
-                $mail->setFrom('pshsircscilab@gmail.com', 'SciLab Notification System');
+                $mail->setFrom($email_sender, 'PSHS-IRC SciLab');
                 $mail->addAddress($email);
 
                 $mail->isHTML(true);
                 $mail->Subject = $subjectLine;
-                $mail->Body = $bodyTemplate;
+
+                $approvalLink = $baseURL . "/supervisor_approve.php?id=" . $formID . "&token=" . urlencode(scilab_approval_token($formID, 'supervisor'));
+                $personalizedBody = str_replace("[ApprovalLink]", $approvalLink, $bodyTemplate);
+                $mail->Body = $personalizedBody;
 
                 $mail->send();
             } catch (Exception $e) {
@@ -100,6 +104,8 @@ function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails
 }
 
 function sendNotificationToAdmins($conn, $requestID) {
+    global $email_smtp_host, $email_smtp_user, $email_smtp_password, $email_smtp_secure, $email_smtp_port, $email_sender;
+
     // Fetch request details
     $stmt = $conn->prepare("SELECT * FROM scilab_form_requests WHERE id = ?");
     $stmt->bind_param("i", $requestID);
@@ -162,7 +168,7 @@ function sendNotificationToAdmins($conn, $requestID) {
     $admins = $conn->query("SELECT email FROM accounts WHERE status = 'active' AND (position = 'Sci. Res. Assist.' OR position = 'Sci. Research Specialist I')");
     if ($admins->num_rows === 0) return;
 
-    $subjectLine = "New SciLab Request Submitted (Approved by Subject Teacher)";
+    $subjectLine = "New SciLab Request Submitted (Approved by Area Unit Head) - SLR-" . $requestID;
     $templatePath = __DIR__ . "/../templates/request_email_template.html";
     
     if (file_exists($templatePath)) {
@@ -195,23 +201,23 @@ function sendNotificationToAdmins($conn, $requestID) {
             $mail = new PHPMailer(true);
             try {
                 $mail->isSMTP();
-                $mail->Host = 'smtp.gmail.com';
+                $mail->Host = $email_smtp_host;
                 $mail->SMTPAuth = true;
-                $mail->Username = 'pshsircscilab@gmail.com';
-                $mail->Password = 'wxzmkkrffptfchcc';
-                $mail->SMTPSecure = 'tls';
-                $mail->Port = 587;
+                $mail->Username = $email_smtp_user;
+                $mail->Password = $email_smtp_password;
+                $mail->SMTPSecure = $email_smtp_secure;
+                $mail->Port = $email_smtp_port;
 
-                $mail->setFrom('pshsircscilab@gmail.com', 'SciLab Notification System');
+                $mail->setFrom($email_sender, 'PSHS-IRC SciLab');
                 $mail->addAddress($admin['email']);
 
                 $mail->isHTML(true);
                 $mail->Subject = $subjectLine;
                 
-                // Inject ActionLink
+                // Inject ActionLink (direct passwordless action link for Lab Personnel)
                 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
                 $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/" . $active_server;
-                $actionLink = $baseURL . "/admin_approve.php";
+                $actionLink = $baseURL . "/supervisor_approve.php?id=" . $requestID . "&token=" . urlencode(scilab_approval_token($requestID, 'lab_personnel'));
                 $personalizedBody = str_replace("[ActionLink]", $actionLink, $bodyTemplate);
                 
                 $mail->Body = $personalizedBody;
@@ -225,6 +231,7 @@ function sendNotificationToAdmins($conn, $requestID) {
 }
 
 function sendNotificationToSubjectTeacher($conn, $requestID) {
+    global $email_smtp_host, $email_smtp_user, $email_smtp_password, $email_smtp_secure, $email_smtp_port, $email_sender, $active_server;
     // Fetch request details
     $stmt = $conn->prepare("SELECT * FROM scilab_form_requests WHERE id = ?");
     $stmt->bind_param("i", $requestID);
@@ -233,7 +240,44 @@ function sendNotificationToSubjectTeacher($conn, $requestID) {
     $data = $res->fetch_assoc();
     $stmt->close();
 
-    if (!$data) return;
+    if (!$data) return false;
+
+    // Resolve the AUH designation for this request's subject
+    $designation = scilab_auh_designation($conn, $data['subject'] ?? '', $data['gradeLevel'] ?? null);
+    if ($designation === null) {
+        error_log("No AUH designation resolvable for request {$requestID} (subject: " . ($data['subject'] ?? '') . ')');
+        return false;
+    }
+
+    // Get current school year
+    $syResult = $conn->query("SELECT value FROM current WHERE description = 'School Year' ORDER BY id DESC LIMIT 1");
+    if (!$syResult || !$sy = $syResult->fetch_assoc()['value'] ?? null) {
+        error_log("Unable to resolve current school year for request {$requestID}");
+        return false;
+    }
+
+    // Find designated AUH employee(s) for this school year
+    $auhStmt = $conn->prepare("SELECT DISTINCT employeeID FROM designation WHERE sy = ? AND designation = ?");
+    $auhStmt->bind_param("ss", $sy, $designation);
+    $auhStmt->execute();
+    $auhRes = $auhStmt->get_result();
+    $auhEmails = [];
+    while ($auh = $auhRes->fetch_assoc()) {
+        $empStmt = $conn->prepare("SELECT email FROM accounts WHERE employeeID = ? AND status = 'active'");
+        $empStmt->bind_param("s", $auh['employeeID']);
+        $empStmt->execute();
+        $empRes = $empStmt->get_result();
+        if ($emp = $empRes->fetch_assoc()) {
+            $auhEmails[] = $emp['email'];
+        }
+        $empStmt->close();
+    }
+    $auhStmt->close();
+
+    if (empty($auhEmails)) {
+        error_log("No active AUH account found for {$designation} (SY {$sy})");
+        return false;
+    }
 
     $requesterID = $data['requesterEmployeeID'];
     $requesterName = $requesterID;
@@ -284,10 +328,7 @@ function sendNotificationToSubjectTeacher($conn, $requestID) {
     $studentsStr = implode(", ", $students);
     $studStmt->close();
 
-    $subjectTeachers = $conn->query("SELECT email FROM accounts WHERE status = 'active' AND position LIKE '%Teacher%'");
-    if ($subjectTeachers->num_rows === 0) return;
-
-    $subjectLine = "Action Required: Subject Teacher Approval Needed";
+    $subjectLine = "Action Required: Area Unit Head (AUH) Approval Needed - SLR-" . $requestID;
     $templatePath = __DIR__ . "/../templates/supervisor_request_email_template.html";
 
     if (file_exists($templatePath)) {
@@ -301,8 +342,9 @@ function sendNotificationToSubjectTeacher($conn, $requestID) {
     $approvalLink = $baseURL . "/supervisor_approve.php?id=" . $requestID;
 
     $replacements = [
-        "[Facility]"         => $data['scilabName'],
-        "[Grade Level]"      => $data['gradeLevel'],
+        "[Request ID]" => "SLR-" . $requestID,
+        "[Facility]" => $data['scilabName'],
+        "[Grade Level]" => $data['gradeLevel'],
         "[Section]"          => $data['sections'],
         "[Subject]"          => $data['subject'],
         "[Concurrent Topic]" => $data['subjectTopic'],
@@ -313,39 +355,48 @@ function sendNotificationToSubjectTeacher($conn, $requestID) {
         "[End Date]"         => $data['inclusiveTime'],
         "[Materials]"        => $materialsStr,
         "[Group Members]"    => $studentsStr,
-        "[ApprovalLink]"     => $approvalLink,
     ];
 
     foreach ($replacements as $key => $val) {
         $bodyTemplate = str_replace($key, htmlspecialchars($val), $bodyTemplate);
     }
 
-    while ($teacher = $subjectTeachers->fetch_assoc()) {
-        if (filter_var($teacher['email'], FILTER_VALIDATE_EMAIL)) {
+    $sent = false;
+    foreach (array_unique($auhEmails) as $email) {
+        if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $mail = new PHPMailer(true);
             try {
                 $mail->isSMTP();
-                $mail->Host = 'smtp.gmail.com';
+                $mail->Host = $email_smtp_host;
                 $mail->SMTPAuth = true;
-                $mail->Username = 'pshsircscilab@gmail.com';
-                $mail->Password = 'wxzmkkrffptfchcc';
-                $mail->SMTPSecure = 'tls';
-                $mail->Port = 587;
+                $mail->Username = $email_smtp_user;
+                $mail->Password = $email_smtp_password;
+                $mail->SMTPSecure = $email_smtp_secure;
+                $mail->Port = $email_smtp_port;
 
-                $mail->setFrom('pshsircscilab@gmail.com', 'SciLab Notification System');
-                $mail->addAddress($teacher['email']);
+                $mail->setFrom($email_sender, 'PSHS-IRC SciLab');
+                $mail->addAddress($email);
                 $mail->isHTML(true);
                 $mail->Subject = $subjectLine;
-                $mail->Body = $bodyTemplate;
+
+                $approvalLink = $baseURL . "/supervisor_approve.php?id=" . $requestID . "&token=" . urlencode(scilab_approval_token($requestID, 'subject_teacher'));
+                $personalizedBody = str_replace("[ApprovalLink]", $approvalLink, $bodyTemplate);
+                $mail->Body = $personalizedBody;
+
                 $mail->send();
+                $sent = true;
             } catch (Exception $e) {
-                error_log("Subject Teacher email failed to {$teacher['email']}: {$mail->ErrorInfo}");
+                error_log("AUH email failed to {$email}: {$mail->ErrorInfo}");
             }
         }
     }
+
+    return $sent;
 }
 
 function sendNotificationToCIDChief($conn, $requestID) {
+    global $email_smtp_host, $email_smtp_user, $email_smtp_password, $email_smtp_secure, $email_smtp_port, $email_sender, $active_server;
+
     // Fetch request details
     $stmt = $conn->prepare("SELECT * FROM scilab_form_requests WHERE id = ?");
     $stmt->bind_param("i", $requestID);
@@ -384,26 +435,29 @@ function sendNotificationToCIDChief($conn, $requestID) {
     $cidChiefs = $conn->query("SELECT email FROM accounts WHERE status = 'active' AND position LIKE '%Chief%'");
     if ($cidChiefs->num_rows === 0) return;
 
-    $subjectLine = "Action Required: CID Chief Final Approval Needed";
+    $subjectLine = "Action Required: CID Chief Final Approval Needed - SLR-" . $requestID;
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
+    $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/" . $active_server;
+    $approvalLink = $baseURL . "/supervisor_approve.php?id=" . $requestID . "&token=" . urlencode(scilab_approval_token($requestID, 'cid_chief'));
     $bodyTemplate = "A new request has passed Lab Personnel review and requires final CID Chief approval. 
         <br><br><strong>Facility:</strong> " . htmlspecialchars($data['scilabName']) . "
         <br><strong>Requested By:</strong> " . htmlspecialchars($requesterName) . "
         <br><strong>Date/Time:</strong> " . htmlspecialchars($data['inclusiveDate']) . " " . htmlspecialchars($data['inclusiveTime']) . "
-        <br><br>Please log in to the system to review and approve.";
+        <br><br>Review and act on this request directly: <a href='" . $approvalLink . "'>Review Request</a>";
 
     while ($admin = $cidChiefs->fetch_assoc()) {
         if (filter_var($admin['email'], FILTER_VALIDATE_EMAIL)) {
             $mail = new PHPMailer(true);
             try {
                 $mail->isSMTP();
-                $mail->Host = 'smtp.gmail.com';
+                $mail->Host = $email_smtp_host;
                 $mail->SMTPAuth = true;
-                $mail->Username = 'pshsircscilab@gmail.com';
-                $mail->Password = 'wxzmkkrffptfchcc';
-                $mail->SMTPSecure = 'tls';
-                $mail->Port = 587;
+                $mail->Username = $email_smtp_user;
+                $mail->Password = $email_smtp_password;
+                $mail->SMTPSecure = $email_smtp_secure;
+                $mail->Port = $email_smtp_port;
 
-                $mail->setFrom('pshsircscilab@gmail.com', 'SciLab Notification System');
+                $mail->setFrom($email_sender, 'PSHS-IRC SciLab');
                 $mail->addAddress($admin['email']);
                 $mail->isHTML(true);
                 $mail->Subject = $subjectLine;
@@ -417,6 +471,8 @@ function sendNotificationToCIDChief($conn, $requestID) {
 }
 
 function sendRejectionNotificationToRequester($conn, $request, $rejectionReason, $rejectedBy) {
+    global $email_smtp_host, $email_smtp_user, $email_smtp_password, $email_smtp_secure, $email_smtp_port, $email_sender;
+
     $requesterID = $request['requesterEmployeeID'];
     $requesterEmail = null;
 
@@ -442,7 +498,7 @@ function sendRejectionNotificationToRequester($conn, $request, $rejectionReason,
     $stmtEmail->close();
 
     if ($requesterEmail) {
-        $subjectLine = "Update on your SciLab Request: Rejected";
+        $subjectLine = "Update on your SciLab Request: Rejected - SLR-" . $request['id'];
         $rejectionReason = $rejectionReason ?? 'No reason provided.';
 
         // A template file like /templates/rejection_email_template.html could be created for a richer email.
@@ -451,14 +507,14 @@ function sendRejectionNotificationToRequester($conn, $request, $rejectionReason,
         try {
             $mail = new PHPMailer(true);
             $mail->isSMTP();
-            $mail->Host = 'smtp.gmail.com';
+            $mail->Host = $email_smtp_host;
             $mail->SMTPAuth = true;
-            $mail->Username = 'pshsircscilab@gmail.com';
-            $mail->Password = 'wxzmkkrffptfchcc';
-            $mail->SMTPSecure = 'tls';
-            $mail->Port = 587;
+            $mail->Username = $email_smtp_user;
+            $mail->Password = $email_smtp_password;
+            $mail->SMTPSecure = $email_smtp_secure;
+            $mail->Port = $email_smtp_port;
 
-            $mail->setFrom('pshsircscilab@gmail.com', 'SciLab Notification System');
+            $mail->setFrom($email_sender, 'PSHS-IRC SciLab');
             $mail->addAddress($requesterEmail);
             $mail->isHTML(true);
             $mail->Subject = $subjectLine;
@@ -512,7 +568,7 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
         if ($typeRow = $typeResult->fetch_assoc()) {
             $accountType = strtolower(trim($typeRow['type'] ?? ''));
 
-            if ($accountType === 'faculty' || $accountType === 'sysadmin' || $accountType === 'staff') {
+            if ($accountType === 'faculty' || $accountType === 'sysadmin') {
                 $isFacultyOrSysadmin = true;
             }
         }
@@ -522,9 +578,9 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
     $statusScilabPersonnel = 'Pending';
     $initialLabPersonnelStatus = 'pending';
     $initialCidChiefStatus = 'pending';
+    $initialSubjectTeacherStatus = 'pending';
 
     $initialSupervisorStatus = $isFacultyOrSysadmin ? 'approved' : 'pending';
-    $initialSubjectTeacherStatus = $isFacultyOrSysadmin ? 'approved' : 'pending';
 
     $stmt = $conn->prepare("INSERT INTO scilab_form_requests (
         scilabName,
@@ -651,13 +707,7 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
 
 header('Content-Type: application/json');
 
-// Check if user is logged in
-if (!isset($_SESSION['username'])) {
-    echo json_encode(['success' => false, 'message' => 'Unauthorized access']);
-    exit;
-}
-
-$username = $_SESSION['username'];
+$username = $_SESSION['username'] ?? null;
 
 $input = json_decode(file_get_contents('php://input'), true);
 
@@ -683,7 +733,7 @@ if (!$request) {
 }
 
 // Determine which column to update based on current status flow
-// Priority: Supervisor -> Subject Teacher -> Lab Personnel -> CID Chief
+// Priority: Supervisor -> Area Unit Head (AUH) -> Lab Personnel -> CID Chief
 $fieldPrefix = '';
 
 if ($action === 'force_approve_override') {
@@ -698,6 +748,18 @@ if ($action === 'force_approve_override') {
     $fieldPrefix = 'cid_chief';
 } else {
     echo json_encode(['success' => false, 'message' => 'No pending approval stage found or request is already completed.']);
+    exit;
+}
+
+// Authorize: a logged-in session OR a valid passwordless approval token for this stage.
+$authorized = false;
+if ($username !== null) {
+    $authorized = true;
+} elseif (isset($input['token']) && $fieldPrefix !== 'force_approve' && hash_equals(scilab_approval_token($requestId, $fieldPrefix), $input['token'])) {
+    $authorized = true;
+}
+if (!$authorized) {
+    echo json_encode(['success' => false, 'message' => 'Unauthorized access']);
     exit;
 }
 
@@ -716,7 +778,8 @@ if ($fieldPrefix === 'force_approve') {
     $sql .= " WHERE id = ?";
     $params[] = $requestId;
     $types .= "i";
-} else {
+}
+else {
     $statusColumn = $fieldPrefix . '_status';
     $newStatus = ($action === 'approve') ? 'approved' : 'rejected';
 
@@ -787,17 +850,17 @@ if ($updateStmt->execute()) {
             try {
                 $mail = new PHPMailer(true);
                 $mail->isSMTP();
-                $mail->Host = 'smtp.gmail.com';
+                $mail->Host = $email_smtp_host;
                 $mail->SMTPAuth = true;
-                $mail->Username = 'pshsircscilab@gmail.com';
-                $mail->Password = 'wxzmkkrffptfchcc';
-                $mail->SMTPSecure = 'tls';
-                $mail->Port = 587;
+                $mail->Username = $email_smtp_user;
+                $mail->Password = $email_smtp_password;
+                $mail->SMTPSecure = $email_smtp_secure;
+                $mail->Port = $email_smtp_port;
 
-                $mail->setFrom('pshsircscilab@gmail.com', 'SciLab Notification System');
+                $mail->setFrom($email_sender, 'PSHS-IRC SciLab');
                 $mail->addAddress($requesterEmail);
                 $mail->isHTML(true);
-                $mail->Subject = 'SciLab Request Approved';
+                $mail->Subject = 'SciLab Request Approved - SLR-' . $requestId;
                 
                 if ($fieldPrefix === 'force_approve') {
                     $mail->Body = 'Your request for ' . htmlspecialchars($request['scilabName']) . ' on ' . htmlspecialchars($request['inclusiveDate']) . ' has been FORCE APPROVED by an Administrator.';
@@ -811,7 +874,14 @@ if ($updateStmt->execute()) {
             }
         }
     } elseif ($fieldPrefix === 'supervisor' && $action === 'approve') {
-        sendNotificationToSubjectTeacher($conn, $requestId);
+        if (!sendNotificationToSubjectTeacher($conn, $requestId)) {
+            // No AUH resolvable for this subject — auto-approve this stage and notify Lab Personnel.
+            $autoStmt = $conn->prepare("UPDATE scilab_form_requests SET subject_teacher_status = 'approved' WHERE id = ?");
+            $autoStmt->bind_param("i", $requestId);
+            $autoStmt->execute();
+            $autoStmt->close();
+            sendNotificationToAdmins($conn, $requestId);
+        }
     } elseif ($fieldPrefix === 'subject_teacher' && $action === 'approve') {
         sendNotificationToAdmins($conn, $requestId);
     } elseif ($fieldPrefix === 'lab_personnel' && $action === 'approve') {

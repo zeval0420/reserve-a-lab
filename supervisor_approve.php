@@ -1,20 +1,16 @@
 <?php
 include('../scilab/helperFiles/db_connection.php');
 include('helperFiles/session_handler.php');
+include('helperFiles/variableDeclarations.php');
 
 $email = $_SESSION['email'] ?? null;
 $username = $_SESSION['username'] ?? null;
 
 $requestId = $_GET['id'] ?? null;
+$token = $_GET['token'] ?? null;
 
 if (!$requestId) {
     die("Please provide a request ID.");
-}
-
-if (!isset($_SESSION['role'])) {
-    $target = 'redirect=' . urlencode('supervisor_approve.php?id=' . $requestId);
-    header('Location: index.php?' . $target);
-    exit();
 }
 
 $stmt = $conn->prepare("SELECT * FROM scilab_form_requests WHERE id = ?");
@@ -70,6 +66,40 @@ $subject_teacher_status = $request['subject_teacher_status'] ?? 'pending';
 $lab_personnel_status = $request['lab_personnel_status'] ?? 'pending';
 $cid_chief_status = $request['cid_chief_status'] ?? 'pending';
 
+if ($supervisor_status === 'pending') {
+    $currentStage = 'supervisor';
+} elseif ($supervisor_status === 'approved' && $subject_teacher_status === 'pending') {
+    $currentStage = 'subject_teacher';
+} elseif ($subject_teacher_status === 'approved' && $lab_personnel_status === 'pending') {
+    $currentStage = 'lab_personnel';
+} elseif ($lab_personnel_status === 'approved' && $cid_chief_status === 'pending') {
+    $currentStage = 'cid_chief';
+} else {
+    $currentStage = '';
+}
+
+$tokenValidStage = '';
+if ($token) {
+    foreach (['supervisor', 'subject_teacher', 'lab_personnel', 'cid_chief'] as $stageName) {
+        if (hash_equals(scilab_approval_token($requestId, $stageName), $token)) {
+            $tokenValidStage = $stageName;
+            break;
+        }
+    }
+}
+
+if (!isset($_SESSION['role']) && $tokenValidStage === '') {
+    $target = 'redirect=' . urlencode('supervisor_approve.php?id=' . $requestId);
+    header('Location: index.php?' . $target);
+    exit();
+}
+
+if (!isset($_SESSION['role'])) {
+    $_SESSION['role'] = 'guest';
+    $_SESSION['username'] = 'Approval Link User';
+    $_SESSION['email'] = '';
+}
+
 $currentRole = $_SESSION['role'] ?? 'supervisor';
 
 // Check if current user is the Teacher in Charge
@@ -105,7 +135,7 @@ if ($supervisor_status === 'pending') {
     $currentApproverStep = 'Supervisor';
 } elseif ($supervisor_status === 'approved' && $subject_teacher_status === 'pending') {
     $canApproveCurrentStep = $isSubjectTeacher;
-    $currentApproverStep = 'Subject Teacher';
+    $currentApproverStep = 'Area Unit Head (AUH)';
 } elseif ($subject_teacher_status === 'approved' && $lab_personnel_status === 'pending') {
     $canApproveCurrentStep = $isLabPersonnel;
     $currentApproverStep = 'Lab Personnel';
@@ -113,6 +143,28 @@ if ($supervisor_status === 'pending') {
     $canApproveCurrentStep = $isCIDChief;
     $currentApproverStep = 'CID Chief';
 }
+
+if ($tokenValidStage !== '' && $tokenValidStage === $currentStage) {
+    $canApproveCurrentStep = true;
+}
+
+$userStepStatus = null;
+if ($isTeacherInCharge) {
+    $userStepStatus = $supervisor_status;
+} elseif ($isSubjectTeacher) {
+    $userStepStatus = $subject_teacher_status;
+} elseif ($isLabPersonnel) {
+    $userStepStatus = $lab_personnel_status;
+} elseif ($isCIDChief) {
+    $userStepStatus = $cid_chief_status;
+}
+
+if ($tokenValidStage !== '' && $userStepStatus === null) {
+    $userStepStatus = $request[$tokenValidStage . '_status'] ?? 'pending';
+}
+
+$hasAlreadyActed = ($userStepStatus !== null && $userStepStatus !== 'pending');
+$lastAction = $userStepStatus;
 
 $materials = [];
 $stmtMat = $conn->prepare("SELECT quantity, item, description FROM scilab_material_requests WHERE formID = ?");
@@ -1001,12 +1053,12 @@ function getStepIcon($class)
                         </div>
                     </div>
 
-                    <!-- Step 2: Subject Teacher -->
+                    <!-- Step 2: Area Unit Head (AUH) -->
                     <?php $s2Class = getStepClass($subject_teacher_status, $supervisor_status); ?>
                     <div class="step <?= $s2Class ?>" data-step="2">
                         <div class="step-dot"><?= getStepIcon($s2Class) ?></div>
                         <div class="step-info">
-                            <div class="step-role">Subject Teacher/Unit Head</div>
+                            <div class="step-role">Area Unit Head (AUH)</div>
                             <span
                                 class="step-status"><?= getStepStatusText($subject_teacher_status, $supervisor_status) ?></span>
                         </div>
@@ -1092,6 +1144,35 @@ function getStepIcon($class)
             </div>
 
         </div><!-- /summary card -->
+
+        <?php if ($canApproveCurrentStep): ?>
+        <div class="card" style="margin-top: 24px;">
+            <div class="card-inner" style="display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+                <div>
+                    <p class="section-label" style="margin-bottom: 4px;">Action Required</p>
+                    <p style="font-size: 14px; color: var(--text-secondary); margin: 0;">Please review and approve or reject this request.</p>
+                </div>
+                <div style="display: flex; gap: 12px; flex-shrink: 0;">
+                    <button class="btn btn-danger" id="pageRejectBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                        Reject
+                    </button>
+                    <button class="btn btn-success" id="pageApproveBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        Approve
+                    </button>
+                </div>
+            </div>
+        </div>
+        <?php elseif ($hasAlreadyActed): ?>
+        <div class="card" style="margin-top: 24px;">
+            <div class="card-inner" style="text-align: center; padding: 24px 32px;">
+                <p style="font-size: 15px; font-weight: 700; color: <?= $lastAction === 'approved' ? 'var(--success)' : 'var(--danger)' ?>; margin: 0;">
+                    You have already <?= $lastAction === 'approved' ? 'approved' : 'rejected' ?> this request.
+                </p>
+            </div>
+        </div>
+        <?php endif; ?>
 
     </main>
 
@@ -1236,7 +1317,7 @@ function getStepIcon($class)
            ROLE SIMULATION
            Change `currentUserRole` to test different states:
              "Supervisor"        — can approve/reject (current approver)
-             "Subject Teacher"   — not yet the approver
+             "Area Unit Head (AUH)" — not yet the approver
              "Laboratory Personnel"
              "CID Chief"
              "Student"           — requester / viewer only
@@ -1244,6 +1325,7 @@ function getStepIcon($class)
         const canApprove = <?= $canApproveCurrentStep ? 'true' : 'false' ?>;
         const currentApprover = "<?= $currentApproverStep ?>";
         const requestId = <?= json_encode($requestId) ?>;
+        const approvalToken = <?= json_encode($token ?? '') ?>;
 
         /* ============================================================
            TRACKER PROGRESS BAR WIDTH
@@ -1304,31 +1386,13 @@ function getStepIcon($class)
             modalFooter.innerHTML = '';
 
             if (canApprove) {
-                /* ---- Current approver: Approve + Reject + Close ---- */
+                /* ---- Current approver: actions are on the page, modal is view-only ---- */
                 const closeBtn = document.createElement('button');
                 closeBtn.className = 'btn btn-ghost';
                 closeBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Close`;
                 closeBtn.addEventListener('click', closeModal);
 
-                const rejectBtn = document.createElement('button');
-                rejectBtn.className = 'btn btn-danger';
-                rejectBtn.id = 'rejectBtn';
-                rejectBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg> Reject`;
-                rejectBtn.addEventListener('click', showRejectArea);
-
-                const approveBtn = document.createElement('button');
-                approveBtn.className = 'btn btn-success';
-                approveBtn.id = 'approveBtn';
-                approveBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Approve`;
-                approveBtn.addEventListener('click', handleApprove);
-
-                const rightGroup = document.createElement('div');
-                rightGroup.className = 'custom-modal-footer-right';
-                rightGroup.appendChild(rejectBtn);
-                rightGroup.appendChild(approveBtn);
-
                 modalFooter.appendChild(closeBtn);
-                modalFooter.appendChild(rightGroup);
 
             } else {
                 /* ---- Not current approver: Close only ---- */
@@ -1352,6 +1416,26 @@ function getStepIcon($class)
             }
         }
 
+        /* ============================================================
+           PAGE-LEVEL APPROVE / REJECT BUTTONS
+        ============================================================ */
+        const pageApproveBtn = document.getElementById('pageApproveBtn');
+        const pageRejectBtn = document.getElementById('pageRejectBtn');
+
+        if (pageApproveBtn) {
+            pageApproveBtn.addEventListener('click', function() {
+                this.disabled = true;
+                handleApprove();
+            });
+        }
+
+        if (pageRejectBtn) {
+            pageRejectBtn.addEventListener('click', function() {
+                openModal();
+                setTimeout(() => showRejectArea(), 100);
+            });
+        }
+
         /* ==
            APPROVE HANDLER (SIMULATED)
         ============================================================ */
@@ -1360,15 +1444,13 @@ function getStepIcon($class)
                 const response = await fetch('ajax/ajax_supervisor_action.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ request_id: requestId, action: action, reason: reason })
+                    body: JSON.stringify({ request_id: requestId, action: action, reason: reason, token: approvalToken })
                 });
                 const data = await response.json();
-                if (data.status === 'success') {
+                if (data.success) {
                     closeModal();
-                    showApprovalToast('✓ ' + data.message, 'success');
+                    showApprovalToast('✓ ' + (data.message || 'Action completed successfully.'), 'success');
                     setTimeout(() => location.reload(), 1500);
-                } else {
-                    showApprovalToast('✗ ' + data.message, 'error');
                 }
             } catch (error) {
                 showApprovalToast('✗ Network error occurred.', 'error');
@@ -1393,11 +1475,9 @@ function getStepIcon($class)
             modal.scrollTo({ top: modal.scrollHeight, behavior: 'smooth' });
             rejectReason.focus();
 
-            // Hide footer action buttons while rejection is active
-            const approveBtn = document.getElementById('approveBtn');
-            const rejectBtn = document.getElementById('rejectBtn');
-            if (approveBtn) approveBtn.style.display = 'none';
-            if (rejectBtn) rejectBtn.style.display = 'none';
+            // Hide page-level action buttons while rejection is active
+            if (pageApproveBtn) pageApproveBtn.style.display = 'none';
+            if (pageRejectBtn) pageRejectBtn.style.display = 'none';
         }
 
         function hideRejectArea() {
@@ -1408,11 +1488,8 @@ function getStepIcon($class)
 
         document.getElementById('cancelRejectBtn').addEventListener('click', () => {
             hideRejectArea();
-            // Restore buttons
-            const approveBtn = document.getElementById('approveBtn');
-            const rejectBtn = document.getElementById('rejectBtn');
-            if (approveBtn) approveBtn.style.display = '';
-            if (rejectBtn) rejectBtn.style.display = '';
+            if (pageApproveBtn) pageApproveBtn.style.display = '';
+            if (pageRejectBtn) pageRejectBtn.style.display = '';
         });
 
         document.getElementById('confirmRejectBtn').addEventListener('click', () => {

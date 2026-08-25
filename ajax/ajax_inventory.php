@@ -2,6 +2,7 @@
 // Centralized DB connection and session handler
 include_once(__DIR__ . '/../../scilab/helperFiles/db_connection.php');
 include_once(__DIR__ . '/../helperFiles/session_handler.php');
+include_once(__DIR__ . '/../helperFiles/variableDeclarations.php');
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
@@ -12,6 +13,8 @@ require_once __DIR__ . '/../PHPMailer/src/SMTP.php';
 
 // HELPER FUNCTION: Check Threshold and Notify Admins
 function checkInventoryThresholdAndNotify($conn, $itemId) {
+    global $email_smtp_host, $email_smtp_user, $email_smtp_password, $email_smtp_secure, $email_smtp_port, $email_sender;
+
     $stmt = $conn->prepare("SELECT item, description, classification, quantity, unit, threshold_qty, threshold_notified FROM scilab_inventory WHERE id = ?");
     $stmt->bind_param("i", $itemId);
     $stmt->execute();
@@ -83,14 +86,14 @@ function checkInventoryThresholdAndNotify($conn, $itemId) {
                 $mail = new PHPMailer(true);
                 try {
                     $mail->isSMTP();
-                    $mail->Host = 'smtp.gmail.com'; 
+                    $mail->Host = $email_smtp_host; 
                     $mail->SMTPAuth = true;
-                    $mail->Username = 'pshsircscilab@gmail.com';
-                    $mail->Password = 'wxzmkkrffptfchcc';
-                    $mail->SMTPSecure = 'tls';
-                    $mail->Port = 587;
+                    $mail->Username = $email_smtp_user;
+                    $mail->Password = $email_smtp_password;
+                    $mail->SMTPSecure = $email_smtp_secure;
+                    $mail->Port = $email_smtp_port;
 
-                    $mail->setFrom('pshsircscilab@gmail.com', 'SciLab Admin');
+                    $mail->setFrom($email_sender, 'PSHS-IRC SciLab');
                     $mail->addAddress($admin['email'], $adminName);
 
                     $mail->isHTML(true);
