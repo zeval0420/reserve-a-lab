@@ -902,12 +902,6 @@
 
                                         let summary = conflictAlert + `
                         <table class="table table-bordered" style="margin-bottom: 0;">
-                            <thead>
-                                <tr>
-                                    <th style="width: 30%;">Field</th>
-                                    <th style="width: 70%;">Value</th>
-                                </tr>
-                            </thead>
                             <tbody>
                                 <tr>
                                     <th>Facility</th>
