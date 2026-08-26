@@ -900,20 +900,57 @@
 
                     const sectionsArr = $('#sections-checkboxes').val() || [];
 
-                    let summary = conflictAlert + `
-                        <strong>Facility:</strong> ${form.find('[name="venue"]').val()}<br>
-                        <strong>Grade Level:</strong> ${form.find('[name="grade_level"]').val()}<br>
-                        <strong>Sections:</strong> ${sectionsArr.join(", ")}<br>
-                        <strong>Subject:</strong> ${form.find('[name="subject"]').val()}<br>
-                        <strong>Topic:</strong> ${form.find('[name="topic"]').val()}<br>
-                        <strong>Unit:</strong> ${form.find('[name="unit"]').val()}<br>
-                        <strong>Teacher:</strong> ${(form.find('[name="teacher[]"]').val() || []).join(', ')}<br>
-                        <strong>Date:</strong> ${form.find('[name="inclusive_date"]').val()}<br>
-                        <strong>Time:</strong> ${form.find('[name="start_time"]').val()} to ${form.find('[name="end_time"]').val()}<br>
-                        <hr>
+                                        let summary = conflictAlert + `
+                        <table class="table table-bordered" style="margin-bottom: 0;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 30%;">Field</th>
+                                    <th style="width: 70%;">Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <th>Facility</th>
+                                    <td>${form.find('[name="venue"]').val()}</td>
+                                </tr>
+                                <tr>
+                                    <th>Grade Level</th>
+                                    <td>${form.find('[name="grade_level"]').val()}</td>
+                                </tr>
+                                <tr>
+                                    <th>Section/s</th>
+                                    <td>${sectionsArr.join(", ")}</td>
+                                </tr>
+                                <tr>
+                                    <th>Subject</th>
+                                    <td>${form.find('[name="subject"]').val()}</td>
+                                </tr>
+                                <tr>
+                                    <th>Topic</th>
+                                    <td>${form.find('[name="topic"]').val()}</td>
+                                </tr>
+                                <tr>
+                                    <th>Unit</th>
+                                    <td>${form.find('[name="unit"]').val()}</td>
+                                </tr>
+                                <tr>
+                                    <th>Teacher/s</th>
+                                    <td>${(form.find('[name="teacher[]"]').val() || []).join(', ')}</td>
+                                </tr>
+                                <tr>
+                                    <th>Date</th>
+                                    <td>${form.find('[name="inclusive_date"]').val()}</td>
+                                </tr>
+                                <tr>
+                                    <th>Time</th>
+                                    <td>${form.find('[name="start_time"]').val()} to ${form.find('[name="end_time"]').val()}</td>
+                                </tr>
+                                <tr>
+                                    <th>Materials</th>
+                                    <td>
                     `;
 
-                    /* Build categorized materials summary natively handling duplication detection and value consolidation loops. */
+                    /* Build categorized materials summary */
                     const categories = CLASSIFICATIONS.map(c => {
                         const slug = slugify(c);
                         return {
@@ -921,6 +958,8 @@
                             selector: `#${slug}-table-body`
                         };
                     });
+
+                    let materialSummary = '';
 
                     categories.forEach((cat, index) => {
                         let catItems = {};
@@ -936,51 +975,73 @@
                             if (!itemVal) return;
 
                             const key = `${itemVal}__${desc}`;
+
                             if (!catItems[key]) {
-                                catItems[key] = { qty: 0, unit, itemLabel, desc };
+                                catItems[key] = {
+                                    qty: 0,
+                                    unit,
+                                    itemLabel,
+                                    desc
+                                };
                             }
+
                             catItems[key].qty += qty;
                         });
 
-                        /* Standardize output structures regardless of selected elements presence. */
-                        summary += `<strong>${cat.name}:</strong><br>`;
-
-                        /* Format string presentations natively appending mapped properties cleanly. */
                         if (Object.keys(catItems).length > 0) {
+                            materialSummary += `<strong>${cat.name}:</strong><br>`;
+
                             for (const key in catItems) {
                                 let { qty, unit, itemLabel, desc } = catItems[key];
 
-                                /* Strip visual redundancy for cleaner output logic internally. */
                                 if (unit) {
                                     const regex = new RegExp(`\\(${unit}\\)`, 'gi');
                                     itemLabel = itemLabel.replace(regex, '').trim();
                                 }
 
                                 const unitPart = unit ? ` ${unit}` : '';
-                                summary += `• ${qty}${unitPart} of ${itemLabel} (${desc})<br>`;
+                                materialSummary += `• ${qty}${unitPart} of ${itemLabel} (${desc})<br>`;
                             }
-                        } else {
-                            summary += `No items selected<br>`;
-                        }
 
-                        /* Encompass visual block structuring loops internally. */
-                        if (index < categories.length - 1){
-                            summary += `<br>`;
+                            if (index < categories.length - 1) {
+                                materialSummary += `<br>`;
+                            }
                         }
                     });
 
-                    // Students
-                    summary += `<hr><strong>Students:</strong><br>`;
+                    if (!materialSummary) {
+                        materialSummary = 'No items selected';
+                    }
+
+                    summary += `${materialSummary}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Students</th>
+                                    <td>
+                    `;
+
                     let hasStudents = false;
+
                     $('.student-select').each((i, el) => {
                         const val = $(el).val();
+
                         if (val) {
                             hasStudents = true;
                             summary += `• ${val}<br>`;
                         }
                     });
 
-                    if (!hasStudents) summary += `No students selected<br>`;
+                    if (!hasStudents) {
+                        summary += `No students selected`;
+                    }
+
+                    summary += `
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    `;
 
                     $('#summaryContent').html(summary);
                     $('#summaryModal').modal('show');
