@@ -902,12 +902,6 @@
 
                                         let summary = conflictAlert + `
                         <table class="table table-bordered" style="margin-bottom: 0;">
-                            <thead>
-                                <tr>
-                                    <th style="width: 30%;">FIELD</th>
-                                    <th style="width: 70%;">VALUE</th>
-                                </tr>
-                            </thead>
                             <tbody>
                                 <tr>
                                     <th>Facility</th>
@@ -930,7 +924,7 @@
                                     <td>${form.find('[name="topic"]').val()}</td>
                                 </tr>
                                 <tr>
-                                    <th>Unit</th>
+                                    <th>Academic Unit</th>
                                     <td>${form.find('[name="unit"]').val()}</td>
                                 </tr>
                                 <tr>
