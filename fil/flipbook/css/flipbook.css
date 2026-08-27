@@ -1,0 +1,318 @@
+/* flipbook.css
+ *
+ * Visual design for the magazine flipbook component.
+ * Everything is scoped under .magazine-flipbook so this can be dropped
+ * into an existing PHP page without leaking styles onto the rest of the
+ * site. No bare element selectors (button, img, body) are used anywhere.
+ */
+
+.magazine-flipbook {
+  /* ---- Design tokens, scoped to this component only ---- */
+  --mf-paper: #fafaf7;
+  --mf-ink: #1c1b19;
+  --mf-graphite: #6e6a63;
+  --mf-mist: #e6e3dc;
+  --mf-accent: #7a2e2e;
+  --mf-shadow: rgba(28, 27, 25, 0.16);
+
+  --mf-font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif;
+  --mf-font-folio: Georgia, "Iowan Old Style", "Palatino Linotype", ui-serif,
+    serif;
+
+  --mf-transition: 180ms ease;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  width: 100%;
+  padding: 40px 16px;
+  background: var(--mf-paper);
+  color: var(--mf-ink);
+  font-family: var(--mf-font-ui);
+  box-sizing: border-box;
+}
+
+.magazine-flipbook *,
+.magazine-flipbook *::before,
+.magazine-flipbook *::after {
+  box-sizing: inherit;
+}
+
+/* ---------------------------------------------------------------- */
+/* Stage: the book plus its loading/error states                     */
+/* ---------------------------------------------------------------- */
+
+.magazine-flipbook__stage {
+  position: relative;
+  width: min(100%, 980px);
+  max-height: min(80vh, 920px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.magazine-flipbook__book {
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  /* A quiet resting shadow so the book has physical presence even before
+     interaction; page-flip adds its own dynamic fold shadows on top of
+     this during drags and flips. */
+  filter: drop-shadow(0 18px 34px var(--mf-shadow));
+}
+
+.magazine-flipbook__book.is-dragging {
+  cursor: grabbing;
+}
+
+/* Fullscreen: let the book use the available space, keep the paper
+   background instead of the browser's default black fullscreen canvas. */
+.magazine-flipbook:fullscreen {
+  background: var(--mf-paper);
+  padding: 32px 16px;
+  justify-content: center;
+}
+
+.magazine-flipbook:fullscreen .magazine-flipbook__stage {
+  max-height: 82vh;
+}
+
+/* ---------------------------------------------------------------- */
+/* Loading state                                                     */
+/* ---------------------------------------------------------------- */
+
+.magazine-flipbook__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  color: var(--mf-graphite);
+  font-size: 15px;
+  letter-spacing: 0.01em;
+}
+
+.magazine-flipbook__loading-mark {
+  width: 34px;
+  height: 46px;
+  border: 1px solid var(--mf-mist);
+  border-radius: 2px;
+  position: relative;
+  overflow: hidden;
+}
+
+.magazine-flipbook__loading-mark::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    var(--mf-mist) 50%,
+    transparent 70%
+  );
+  animation: mf-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes mf-shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* ---------------------------------------------------------------- */
+/* Error state                                                       */
+/* ---------------------------------------------------------------- */
+
+.magazine-flipbook__error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  color: var(--mf-ink);
+  padding: 24px 16px;
+  max-width: 360px;
+}
+
+.magazine-flipbook__error-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.magazine-flipbook__error-detail {
+  font-size: 14px;
+  color: var(--mf-graphite);
+  margin: 0;
+}
+
+/* ---------------------------------------------------------------- */
+/* Controls bar                                                      */
+/* ---------------------------------------------------------------- */
+
+.magazine-flipbook__controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.magazine-flipbook__nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: var(--mf-ink);
+  font-family: inherit;
+  font-size: 14px;
+  letter-spacing: 0.01em;
+  padding: 10px 6px;
+  cursor: pointer;
+  transition: color var(--mf-transition), opacity var(--mf-transition);
+  min-height: 44px;
+}
+
+.magazine-flipbook__nav-btn:hover:not(:disabled) {
+  color: var(--mf-accent);
+}
+
+.magazine-flipbook__nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.magazine-flipbook__nav-glyph {
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* Folio-style page indicator: the one deliberately editorial touch. */
+.magazine-flipbook__indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 64px;
+}
+
+.magazine-flipbook__indicator-number {
+  font-family: var(--mf-font-folio);
+  font-variant-numeric: tabular-nums;
+  font-size: 17px;
+  color: var(--mf-ink);
+}
+
+.magazine-flipbook__indicator-rule {
+  width: 22px;
+  height: 1px;
+  background: var(--mf-accent);
+}
+
+.magazine-flipbook__download {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: transparent;
+  border: none;
+  color: var(--mf-graphite);
+  font-family: inherit;
+  font-size: 13px;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  padding: 10px 6px;
+  cursor: pointer;
+  transition: color var(--mf-transition);
+  min-height: 44px;
+}
+
+.magazine-flipbook__download:hover {
+  color: var(--mf-ink);
+}
+
+.magazine-flipbook__download svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.magazine-flipbook__fullscreen-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--mf-graphite);
+  cursor: pointer;
+  padding: 10px;
+  min-height: 44px;
+  min-width: 44px;
+  transition: color var(--mf-transition);
+}
+
+.magazine-flipbook__fullscreen-btn:hover {
+  color: var(--mf-ink);
+}
+
+.magazine-flipbook__fullscreen-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ---------------------------------------------------------------- */
+/* Focus states — visible, never suppressed without replacement      */
+/* ---------------------------------------------------------------- */
+
+.magazine-flipbook__nav-btn:focus-visible,
+.magazine-flipbook__download:focus-visible,
+.magazine-flipbook__fullscreen-btn:focus-visible {
+  outline: 2px solid var(--mf-accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* ---------------------------------------------------------------- */
+/* Reduced motion: keep navigation functional, drop decoration       */
+/* ---------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .magazine-flipbook__nav-btn,
+  .magazine-flipbook__download,
+  .magazine-flipbook__fullscreen-btn {
+    transition: none;
+  }
+
+  .magazine-flipbook__loading-mark::after {
+    animation: none;
+  }
+}
+
+/* ---------------------------------------------------------------- */
+/* Responsive                                                        */
+/* ---------------------------------------------------------------- */
+
+@media (max-width: 640px) {
+  .magazine-flipbook {
+    padding: 24px 12px;
+    gap: 20px;
+  }
+
+  .magazine-flipbook__controls {
+    gap: 18px;
+  }
+
+  .magazine-flipbook__nav-btn span:not(.magazine-flipbook__nav-glyph) {
+    display: none;
+  }
+
+  .magazine-flipbook__download span {
+    display: none;
+  }
+}

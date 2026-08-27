@@ -823,6 +823,9 @@ call_user_func_array([$updateStmt, 'bind_param'], $bindParams);
 if ($updateStmt->execute()) {
     // Check if this is the final approval (CID Chief or Force Approve)
     if (($fieldPrefix === 'cid_chief' && $action === 'approve') || $fieldPrefix === 'force_approve') {
+        // Automatically deduct the requested materials from inventory
+        scilab_deduct_inventory($conn, $requestId);
+
         $requesterID = $request['requesterEmployeeID'];
         $requesterEmail = null;
 

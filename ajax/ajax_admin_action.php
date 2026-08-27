@@ -157,6 +157,7 @@
 
             if ($stmt->affected_rows > 0) {
                 sendNotificationEmail($conn, $id, 'approved', $controlNumber);
+                scilab_deduct_inventory($conn, $id);
                 echo "Request approved.";
             } else {
                 echo "Update failed.";
@@ -191,6 +192,7 @@
 
             if ($stmt->affected_rows > 0) {
                 sendNotificationEmail($conn, $id, 'approved', $controlNumber);
+                scilab_deduct_inventory($conn, $id);
                 echo "Request approved.";
             } else {
                 echo "Update failed.";
