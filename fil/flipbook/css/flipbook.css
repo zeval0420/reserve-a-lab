@@ -12,8 +12,24 @@
   --mf-ink: #1c1b19;
   --mf-graphite: #6e6a63;
   --mf-mist: #e6e3dc;
-  --mf-accent: #7a2e2e;
-  --mf-shadow: rgba(28, 27, 25, 0.16);
+  --mf-accent: #8c4a3c;
+  --mf-shadow: rgba(28, 27, 25, 0.4);
+
+  /* Wood-grain "table" palette */
+  --mf-table-base: #5a3317;
+  --mf-table-mid: #75431f;
+  --mf-table-light: #8b5a33;
+  --mf-table-dark: #3f220d;
+  --mf-table-grain: rgba(38, 18, 5, 0.35);
+
+  /* Glass control palette (light text on dark wood) */
+  --mf-glass-bg: rgba(255, 255, 255, 0.12);
+  --mf-glass-bg-hover: rgba(255, 255, 255, 0.22);
+  --mf-glass-bg-active: rgba(255, 255, 255, 0.3);
+  --mf-glass-border: rgba(255, 255, 255, 0.22);
+  --mf-glass-shadow: rgba(0, 0, 0, 0.35);
+  --mf-control-text: #f7f0e6;
+  --mf-control-text-dim: #e2d5c6;
 
   --mf-font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     Helvetica, Arial, sans-serif;
@@ -28,10 +44,47 @@
   gap: 28px;
   width: 100%;
   padding: 40px 16px;
-  background: var(--mf-paper);
-  color: var(--mf-ink);
+  color: var(--mf-control-text);
   font-family: var(--mf-font-ui);
   box-sizing: border-box;
+
+  /* Simulated wood-grain tabletop using layered repeating gradients.
+     Vertical grain planks over a warm walnut base with a soft vignette. */
+  background-color: var(--mf-table-base);
+  background-image:
+    /* Darker plank boundaries */
+    repeating-linear-gradient(
+      90deg,
+      var(--mf-table-dark) 0px,
+      transparent 3px,
+      transparent 90px,
+      var(--mf-table-dark) 96px
+    ),
+    /* Subtle wide grain streaks */
+    repeating-linear-gradient(
+      88deg,
+      var(--mf-table-grain) 0px,
+      transparent 4px,
+      transparent 42px,
+      var(--mf-table-grain) 46px
+    ),
+    /* Fine, slightly-denser grain */
+    repeating-linear-gradient(
+      92deg,
+      rgba(255, 200, 130, 0.045) 0px,
+      transparent 2px,
+      transparent 18px,
+      rgba(255, 200, 130, 0.045) 20px
+    ),
+    /* Wood tone variation */
+    linear-gradient(
+      100deg,
+      var(--mf-table-dark) 0%,
+      var(--mf-table-mid) 32%,
+      var(--mf-table-light) 55%,
+      var(--mf-table-mid) 78%,
+      var(--mf-table-dark) 100%
+    );
 }
 
 .magazine-flipbook *,
@@ -54,23 +107,194 @@
 }
 
 .magazine-flipbook__book {
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
   cursor: grab;
-  /* A quiet resting shadow so the book has physical presence even before
-     interaction; page-flip adds its own dynamic fold shadows on top of
-     this during drags and flips. */
-  filter: drop-shadow(0 18px 34px var(--mf-shadow));
+  /* A resting shadow so the book has physical presence even before
+     interaction; slightly stronger here so the paper book reads
+     clearly against the dark wood table. page-flip adds its own
+     dynamic fold shadows on top of this during drags and flips. */
+  filter: drop-shadow(0 24px 40px var(--mf-shadow));
 }
 
 .magazine-flipbook__book.is-dragging {
   cursor: grabbing;
 }
 
-/* Fullscreen: let the book use the available space, keep the paper
+/* A soft, blurred "lit" halo under the book so it feels like it's laid
+   on the table rather than floating on a flat background. */
+.magazine-flipbook__stage::before {
+  content: "";
+  position: absolute;
+  top: 7%;
+  left: 6%;
+  right: 6%;
+  bottom: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0.5) 0%,
+    transparent 70%
+  );
+  filter: blur(24px);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Each page-flip page: just a positioning context for its background
+   image. page-flip itself controls the page's transform/size during
+   flips — we only style what's inside it. */
+.magazine-flipbook__page {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: var(--mf-paper);
+}
+
+.magazine-flipbook__page-bg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* ---------------------------------------------------------------- */
+/* Interactive overlay (Segment 4)                                   */
+/* ---------------------------------------------------------------- */
+
+/* Sits on top of the book but lets clicks/drags on empty space pass
+   straight through to page-flip underneath — only actual interactive
+   elements (below) re-enable pointer events. */
+.magazine-flipbook__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
+.magazine-flipbook__overlay-page {
+  position: absolute;
+  pointer-events: none;
+}
+
+.magazine-flipbook__ix-element {
+  position: absolute;
+  pointer-events: auto;
+}
+
+.magazine-flipbook__ix-button {
+  width: 100%;
+  height: 100%;
+  background: var(--mf-paper);
+  border: 1px solid var(--mf-accent);
+  color: var(--mf-accent);
+  font-family: inherit;
+  font-size: 13px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background var(--mf-transition), color var(--mf-transition);
+}
+
+.magazine-flipbook__ix-button:hover {
+  background: var(--mf-accent);
+  color: var(--mf-paper);
+}
+
+.magazine-flipbook__ix-link {
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+  color: var(--mf-accent);
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.magazine-flipbook__ix-input {
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--mf-mist);
+  border-radius: 3px;
+  padding: 0 8px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--mf-ink);
+  background: var(--mf-paper);
+}
+
+.magazine-flipbook__ix-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  font-size: 13px;
+  color: var(--mf-ink);
+  cursor: pointer;
+}
+
+.magazine-flipbook__ix-quiz {
+  border: 1px solid var(--mf-mist);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--mf-ink);
+  background: var(--mf-paper);
+  overflow: auto;
+  margin: 0;
+}
+
+.magazine-flipbook__ix-quiz-option {
+  display: block;
+  padding: 3px 0;
+  cursor: pointer;
+}
+
+.magazine-flipbook__ix-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--mf-mist);
+  border-radius: 4px;
+  color: var(--mf-graphite);
+  font-size: 12px;
+  background: rgba(250, 250, 247, 0.85);
+}
+
+.magazine-flipbook__ix-button:focus-visible,
+.magazine-flipbook__ix-link:focus-visible,
+.magazine-flipbook__ix-input:focus-visible,
+.magazine-flipbook__ix-checkbox:focus-within {
+  outline: 2px solid var(--mf-accent);
+  outline-offset: 2px;
+}
+
+/* Fullscreen: let the book use the available space, keep the table
    background instead of the browser's default black fullscreen canvas. */
 .magazine-flipbook:fullscreen {
-  background: var(--mf-paper);
+  background-color: var(--mf-table-dark);
+  background-image:
+    repeating-linear-gradient(
+      92deg,
+      var(--mf-table-grain) 0px,
+      transparent 3px,
+      transparent 48px,
+      var(--mf-table-grain) 52px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.22) 0px,
+      transparent 2px,
+      transparent 96px,
+      rgba(0, 0, 0, 0.22) 100px
+    ),
+    linear-gradient(100deg, #4a2710, var(--mf-table-mid) 50%, #4a2710);
   padding: 32px 16px;
   justify-content: center;
 }
@@ -88,18 +312,20 @@
   flex-direction: column;
   align-items: center;
   gap: 14px;
-  color: var(--mf-graphite);
+  color: var(--mf-control-text-dim);
   font-size: 15px;
   letter-spacing: 0.01em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 .magazine-flipbook__loading-mark {
   width: 34px;
   height: 46px;
-  border: 1px solid var(--mf-mist);
+  border: 1px solid var(--mf-glass-border);
   border-radius: 2px;
   position: relative;
   overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .magazine-flipbook__loading-mark::after {
@@ -109,7 +335,7 @@
   background: linear-gradient(
     100deg,
     transparent 30%,
-    var(--mf-mist) 50%,
+    rgba(255, 255, 255, 0.35) 50%,
     transparent 70%
   );
   animation: mf-shimmer 1.4s ease-in-out infinite;
@@ -134,7 +360,7 @@
   align-items: center;
   gap: 6px;
   text-align: center;
-  color: var(--mf-ink);
+  color: var(--mf-control-text);
   padding: 24px 16px;
   max-width: 360px;
 }
@@ -147,7 +373,7 @@
 
 .magazine-flipbook__error-detail {
   font-size: 14px;
-  color: var(--mf-graphite);
+  color: var(--mf-control-text-dim);
   margin: 0;
 }
 
@@ -159,82 +385,129 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 28px;
+  gap: 12px;
   flex-wrap: wrap;
-  width: 100%;
+  width: max-content;
+  max-width: 100%;
+  padding: 10px 14px;
+  border-radius: 28px;
+  background: var(--mf-glass-bg);
+  border: 1px solid var(--mf-glass-border);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 10px 30px var(--mf-glass-shadow);
 }
 
 .magazine-flipbook__nav-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background: transparent;
-  border: none;
-  color: var(--mf-ink);
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--mf-glass-border);
+  color: var(--mf-control-text);
   font-family: inherit;
   font-size: 14px;
-  letter-spacing: 0.01em;
-  padding: 10px 6px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  padding: 9px 16px;
   cursor: pointer;
-  transition: color var(--mf-transition), opacity var(--mf-transition);
-  min-height: 44px;
+  border-radius: 999px;
+  min-height: 42px;
+  white-space: nowrap;
+  transition: background var(--mf-transition), color var(--mf-transition),
+    transform var(--mf-transition), border-color var(--mf-transition),
+    box-shadow var(--mf-transition);
 }
 
 .magazine-flipbook__nav-btn:hover:not(:disabled) {
-  color: var(--mf-accent);
+  background: var(--mf-glass-bg-hover);
+  border-color: rgba(255, 255, 255, 0.35);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.magazine-flipbook__nav-btn:active:not(:disabled) {
+  background: var(--mf-glass-bg-active);
+  transform: translateY(0) scale(0.97);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
 }
 
 .magazine-flipbook__nav-btn:disabled {
-  opacity: 0.35;
+  opacity: 0.4;
   cursor: not-allowed;
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .magazine-flipbook__nav-glyph {
-  font-size: 18px;
+  font-size: 20px;
   line-height: 1;
+  color: rgba(255, 255, 255, 0.85);
 }
 
-/* Folio-style page indicator: the one deliberately editorial touch. */
+/* Folio-style page indicator: the one deliberately editorial touch,
+   brightened and shadowed so it reads clearly on the dark wood. */
 .magazine-flipbook__indicator {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
   min-width: 64px;
+  padding: 0 6px;
 }
 
 .magazine-flipbook__indicator-number {
   font-family: var(--mf-font-folio);
   font-variant-numeric: tabular-nums;
   font-size: 17px;
-  color: var(--mf-ink);
+  color: var(--mf-control-text);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
 }
 
 .magazine-flipbook__indicator-rule {
-  width: 22px;
-  height: 1px;
-  background: var(--mf-accent);
+  width: 26px;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--mf-accent),
+    transparent
+  );
+  border-radius: 1px;
 }
 
 .magazine-flipbook__download {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  background: transparent;
-  border: none;
-  color: var(--mf-graphite);
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--mf-glass-border);
+  color: var(--mf-control-text);
   font-family: inherit;
   font-size: 13px;
+  font-weight: 500;
   letter-spacing: 0.01em;
   text-decoration: none;
-  padding: 10px 6px;
+  padding: 9px 16px;
   cursor: pointer;
-  transition: color var(--mf-transition);
-  min-height: 44px;
+  border-radius: 999px;
+  min-height: 42px;
+  white-space: nowrap;
+  transition: background var(--mf-transition), color var(--mf-transition),
+    transform var(--mf-transition), border-color var(--mf-transition),
+    box-shadow var(--mf-transition);
 }
 
 .magazine-flipbook__download:hover {
-  color: var(--mf-ink);
+  background: var(--mf-glass-bg-hover);
+  border-color: rgba(255, 255, 255, 0.35);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.magazine-flipbook__download:active {
+  background: var(--mf-glass-bg-active);
+  transform: scale(0.97);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
 }
 
 .magazine-flipbook__download svg {
@@ -247,18 +520,30 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
-  border: none;
-  color: var(--mf-graphite);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--mf-glass-border);
+  color: var(--mf-control-text);
   cursor: pointer;
-  padding: 10px;
-  min-height: 44px;
-  min-width: 44px;
-  transition: color var(--mf-transition);
+  padding: 0;
+  min-height: 42px;
+  min-width: 42px;
+  border-radius: 50%;
+  transition: background var(--mf-transition), color var(--mf-transition),
+    transform var(--mf-transition), border-color var(--mf-transition),
+    box-shadow var(--mf-transition);
 }
 
 .magazine-flipbook__fullscreen-btn:hover {
-  color: var(--mf-ink);
+  background: var(--mf-glass-bg-hover);
+  border-color: rgba(255, 255, 255, 0.35);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.magazine-flipbook__fullscreen-btn:active {
+  background: var(--mf-glass-bg-active);
+  transform: scale(0.95);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
 }
 
 .magazine-flipbook__fullscreen-btn svg {
@@ -292,6 +577,10 @@
   .magazine-flipbook__loading-mark::after {
     animation: none;
   }
+
+  .magazine-flipbook__overlay {
+    transition: none;
+  }
 }
 
 /* ---------------------------------------------------------------- */
@@ -305,7 +594,12 @@
   }
 
   .magazine-flipbook__controls {
-    gap: 18px;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  .magazine-flipbook__nav-btn {
+    padding: 8px 12px;
   }
 
   .magazine-flipbook__nav-btn span:not(.magazine-flipbook__nav-glyph) {
@@ -314,5 +608,9 @@
 
   .magazine-flipbook__download span {
     display: none;
+  }
+
+  .magazine-flipbook__download {
+    padding: 8px 12px;
   }
 }
