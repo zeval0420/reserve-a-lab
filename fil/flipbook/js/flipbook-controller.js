@@ -8,6 +8,11 @@
 
 (function () {
   let pageFlipInstance = null;
+  // Keep a reference to the book container so the cover-slot classes can
+  // be toggled on it from emitPageChange (page-flip resizes this element,
+  // and the CSS shifts it left/right by a quarter of the 2-page spread to
+  // seat a standalone cover in its own page's slot).
+  let bookContainerEl = null;
 
   function prefersReducedMotion() {
     return (
@@ -43,6 +48,7 @@
       throw new Error('FlipbookController.init: no page images provided.');
     }
 
+    bookContainerEl = containerEl;
     const bounds = computeSizeBounds(images[0]);
     const reducedMotion = prefersReducedMotion();
 
@@ -89,11 +95,30 @@
   }
 
   function emitPageChange(currentPageIndex) {
+    // Seat a standalone cover properly: page-flip renders the cover on a
+    // full (2-page) width box with the art on only one half and the facing
+    // half blank, so a cover page looks off-kilter. Tag the book with a
+    // cover-slot class so the CSS shifts it a quarter of the spread width
+    // (centering the visible single page) and clips the blank half away.
+    // Front cover (page 1) shifts left, back cover (last page) shifts right;
+    // on any normal spread both classes are removed and the book centers.
+    const pageCount = pageFlipInstance.getPageCount();
+    if (bookContainerEl) {
+      bookContainerEl.classList.toggle(
+        'is-cover-left',
+        pageCount > 1 && currentPageIndex === 0
+      );
+      bookContainerEl.classList.toggle(
+        'is-cover-right',
+        pageCount > 1 && currentPageIndex === pageCount - 1
+      );
+    }
+
     document.dispatchEvent(
       new CustomEvent('flipbook:pagechange', {
         detail: {
           currentPage: currentPageIndex,
-          pageCount: pageFlipInstance.getPageCount()
+          pageCount
         }
       })
     );
