@@ -97,5 +97,6 @@ $pdfUrl = 'book.pdf';
 <script src="js/flipbook-controller.js"></script>
 <script src="js/navigation-controls.js"></script>
 <script src="js/fullscreen-control.js"></script>
+<script src="js/page-turn-sound.js"></script>
 <script src="js/main.js"></script>
 <script type="module" src="js/pdf-renderer.js"></script>

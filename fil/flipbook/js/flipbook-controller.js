@@ -126,8 +126,19 @@
 
   window.FlipbookController = {
     init: createFlipbook,
-    next: () => pageFlipInstance && pageFlipInstance.flipNext(),
-    prev: () => pageFlipInstance && pageFlipInstance.flipPrev(),
+    next: () => {
+      // Flip-lock: a single press must produce a single animated turn.
+      // page-flip's flip() eagerly finishes any in-flight animation; if a
+      // second flip is invoked while one is mid-air it advances a page and
+      // starts yet another animation, which reads as "turns twice". Ignore
+      // navigation while the book is not idle ('read').
+      if (!pageFlipInstance || pageFlipInstance.getState() !== 'read') return;
+      pageFlipInstance.flipNext();
+    },
+    prev: () => {
+      if (!pageFlipInstance || pageFlipInstance.getState() !== 'read') return;
+      pageFlipInstance.flipPrev();
+    },
     goTo: (pageIndex) => pageFlipInstance && pageFlipInstance.flip(pageIndex),
     getCurrentPage: () =>
       pageFlipInstance ? pageFlipInstance.getCurrentPageIndex() : 0,

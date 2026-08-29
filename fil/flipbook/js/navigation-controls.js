@@ -83,7 +83,14 @@
     });
   }
 
+  let bound = false;
+
   function initNavigationControls() {
+    // Idempotent: if the app ever re-initializes (e.g. a duplicate
+    // flipbook:pdfready dispatch), don't stack duplicate click/keyboard
+    // listeners — each would otherwise fire a second page turn.
+    if (bound) return;
+    bound = true;
     bindButtons();
     bindKeyboard();
     bindPageChangeSync();
