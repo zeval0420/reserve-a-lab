@@ -128,6 +128,19 @@
   cursor: grabbing;
 }
 
+/* Give the flip canvas extra vertical headroom so a turning page's top and
+   bottom corners can physically poke PAST the book's resting rectangle
+   instead of being cut off at the canvas edge. page-flip sizes its canvas
+   to the wrapper (inline padding-bottom = the page aspect), so we override
+   that inline padding to make the wrapper (and thus the canvas) taller than
+   the book; page-flip then centers the book within it, leaving room for the
+   rotating corners above and below. The surrounding band is kept transparent
+   (see the canvas renderer clear() patch in flipbook-controller.js) so it
+   shows the table, never a white rectangle. */
+.magazine-flipbook .stf__wrapper {
+  padding-bottom: 88% !important;
+}
+
 /* A standalone cover: page-flip still renders a full-width (2-page) box
    but draws the cover art on only ONE half of it — the right half for the
    front cover (page 1) and the left half for the back cover (last page) —
@@ -137,17 +150,28 @@
         own page would sit on the screen (a quarter of the full width = from
         the book's midpoint to the center of one page).
      2. clip-path hides the blank facing half so no white rectangle shows.
-   Per page-flip's drawing, the front cover lives on the right half (clip
-   the left), the back cover on the left half (clip the right). */
+   IMPORTANT: the clip is applied only while the cover is at rest (see the
+   .is-cover-resting rules below). The controller drops is-cover-resting the
+   moment a flip/fold begins so the clip never cuts off the 3D-rotating page
+   mid-turn — it would otherwise render as a page clipped to a flat
+   rectangle instead of sticking out. */
 .magazine-flipbook__book.is-cover-left {
   transform: translateX(-25%);
-  /* keep right half (front cover art), trim the blank left half */
-  clip-path: inset(0 0 0 50%);
 }
 
 .magazine-flipbook__book.is-cover-right {
   transform: translateX(25%);
-  /* keep left half (back cover art), trim the blank right half */
+}
+
+/* The blank-half trim, applied ONLY when the book has settled ('read') on a
+   cover. Per page-flip's drawing, the front cover art lives on the right
+   half (clip the left blank half), the back cover art on the left half
+   (clip the right blank half). */
+.magazine-flipbook__book.is-cover-resting.is-cover-left {
+  clip-path: inset(0 0 0 50%);
+}
+
+.magazine-flipbook__book.is-cover-resting.is-cover-right {
   clip-path: inset(0 50% 0 0);
 }
 

@@ -76,6 +76,20 @@
 
     pageFlipInstance.loadFromImages(images.map((image) => image.dataUrl));
 
+    // page-flip's canvas renderer paints the ENTIRE canvas white on every
+    // animation frame (clear(): ctx.fillStyle="white"; fillRect(0,0,w,h)).
+    // We now leave vertical headroom around the book so turning-page corners
+    // can poke out past the resting rectangle, so that headroom must be
+    // transparent — wipe to a clear canvas instead of a white one, letting
+    // the wood table show through. This patch runs right after the renderer
+    // exists and is picked up on every subsequent drawFrame().
+    const renderer = pageFlipInstance.getRender();
+    if (renderer && typeof renderer.clear === 'function') {
+      renderer.clear = function () {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      };
+    }
+
     pageFlipInstance.on('flip', (event) => {
       emitPageChange(event.data);
     });
@@ -84,14 +98,41 @@
     // user is actively folding/dragging a page, without any custom drag
     // overlay. "user_fold" and "flipping" both count as active dragging;
     // "read" means the page has settled.
+    // Also re-sync the cover clip: on a cover the blank-half trim must only
+    // apply at rest, never mid-flip (see syncCoverResting).
     pageFlipInstance.on('changeState', (event) => {
-      const isActive = event.data === 'user_fold' || event.data === 'flipping';
+      const state = event.data;
+      const isActive = state === 'user_fold' || state === 'flipping';
       containerEl.classList.toggle('is-dragging', isActive);
+      syncCoverResting(state);
     });
 
     emitPageChange(pageFlipInstance.getCurrentPageIndex());
+    // page-flip starts in the 'read' state but doesn't emit a changeState on
+    // load, so seed the resting cover clip explicitly.
+    syncCoverResting('read');
 
     return pageFlipInstance;
+  }
+
+  /**
+   * The blank-half trim on a cover (clip-path) is applied ONLY while the
+   * book has settled ('read') on that cover. If we clipped while a flip or
+   * drag fold is in progress, the 3D-rotating page would be cut off to a
+   * flat rectangle instead of visibly sticking out. Toggle the
+   * is-cover-resting class to match: on when the current page is a cover
+   * (index 0 or last) AND the engine reports 'read' (idle); otherwise off.
+   */
+  function syncCoverResting(state) {
+    if (!bookContainerEl || !pageFlipInstance) return;
+    const pageCount = pageFlipInstance.getPageCount();
+    const currentPage = pageFlipInstance.getCurrentPageIndex();
+    const isCover =
+      pageCount > 1 && (currentPage === 0 || currentPage === pageCount - 1);
+    bookContainerEl.classList.toggle(
+      'is-cover-resting',
+      isCover && state === 'read'
+    );
   }
 
   function emitPageChange(currentPageIndex) {
