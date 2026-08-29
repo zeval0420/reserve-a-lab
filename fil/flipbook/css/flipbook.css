@@ -110,15 +110,6 @@
   background: transparent;
 }
 
-/* When the book is showing a standalone cover (page 1 or the last page),
-   the controller adds this class. Narrowing the stage itself — on top of
-   page-flip's own autoSize behavior — guarantees the cover is centered as
-   a single page rather than sitting in a box still shaped for a two-page
-   spread. */
-.magazine-flipbook__stage.is-cover-spread {
-  width: min(100%, 560px);
-}
-
 .magazine-flipbook__book {
   position: relative;
   z-index: 1;
@@ -126,35 +117,45 @@
   height: 100%;
   cursor: grab;
   background: transparent;
-  /* The resting depth shadow lives on each page (below), not here: this
-     element is resized by page-flip's own autoSize behavior, so a shadow
-     on it would trace a box shaped for a spread even while only a
-     narrower cover is visible inside it. It always hugs the real,
-     currently-rendered page instead. */
-}
-
-/* Hidden until the book's first real layout settles ('.is-ready'), then
-   faded in — avoids a flash of an empty/incorrectly-sized container
-   while page-flip performs its initial layout pass. */
-.magazine-flipbook__book,
-.magazine-flipbook__overlay {
-  opacity: 0;
-}
-
-.magazine-flipbook__stage.is-ready .magazine-flipbook__book,
-.magazine-flipbook__stage.is-ready .magazine-flipbook__overlay {
-  opacity: 1;
-  transition: opacity 220ms ease;
-}
-
-/* Blocks drag/click-to-turn only for the brief automatic opening flip;
-   removed the instant that flip completes. */
-.magazine-flipbook__book.is-auto-opening {
-  pointer-events: none;
+  /* Smooth cover-slot travel: when the book is shifted into the left or
+     right slot of a two-page spread (see is-cover-left / is-cover-right
+     below) or back to the centered spread position, animate it rather
+     than jumping. */
+  transition: transform var(--mf-transition);
 }
 
 .magazine-flipbook__book.is-dragging {
   cursor: grabbing;
+}
+
+/* A standalone cover: page-flip still renders a full-width (2-page) box
+   but draws the cover art on only ONE half of it — the right half for the
+   front cover (page 1) and the left half for the back cover (last page) —
+   leaving the facing half blank. Two things fix that:
+     1. translateX(±25%) of the book's own width shifts the box by a
+        quarter of the two-page template width, seating the cover where its
+        own page would sit on the screen (a quarter of the full width = from
+        the book's midpoint to the center of one page).
+     2. clip-path hides the blank facing half so no white rectangle shows.
+   Per page-flip's drawing, the front cover lives on the right half (clip
+   the left), the back cover on the left half (clip the right). */
+.magazine-flipbook__book.is-cover-left {
+  transform: translateX(-25%);
+  /* keep right half (front cover art), trim the blank left half */
+  clip-path: inset(0 0 0 50%);
+}
+
+.magazine-flipbook__book.is-cover-right {
+  transform: translateX(25%);
+  /* keep left half (back cover art), trim the blank right half */
+  clip-path: inset(0 50% 0 0);
+}
+
+.magazine-flipbook__book.is-cover-left,
+.magazine-flipbook__book.is-cover-right {
+  /* The book's width/height are managed by page-flip (autoSize), so its
+     box stays centered; only the visible cover is translated and clipped. */
+  will-change: transform;
 }
 
 /* A soft, blurred "lit" halo under the book so it feels like it's laid
@@ -619,11 +620,6 @@
   }
 
   .magazine-flipbook__overlay {
-    transition: none;
-  }
-
-  .magazine-flipbook__stage.is-ready .magazine-flipbook__book,
-  .magazine-flipbook__stage.is-ready .magazine-flipbook__overlay {
     transition: none;
   }
 }
