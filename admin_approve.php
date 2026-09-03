@@ -236,6 +236,21 @@
                 line-height: 1.4;
             }
 
+            .request-flag-badge {
+                display: inline-block;
+                padding: 3px 8px;
+                border-radius: 4px;
+                background: #dc3545;
+                color: #fff;
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.5px;
+                white-space: nowrap;
+            }
+            .request-flag-none { color: #999; font-size: 12px; }
+            .request-flag-sub { font-size: 11px; color: #888; margin-top: 2px; white-space: nowrap; }
+            tr.request-flagged-row { background: rgba(220, 53, 69, 0.07) !important; }
+
             /* Multiselect consistency */
             .form-group .multiselect-native-select .btn-group, 
             .form-group .btn-group { width: 100%; }
@@ -691,6 +706,7 @@
                                 <th>Date of Use</th>
                                 <th>Requested Materials</th>
                                 <th>Teacher-in-Charge</th>
+                                <th>Flag</th>
                                 <?php if ($statusFilter === 'Approved'): ?><th>Remarks</th><?php endif; ?>
                                 <?php if ($statusFilter === 'Rejected'): ?><th>Feedback</th><?php endif; ?>
                                 <?php if ($statusFilter !== 'Rejected'): ?><th>Action</th><?php endif; ?>
@@ -717,8 +733,9 @@
                                         $materialText = isset($materials[$formID]) ? implode("", $materials[$formID]) : '—';
                                         $row['materialsDetailed'] = isset($materialsDetailed[$formID]) ? implode("", $materialsDetailed[$formID]) : '—';
                                         $teacherInCharge = !empty($row['teacherInCharge']) ? htmlspecialchars($row['teacherInCharge']) : '—';
+                                        $flagged = (!empty($row['dateRequested']) && strtotime($row['dateRequested']) >= strtotime('-3 days'));
                                 ?>
-                                    <tr id="row-<?= $row['id'] ?>">
+                                    <tr id="row-<?= $row['id'] ?>" class="<?= $flagged ? 'request-flagged-row' : '' ?>">
                                         <td><span style="display:none;"><?= $row['id'] ?></span><?= $i++ ?></td>
                                         <td><?= htmlspecialchars($fullName) ?></td>
                                         <?php if ($statusFilter === 'Approved'): ?><td><?= htmlspecialchars($row['controlNumber']) ?></td><?php endif; ?>
@@ -729,6 +746,7 @@
                                         <td><?= htmlspecialchars($row['inclusiveDate']).' ('.htmlspecialchars($row['inclusiveTime']).')' ?></td>
                                         <td><?= $materialText ?></td>
                                         <td><?= $teacherInCharge ?></td>
+                                        <td><?= $flagged ? '<span class="request-flag-badge" title="Requested less than 3 days ago">FLAGGED</span><div class="request-flag-sub">' . htmlspecialchars(date('M d, Y', strtotime($row['dateRequested']))) . '</div>' : '<span class="request-flag-none">—</span>' ?></td>
 
                                         <?php if ($statusFilter === 'Approved'): ?>
                                             <td><?= htmlspecialchars($row['feedback'] ?? '—') ?></td>

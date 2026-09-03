@@ -446,6 +446,25 @@ select.liquid-input {
 .ns-item.warning { border-left: 4px solid var(--color-warning); }
 .ns-item.info    { border-left: 4px solid var(--color-info); }
 
+/* Flagged requests (submitted less than 3 days ago) */
+.ns-item.flagged {
+    border-left: 4px solid var(--color-danger);
+    background: rgba(220, 53, 69, 0.06);
+    border-color: rgba(220, 53, 69, 0.25);
+}
+.request-flag {
+    display: inline-block;
+    margin-top: 6px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--color-danger);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
 .ns-clear-btn {
     margin: 20px;
     padding: 12px;

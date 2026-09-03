@@ -169,9 +169,10 @@
                     const serverItems = response.items.map(item => ({
                         type: 'warning',
                         timestamp: item.submitted,
-                        message: `<strong>${item.requester}</strong> requested <strong>${item.lab}</strong>.<br><small>For ${item.date} ${item.time}</small>`,
+                        message: `<strong>${item.requester}</strong> requested <strong>${item.lab}</strong>.<br><small>For ${item.date} ${item.time}</small>${item.flag ? `<span class="request-flag">FLAGGED < 3 days</span>` : ''}`,
                         source: 'server',
-                        link: `admin_approve.php?status=Pending&search=${item.id}`
+                        link: `admin_approve.php?status=Pending&search=${item.id}`,
+                        flag: item.flag ? 1 : 0
                     }));
                     displayItems = [...serverItems, ...displayItems];
                 }
@@ -189,8 +190,9 @@
 
         container.innerHTML = filtered.map(item => {
             const viewLink = item.link ? `<div style="margin-top:8px; text-align:right;"><a href="${item.link}" style="font-weight:600; text-decoration:none; color:inherit; font-size:12px; border-bottom:1px dotted currentColor;">Review Request &rarr;</a></div>` : '';
+            const flagClass = item.flag ? ' flagged' : '';
             return `
-            <div class="ns-item ${item.type}">
+            <div class="ns-item ${item.type}${flagClass}">
                 <div class="ns-item-header">
                     <span>${item.type}</span>
                     <span>${item.timestamp}</span>

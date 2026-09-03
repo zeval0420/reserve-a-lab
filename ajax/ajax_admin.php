@@ -92,7 +92,8 @@
                 'time' => $row['inclusiveTime'],
                 'submitted' => date('M d, Y g:i A', strtotime($row['dateRequested'])),
                 'requester' => $row['requesterName'] ? trim($row['requesterName']) : 'Unknown',
-                'teacher' => $row['teacherInCharge'] ?? ''
+                'teacher' => $row['teacherInCharge'] ?? '',
+                'flag' => (strtotime($row['dateRequested']) >= strtotime('-3 days')) ? 1 : 0
             ];
         }
 
