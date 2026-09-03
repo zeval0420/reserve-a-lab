@@ -40,7 +40,15 @@ $stmt = $conn->prepare("
         fr.requesterEmployeeID,
         fr.dateRequested,
         fr.statusScilabPersonnel,
-        fr.subjectAcademicUnit
+        fr.subjectAcademicUnit,
+        fr.supervisor_approved_at,
+        fr.supervisor_approved_by,
+        fr.subject_teacher_approved_at,
+        fr.subject_teacher_approved_by,
+        fr.lab_personnel_approved_at,
+        fr.lab_personnel_approved_by,
+        fr.cid_chief_approved_at,
+        fr.cid_chief_approved_by
     FROM scilab_form_requests fr
     WHERE fr.id = ?
 ");
@@ -149,6 +157,26 @@ function getSignatureHtml($relativePath) {
 
 $endorsedBySig = getSignatureHtml($formData['subject_teacher_signature'] ?? '');
 $approvedBySig = getSignatureHtml($formData['lab_personnel_signature'] ?? '');
+
+/**
+ * Build the "Approved on <date> via the system" line for a given approval stage.
+ * Returns empty string when the stage has not been approved (no date recorded).
+ */
+function formatApprovedOn($formData, $stage) {
+    $at = $formData[$stage . '_approved_at'] ?? null;
+    $by = trim((string)($formData[$stage . '_approved_by'] ?? ''));
+    if (empty($at)) {
+        return '';
+    }
+    $dateStr = date('F j, Y', strtotime($at));
+    $byLine = $by !== '' ? ' by ' . htmlspecialchars($by) : '';
+    return "Approved on " . $dateStr . " via the system" . $byLine;
+}
+
+$endorsedOn = formatApprovedOn($formData, 'subject_teacher');
+$approvedOn = formatApprovedOn($formData, 'lab_personnel');
+$cidApprovedOn = formatApprovedOn($formData, 'cid_chief');
+$supervisorOn = formatApprovedOn($formData, 'supervisor');
 
 // Fallback for approved by if no digital signature but status is approved (legacy support)
 if (empty($approvedBySig) && ($formData['statusScilabPersonnel'] ?? '') === 'Approved') {
@@ -333,6 +361,35 @@ $html = "
             font-style: italic;
             margin-top: -10pt;
             margin-left: 85pt;
+        }
+
+        .approved-on {
+            display: block;
+            text-align: left;
+            font-size: 7pt;
+            font-style: italic;
+            color: #333;
+            margin-left: 85pt;
+            margin-top: 2pt;
+        }
+
+        .labres-approved-on {
+            display: block;
+            text-align: left;
+            font-size: 7pt;
+            font-style: italic;
+            color: #333;
+            margin-left: 110pt;
+            margin-top: 2pt;
+        }
+
+        .permit-approved-on {
+            display: block;
+            text-align: left;
+            font-size: 7pt;
+            font-style: italic;
+            color: #333;
+            margin-top: 2pt;
         }
         
         .student-list {
@@ -624,6 +681,7 @@ $html .= "
                     <label>Endorsed by:</label>
                     <span class='value' style='min-width: 140pt;'>" . htmlspecialchars($formData['teacherInCharge'] ?? '') . "</span>
                     $endorsedBySig
+                    " . ($endorsedOn !== '' ? "<span class='approved-on'>$endorsedOn</span>" : '') . "
                 </div>
             </div>
             <div class='form-field w-50'>
@@ -631,6 +689,7 @@ $html .= "
                     <label>Approved by:</label>
                     <span class='value' style='min-width: 140pt;'>" . htmlspecialchars($srsString) . "</span>
                     $approvedBySig
+                    " . ($approvedOn !== '' ? "<span class='approved-on'>$approvedOn</span>" : '') . "
                 </div>
             </div>
         </div>
@@ -737,6 +796,7 @@ $html .= "
                     <span class='labres-label'>Endorsed by:</span>
                     <span class='labres-signature-line'>" . htmlspecialchars($formData['teacherInCharge'] ?? '') . "</span>
                     <span class='labres-signature-label'>Subject Teacher/Unit Head</span>
+                    " . ($endorsedOn !== '' ? "<span class='labres-approved-on'>$endorsedOn</span>" : '') . "
                 </div>
             </div>
             <div class='labres-row' style='margin-top: 20px;'>
@@ -744,6 +804,7 @@ $html .= "
                     <span class='labres-label'>Approved by:</span>
                     <span class='labres-signature-line'>" . htmlspecialchars($srsString) . "</span>
                     <span class='labres-signature-label'>SRS / SRA</span>
+                    " . ($approvedOn !== '' ? "<span class='labres-approved-on'>$approvedOn</span>" : '') . "
                 </div>
             </div>
         </div>
@@ -870,6 +931,7 @@ $html .= "
             <div class='permit-line-block'>
                 CID Chief
             </div>
+            " . ($cidApprovedOn !== '' ? "<span class='permit-approved-on'>$cidApprovedOn</span>" : '') . "
         </div>
 
         <div class='permit-footer-text'>

@@ -582,6 +582,8 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
 
     $initialSupervisorStatus = $isFacultyOrSysadmin ? 'approved' : 'pending';
 
+    $requesterNameInitial = trim(($_SESSION['firstname'] ?? '') . ' ' . ($_SESSION['middlename'] ?? '') . ' ' . ($_SESSION['lastname'] ?? ''));
+
     $stmt = $conn->prepare("INSERT INTO scilab_form_requests (
         scilabName,
         gradeLevel,
@@ -598,11 +600,16 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
         supervisor_status,
         subject_teacher_status,
         lab_personnel_status,
-        cid_chief_status
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        cid_chief_status,
+        supervisor_approved_at,
+        supervisor_approved_by
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+
+    $initialSupervisorApprovedAt = $isFacultyOrSysadmin ? date('Y-m-d H:i:s') : null;
+    $initialSupervisorApprovedBy = $isFacultyOrSysadmin ? $requesterNameInitial : null;
 
     $stmt->bind_param(
-        "sissssssssssssss",
+        "sissssssssssssssss",
         $scilabName,
         $grade,
         $sections,
@@ -618,7 +625,9 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
         $initialSupervisorStatus,
         $initialSubjectTeacherStatus,
         $initialLabPersonnelStatus,
-        $initialCidChiefStatus
+        $initialCidChiefStatus,
+        $initialSupervisorApprovedAt,
+        $initialSupervisorApprovedBy
     );
 
     if (!$stmt->execute()) {
@@ -763,12 +772,40 @@ if (!$authorized) {
     exit;
 }
 
+// Resolve the current approver's display name for audit/PDF display.
+$approverName = trim(($_SESSION['firstname'] ?? '') . ' ' . ($_SESSION['middlename'] ?? '') . ' ' . ($_SESSION['lastname'] ?? ''));
+if ($approverName === '') {
+    $approverName = trim((string)($_SESSION['username'] ?? ''));
+}
+if ($approverName === '' && !empty($_SESSION['employeeID'])) {
+    $nameStmt = $conn->prepare("SELECT firstname, middlename, lastname FROM accounts WHERE employeeID = ? LIMIT 1");
+    if ($nameStmt) {
+        $nameStmt->bind_param("s", $_SESSION['employeeID']);
+        $nameStmt->execute();
+        if ($nameRow = $nameStmt->get_result()->fetch_assoc()) {
+            $approverName = trim(($nameRow['firstname'] ?? '') . ' ' . ($nameRow['middlename'] ?? '') . ' ' . ($nameRow['lastname'] ?? ''));
+        }
+        $nameStmt->close();
+    }
+}
+if ($approverName === '') {
+    $approverName = ucwords(str_replace('_', ' ', $fieldPrefix)) . ' (via approval link)';
+}
+
 // Determine which column to update based on current status flow
 if ($fieldPrefix === 'force_approve') {
     $sql = "UPDATE scilab_form_requests SET statusScilabPersonnel = 'Approved', supervisor_status = 'approved', subject_teacher_status = 'approved', lab_personnel_status = 'approved', cid_chief_status = 'approved'";
     $params = [];
     $types = "";
-    
+
+    // Record timestamp + approver for all four stages (admin force approval).
+    foreach (['supervisor', 'subject_teacher', 'lab_personnel', 'cid_chief'] as $stage) {
+        $sql .= ", {$stage}_approved_at = NOW()";
+        $sql .= ", {$stage}_approved_by = ?";
+        $params[] = $approverName;
+        $types .= "s";
+    }
+
     if ($action === 'force_approve_override' && $reason !== null) {
         $sql .= ", feedback = ?";
         $params[] = $reason;
@@ -785,6 +822,8 @@ else {
 
     // Prepare SQL
     $sql = "UPDATE scilab_form_requests SET $statusColumn = ?";
+    $params = [$newStatus];
+    $types = "s";
     
     // If rejected at any stage, mark the whole request as Rejected
     if ($action === 'reject') {
@@ -794,8 +833,13 @@ else {
         $sql .= ", statusScilabPersonnel = 'Approved'";
     }
 
-    $params = [$newStatus];
-    $types = "s";
+    // When approving this stage, record the timestamp + approver name.
+    if ($action === 'approve') {
+        $sql .= ", {$fieldPrefix}_approved_at = NOW()";
+        $sql .= ", {$fieldPrefix}_approved_by = ?";
+        $params[] = $approverName;
+        $types .= "s";
+    }
 
     if ($action === 'reject' && $reason !== null) {
         $sql .= ", feedback = ?";
@@ -879,7 +923,7 @@ if ($updateStmt->execute()) {
     } elseif ($fieldPrefix === 'supervisor' && $action === 'approve') {
         if (!sendNotificationToSubjectTeacher($conn, $requestId)) {
             // No AUH resolvable for this subject — auto-approve this stage and notify Lab Personnel.
-            $autoStmt = $conn->prepare("UPDATE scilab_form_requests SET subject_teacher_status = 'approved' WHERE id = ?");
+            $autoStmt = $conn->prepare("UPDATE scilab_form_requests SET subject_teacher_status = 'approved', subject_teacher_approved_at = NOW(), subject_teacher_approved_by = 'Auto-approved (no AUH resolved)' WHERE id = ?");
             $autoStmt->bind_param("i", $requestId);
             $autoStmt->execute();
             $autoStmt->close();

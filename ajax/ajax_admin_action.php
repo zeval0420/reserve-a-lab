@@ -14,6 +14,10 @@
     // Get session data
     $email = $_SESSION['email'];
     $username   = $_SESSION['username'];
+    $adminName = trim(($_SESSION['firstname'] ?? '') . ' ' . ($_SESSION['middlename'] ?? '') . ' ' . ($_SESSION['lastname'] ?? ''));
+    if ($adminName === '') {
+        $adminName = $username;
+    }
 
     function formatTime($time) {
         return date("g:i A", strtotime($time));
@@ -151,8 +155,8 @@
             }
             $checkStmt->close();
 
-            $stmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Approved', supervisor_status = 'approved', subject_teacher_status = 'approved', lab_personnel_status = 'approved', cid_chief_status = 'approved', controlNumber = ?, feedback = ? WHERE id = ?");
-            $stmt->bind_param("isi", $controlNumber, $remarks, $id);
+            $stmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Approved', supervisor_status = 'approved', subject_teacher_status = 'approved', lab_personnel_status = 'approved', cid_chief_status = 'approved', supervisor_approved_at = NOW(), subject_teacher_approved_at = NOW(), lab_personnel_approved_at = NOW(), cid_chief_approved_at = NOW(), supervisor_approved_by = ?, subject_teacher_approved_by = ?, lab_personnel_approved_by = ?, cid_chief_approved_by = ?, controlNumber = ?, feedback = ? WHERE id = ?");
+            $stmt->bind_param("ssssisi", $adminName, $adminName, $adminName, $adminName, $controlNumber, $remarks, $id);
             $stmt->execute();
 
             if ($stmt->affected_rows > 0) {
@@ -186,8 +190,8 @@
             }
             $checkStmt->close();
 
-            $stmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Approved', supervisor_status = 'approved', subject_teacher_status = 'approved', lab_personnel_status = 'approved', cid_chief_status = 'approved', controlNumber = ?, feedback = ? WHERE id = ?");
-            $stmt->bind_param("isi", $controlNumber, $remarks, $id);
+            $stmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Approved', supervisor_status = 'approved', subject_teacher_status = 'approved', lab_personnel_status = 'approved', cid_chief_status = 'approved', supervisor_approved_at = NOW(), subject_teacher_approved_at = NOW(), lab_personnel_approved_at = NOW(), cid_chief_approved_at = NOW(), supervisor_approved_by = ?, subject_teacher_approved_by = ?, lab_personnel_approved_by = ?, cid_chief_approved_by = ?, controlNumber = ?, feedback = ? WHERE id = ?");
+            $stmt->bind_param("ssssisi", $adminName, $adminName, $adminName, $adminName, $controlNumber, $remarks, $id);
             $stmt->execute();
 
             if ($stmt->affected_rows > 0) {
