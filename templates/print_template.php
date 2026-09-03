@@ -77,8 +77,10 @@ $stmt = $conn->prepare("
         mr.description,
         mr.issuedCondition,
         mr.returnedCondition,
-        mr.returnedItemInspector
+        mr.returnedItemInspector,
+        COALESCE(si.classification, 'Uncategorized') AS classification
     FROM scilab_material_requests mr
+    LEFT JOIN scilab_inventory si ON mr.item = si.item
     WHERE mr.formID = ?
     ORDER BY mr.id ASC
 ");
@@ -91,6 +93,23 @@ $materials = [];
 while ($row = $materialsResult->fetch_assoc()) {
     $materials[] = $row;
 }
+
+// Split materials between the equipment page and the reagent page.
+$equipmentClasses = ['Equipment', 'Semi Expendable', 'Glassware', 'Specialized Equipment', 'Uncategorized'];
+$reagentClasses   = ['Reagent', 'Consumable'];
+
+$equipmentMaterials = [];
+$reagentMaterials = [];
+
+foreach ($materials as $material) {
+    $classification = trim((string)($material['classification'] ?? ''));
+    if (in_array($classification, $reagentClasses)) {
+        $reagentMaterials[] = $material;
+    } else {
+        $equipmentMaterials[] = $material;
+    }
+}
+
 
 $stmt->close();
 
@@ -242,7 +261,7 @@ $html = "
         
         .form-row {
             width: 100%;
-            margin-bottom: 6pt;
+            margin-bottom: 4pt;
             display: table;
         }
         
@@ -303,18 +322,18 @@ $html = "
         }
         
         .material-section {
-            margin: 12pt 0;
+            margin: 8pt 0;
         }
         
         .material-section p {
-            margin-bottom: 4pt;
+            margin-bottom: 3pt;
             font-weight: bold;
         }
         
         table {
             width: 100%;
             border-collapse: collapse;
-            margin: 8pt 0;
+            margin: 6pt 0;
         }
         
         table, th, td {
@@ -331,13 +350,13 @@ $html = "
         }
         
         td {
-            padding: 3pt;
+            padding: 2.5pt;
             min-height: 16pt;
             font-size: 8pt;
         }
         
         .notes {
-            margin: 12pt 0;
+            margin: 8pt 0;
             font-size: 8pt;
         }
         
@@ -351,7 +370,7 @@ $html = "
         }
         
         .signature-section {
-            margin-top: 8pt;    
+            margin-top: 5pt;    
         }
         
         .signature-label {
@@ -359,7 +378,7 @@ $html = "
             text-align: left;
             font-size: 8pt;
             font-style: italic;
-            margin-top: -10pt;
+            margin-top: -8pt;
             margin-left: 85pt;
         }
 
@@ -416,11 +435,27 @@ $html = "
             font-size: 9pt;
             margin-top: 16pt;
         }
+
+        .system-record-note {
+            font-size: 7pt;
+            font-style: italic;
+            color: #444;
+            text-align: center;
+            margin-top: 20pt;
+            padding-top: 6pt;
+            border-top: 1px solid #999;
+            line-height: 1.4;
+        }
     </style>
 
     <style>
         .page-main {
             font-size: 8pt;
+        }
+
+        .page-reagent {
+            font-size: 9pt;
+            page-break-before: always;
         }
 
         .page-labres {
@@ -433,26 +468,26 @@ $html = "
             page-break-before: always;
         }
 
-        /* ============ Page 2: Laboratory Reservation Form ============ */
-        .labres-header { margin-bottom: 18pt; }
+        /* ============ Page 4: Laboratory Reservation Form ============ */
+        .labres-header { margin-bottom: 8pt; }
         .labres-header h3 { font-size: 10pt; font-weight: bold; margin-bottom: 6pt; }
         .labres-line { border-bottom: 1px solid #000; display: inline-block; min-width: 180pt; height: 12pt; }
-        .labres-title { font-size: 11pt; font-weight: bold; margin-bottom: 20pt; }
-        .labres-row { width: 100%; margin-bottom: 10pt; display: table; }
+        .labres-title { font-size: 10pt; font-weight: bold; margin-bottom: 10pt; }
+        .labres-row { width: 100%; margin-bottom: 5pt; display: table; }
         .labres-field { display: table-cell; vertical-align: top; }
         .labres-label { white-space: nowrap; }
-        .labres-value { border-bottom: 1px solid #000; display: inline-block; min-width: 180pt; min-height: 14pt; padding: 0 4pt; margin-left: 6pt; }
+        .labres-value { border-bottom: 1px solid #000; display: inline-block; min-width: 180pt; min-height: 12pt; padding: 0 4pt; margin-left: 6pt; }
         .labres-w-25 { width: 25%; }
         .labres-w-50 { width: 50%; }
         .labres-w-100 { width: 100%; }
-        .labres-student-list { margin-top: 14pt; }
-        .labres-student-list p { margin-bottom: 6pt; }
-        .labres-student-item { margin-bottom: 6pt; }
-        .labres-student-line { border-bottom: 1px solid #000; min-width: 300pt; display: inline-block; min-height: 14pt; }
-        .labres-signature-section { margin-top: 18pt; }
-        .labres-signature-line { border-bottom: 1px solid #000; min-width: 200pt; min-height: 14pt; display: inline-block; padding: 0 4pt; margin-left: 6pt; }
+        .labres-student-list { margin-top: 6pt; }
+        .labres-student-list p { margin-bottom: 4pt; }
+        .labres-student-item { margin-bottom: 4pt; }
+        .labres-student-line { border-bottom: 1px solid #000; min-width: 300pt; display: inline-block; min-height: 12pt; }
+        .labres-signature-section { margin-top: 8pt; }
+        .labres-signature-line { border-bottom: 1px solid #000; min-width: 200pt; min-height: 12pt; display: inline-block; padding: 0 4pt; margin-left: 6pt; }
         .labres-signature-label { display: block; font-size: 8pt; margin-left: 110pt; margin-top: 2pt; }
-        .labres-footer-text { margin-top: 20pt; font-size: 9pt; }
+        .labres-footer-text { margin-top: 10pt; font-size: 9pt; }
 
         /* ============ Page 3: Science Laboratory Work Permit ============ */
         .permit-header { display: table; width: 100%; margin-bottom: 12pt; }
@@ -578,8 +613,8 @@ $html = "
 ";
 
 // Add materials rows
-if (!empty($materials)) {
-    foreach ($materials as $material) {
+if (!empty($equipmentMaterials)) {
+    foreach ($equipmentMaterials as $material) {
         $itemName = htmlspecialchars($material['item']);
         if (!empty($material['description'])) {
             $itemDescription = htmlspecialchars($material['description']);
@@ -605,7 +640,7 @@ if (!empty($materials)) {
 }
 
 // Add empty rows if needed (minimum 5 rows)
-$emptyRowsNeeded = max(0, 5 - count($materials));
+$emptyRowsNeeded = max(0, 5 - count($equipmentMaterials));
 for ($i = 0; $i < $emptyRowsNeeded; $i++) {
     $html .= "
     <tr>
@@ -707,111 +742,240 @@ $html .= "
         <p>PSHS-00-F-CIID-20-Ver02-Rev1-10/18/20</p>
     </div>
 
+    <div class='system-record-note'>
+        This document is an electronically generated record of the Laboratory Reservation System. The corresponding reservation request has been duly reviewed and digitally approved through the system.
     </div>
 
-    <div class='page page-labres'>
+    </div>
 
-        <div class='labres-header'>
-            <h3>PHILIPPINE SCIENCE HIGH SCHOOL SYSTEM</h3>
-            <div style='font-weight: bold;'>
-                CAMPUS: <span class='labres-line' style='min-width: 180pt;'>ILOCOS REGION</span>
+
+    <div class='page page-reagent'>
+
+    <div class='header'>
+        <h3>PHILIPPINE SCIENCE HIGH SCHOOL SYSTEM</h3>
+        <div class='campus-line'>
+            <label>CAMPUS:</label>
+            <span>ILOCOS REGION</span>
+        </div>
+    </div>
+
+    <div class='form-title'>
+        REAGENT REQUEST FORM
+    </div>
+    
+    <div class='control-row'>
+        <div class='control-left'></div>
+        <div class='control-right'>
+            <div class='control-field'>
+                <label>Control No:</label>
+                <span class='value' style='min-width: 60pt;'>" . htmlspecialchars($formData['controlNumber'] ?? '') . "</span>
+            </div>
+            <div class='control-field'>
+                <label>SY:</label>
+                <span class='value' style='min-width: 50pt;'>" . htmlspecialchars($formData['sy'] ?? '') . "</span>
             </div>
         </div>
+    </div>
 
-        <div class='labres-title'>
-            LABORATORY RESERVATION FORM
+    <div class='form-row'>
+        <div class='form-field w-60'>
+            <label>Grade Level and Section:</label>
+            <span class='value' style='min-width: 150pt;'>" . htmlspecialchars('Grade ' . $formData['gradeLevel'] . ' - ' . $formData['sections']) . "</span>
         </div>
+        <div class='form-field w-40'>
+            <label>Number of Students:</label>
+            <span class='value' style='min-width: 60pt;'>" . count($students) . "</span>
+        </div>
+    </div>
+    
+    <div class='form-row'>
+        <div class='form-field w-60'>
+            <label>Subject:</label>
+            <span class='value' style='min-width: 150pt;'>" . htmlspecialchars($formData['subject'] ?? '') . "</span>
+        </div>
+        <div class='form-field w-40'>
+            <label>Concurrent Topic:</label>
+            <span class='value' style='min-width: 90pt;'>" . htmlspecialchars($formData['subjectTopic'] ?? '') . "</span>
+        </div>
+    </div>
 
-        <div class='labres-row'>
-            <div class='labres-field labres-w-50'></div>
-            <div class='labres-field labres-w-25'>
-                <span class='labres-label'>Control No:</span>
-                <span class='labres-value' style='min-width: 80pt;'>" . htmlspecialchars($formData['controlNumber'] ?? '') . "</span>
+    <div class='form-row'>
+        <div class='form-field w-60'>
+            <label>Unit:</label>
+            <span class='value' style='min-width: 150pt;'>" . htmlspecialchars($formData['subjectAcademicUnit'] ?? '') . "</span>
+        </div>
+        <div class='form-field w-40'>
+            <label>Teacher In-Charge:</label>
+            <span class='value' style='min-width: 90pt;'>" . htmlspecialchars($formData['teacherInCharge'] ?? '') . "</span>
+        </div>
+    </div>
+
+    <div class='form-row'>
+        <div class='form-field w-100'>
+            <label>Venue of the Experiment:</label>
+            <span class='value' style='min-width: 250pt;'>" . htmlspecialchars($formData['scilabName'] ?? '') . "</span>
+        </div>
+    </div>
+
+    <div class='form-row'>
+        <div class='form-field w-50'>
+            <label>Date/Inclusive Date:</label>
+            <span class='value' style='min-width: 120pt;'>". htmlspecialchars($formData['inclusiveDate'] ?? '') . "</span>
+        </div>
+        <div class='form-field w-50'>
+            <label>Inclusive Time of Use:</label>
+            <span class='value' style='min-width: 120pt;'>". htmlspecialchars($formData['inclusiveTime'] ?? '') . "</span>
+        </div>
+    </div>
+
+
+    <div class='material-section'>
+        <p>Reagent Needed:</p>
+        <table>
+            <thead>
+                <tr>
+                    <th style='width: 8%;'>Quantity</th>
+                    <th style='width: 33%;'>Reagent</th>
+                    <th style='width: 16%;'>SDS [&check;][X]</th>
+                    <th style='width: 33%;'>Issued&#10;&#13;Amount/Remarks</th>
+                </tr>
+            </thead>
+            <tbody>
+";
+
+// Add materials rows
+if (!empty($reagentMaterials)) {
+    foreach ($reagentMaterials as $material) {
+        $itemName = htmlspecialchars($material['item']);
+        if (!empty($material['description'])) {
+            $itemDescription = htmlspecialchars($material['description']);
+        }else{
+            $itemDescription = 'N/A';
+        }
+        
+        $quantity = htmlspecialchars($material['quantity']);
+        if (!empty($material['unit'])) {
+            $quantity .= ' ' . htmlspecialchars($material['unit']);
+        }
+        
+        $html .= "
+        <tr>
+            <td style='text-align: center;'>" . $quantity . "</td>
+            <td>" . $itemName . "</td>
+            <td>&nbsp;</td>
+            <td style='text-align: center;'>&nbsp;</td>
+        </tr>
+        ";
+    }
+}
+
+// Add empty rows if needed (minimum 5 rows)
+$emptyRowsNeeded = max(0, 5 - count($reagentMaterials));
+for ($i = 0; $i < $emptyRowsNeeded; $i++) {
+    $html .= "
+    <tr>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+    </tr>
+    ";
+}
+
+$html .= "
+    </table>
+    </div>
+    
+    <div class='notes'>
+        <ul>
+            <li>Students must certify that he/she/they have read the safety information as specified in the Safety Data Sheet (SDS) of the reagents being requested.</li>
+            <li>This form must be filled out completely and legibly and submitted, together with a suitable container with cover and proper label, to the SRA of the unit which will release the reagents.</li>
+            <li>Requests not in accordance with existing Unit regulations and considerations may not be granted.</li>
+            <li>The reagents will be released to the SRA of the requesting unit.</li>
+        </ul>
+    </div>
+
+    <div class='signature-section'>
+        <div class='form-row'>
+            <div class='form-field w-50'>
+                <label>Requested by:</label>
+                <span class='value' style='min-width: 140pt;'>" . htmlspecialchars($requesterName) . "</span>
             </div>
-            <div class='labres-field labres-w-25'>
-                <span class='labres-label'>SY:</span>
-                <span class='labres-value' style='min-width: 120pt;'>" . htmlspecialchars($formData['sy'] ?? '') . "</span>
+            <div class='form-field w-50'>
+                <label>Date Requested:</label>
+                <span class='value' style='min-width: 120pt;'>" . htmlspecialchars($dateRequested) . "</span>
             </div>
         </div>
-
-        <div class='labres-row'>
-            <div class='labres-field labres-w-50'>
-                <span class='labres-label'>Grade Level and Section:</span>
-                <span class='labres-value'>" . htmlspecialchars('Grade ' . $formData['gradeLevel'] . ' - ' . $formData['sections']) . "</span>
-            </div>
-            <div class='labres-field labres-w-50'>
-                <span class='labres-label'>Number of Students:</span>
-                <span class='labres-value' style='min-width: 80pt;'>" . count($students) . "</span>
+        <div class='form-row'>
+            <div class='form-field w-50'>
+                <span class='signature-label'>Teacher/Student</span>
             </div>
         </div>
+    </div>
 
-        <div class='labres-row'>
-            <div class='labres-field labres-w-50'>
-                <span class='labres-label'>Subject:</span>
-                <span class='labres-value'>" . htmlspecialchars($formData['subject'] ?? '') . "</span>
-            </div>
-            <div class='labres-field labres-w-50'>
-                <span class='labres-label'>Teacher In-Charge:</span>
-                <span class='labres-value'>" . htmlspecialchars($formData['teacherInCharge'] ?? '') . "</span>
-            </div>
-        </div>
+    <div class='student-list'>
+        <p>If user of the lab is a group, list down the names of the students:</p>
+        <ul>
 
-        <div class='labres-row'>
-            <div class='labres-field labres-w-50'>
-                <span class='labres-label'>Date/Inclusive Dates:</span>
-                <span class='labres-value'>" . htmlspecialchars($formData['inclusiveDate'] ?? '') . "</span>
-            </div>
-            <div class='labres-field labres-w-50'>
-                <span class='labres-label'>Inclusive Time of Use:</span>
-                <span class='labres-value'>" . htmlspecialchars($formData['inclusiveTime'] ?? '') . "</span>
-            </div>
-        </div>
+";
 
-        <div class='labres-row'>
-            <div class='labres-field labres-w-100'>
-                <span class='labres-label'>Preferred Lab Room:</span>
-                <span class='labres-value' style='min-width: 350pt;'>" . htmlspecialchars($formData['scilabName'] ?? '') . "</span>
-            </div>
-        </div>
+// Add student names
+if (!empty($students)) {
+    foreach ($students as $index => $studentName) {
+        $html .= "
+        <li>" . htmlspecialchars($studentName) . "</li>
+        ";
+    }
+}
 
-        <div class='labres-row'>
-            <div class='labres-field labres-w-50'>
-                <span class='labres-label'>Requested by:</span>
-                <span class='labres-value' style='min-width: 200pt;'>" . htmlspecialchars($requesterName) . "</span>
-            </div>
-            <div class='labres-field labres-w-50'>
-                <span class='labres-label'>Date Requested:</span>
-                <span class='labres-value' style='min-width: 160pt;'>" . htmlspecialchars($dateRequested) . "</span>
-            </div>
-        </div>
+// Add empty lines for remaining students (minimum 10 lines)
+$emptyLinesNeeded = max(0, 5 - count($students));
+for ($i = count($students); $i < count($students) + $emptyLinesNeeded; $i++) {
+    $html .= "
+    <li></li>
+    ";
+}
 
-        <div class='labres-student-list'>
-            <p>If user of the lab is a group, list down the names of students.</p>
-            __LABRES_STUDENTS__
-        </div>
+$html .= "
+        </ul>
+    </div>
 
-        <div class='labres-signature-section'>
-            <div class='labres-row'>
-                <div class='labres-field labres-w-100'>
-                    <span class='labres-label'>Endorsed by:</span>
-                    <span class='labres-signature-line'>" . htmlspecialchars($formData['teacherInCharge'] ?? '') . "</span>
-                    <span class='labres-signature-label'>Subject Teacher/Unit Head</span>
-                    " . ($endorsedOn !== '' ? "<span class='labres-approved-on'>$endorsedOn</span>" : '') . "
+    <div class='signature-section'>
+        <div class='form-row'>
+            <div class='form-field w-50'>
+                <div style='position: relative;'>
+                    <label>Endorsed by:</label>
+                    <span class='value' style='min-width: 140pt;'>" . htmlspecialchars($formData['teacherInCharge'] ?? '') . "</span>
+                    $endorsedBySig
+                    " . ($endorsedOn !== '' ? "<span class='approved-on'>$endorsedOn</span>" : '') . "
                 </div>
             </div>
-            <div class='labres-row' style='margin-top: 20px;'>
-                <div class='labres-field labres-w-100'>
-                    <span class='labres-label'>Approved by:</span>
-                    <span class='labres-signature-line'>" . htmlspecialchars($srsString) . "</span>
-                    <span class='labres-signature-label'>SRS / SRA</span>
-                    " . ($approvedOn !== '' ? "<span class='labres-approved-on'>$approvedOn</span>" : '') . "
+            <div class='form-field w-50'>
+                <div style='position: relative;'>
+                    <label>Approved by:</label>
+                    <span class='value' style='min-width: 140pt;'>" . htmlspecialchars($srsString) . "</span>
+                    $approvedBySig
+                    " . ($approvedOn !== '' ? "<span class='approved-on'>$approvedOn</span>" : '') . "
                 </div>
             </div>
         </div>
-
-        <div class='labres-footer-text'>
-            PSHS-00-F-CID-05-Ver02-Rev1-10/18/20
+        <div class='form-row'>
+            <div class='form-field w-50'>
+                <span class='signature-label'>Subject Teacher/Unit Head</span>
+            </div>
+            <div class='form-field w-50'>
+                <span class='signature-label'>SRS/SRA</span>
+            </div>
         </div>
+    </div>
+
+    <div class='footer-text'>
+        <p>PSHS-00-F-CIID-20-Ver02-Rev1-10/18/20</p>
+    </div>
+
+    <div class='system-record-note'>
+        This document is an electronically generated record of the Laboratory Reservation System. The corresponding reservation request has been duly reviewed and digitally approved through the system.
+    </div>
 
     </div>
 
@@ -940,13 +1104,119 @@ $html .= "
 
     </div>
 
+    <div class='page page-labres'>
+
+        <div class='labres-header'>
+            <h3>PHILIPPINE SCIENCE HIGH SCHOOL SYSTEM</h3>
+            <div style='font-weight: bold;'>
+                CAMPUS: <span class='labres-line' style='min-width: 180pt;'>ILOCOS REGION</span>
+            </div>
+        </div>
+
+        <div class='labres-title'>
+            LABORATORY RESERVATION FORM
+        </div>
+
+        <div class='labres-row'>
+            <div class='labres-field labres-w-50'></div>
+            <div class='labres-field labres-w-25'>
+                <span class='labres-label'>Control No:</span>
+                <span class='labres-value' style='min-width: 80pt;'>" . htmlspecialchars($formData['controlNumber'] ?? '') . "</span>
+            </div>
+            <div class='labres-field labres-w-25'>
+                <span class='labres-label'>SY:</span>
+                <span class='labres-value' style='min-width: 120pt;'>" . htmlspecialchars($formData['sy'] ?? '') . "</span>
+            </div>
+        </div>
+
+        <div class='labres-row'>
+            <div class='labres-field labres-w-50'>
+                <span class='labres-label'>Grade Level and Section:</span>
+                <span class='labres-value'>" . htmlspecialchars('Grade ' . $formData['gradeLevel'] . ' - ' . $formData['sections']) . "</span>
+            </div>
+            <div class='labres-field labres-w-50'>
+                <span class='labres-label'>Number of Students:</span>
+                <span class='labres-value' style='min-width: 80pt;'>" . count($students) . "</span>
+            </div>
+        </div>
+
+        <div class='labres-row'>
+            <div class='labres-field labres-w-50'>
+                <span class='labres-label'>Subject:</span>
+                <span class='labres-value'>" . htmlspecialchars($formData['subject'] ?? '') . "</span>
+            </div>
+            <div class='labres-field labres-w-50'>
+                <span class='labres-label'>Teacher In-Charge:</span>
+                <span class='labres-value'>" . htmlspecialchars($formData['teacherInCharge'] ?? '') . "</span>
+            </div>
+        </div>
+
+        <div class='labres-row'>
+            <div class='labres-field labres-w-50'>
+                <span class='labres-label'>Date/Inclusive Dates:</span>
+                <span class='labres-value'>" . htmlspecialchars($formData['inclusiveDate'] ?? '') . "</span>
+            </div>
+            <div class='labres-field labres-w-50'>
+                <span class='labres-label'>Inclusive Time of Use:</span>
+                <span class='labres-value'>" . htmlspecialchars($formData['inclusiveTime'] ?? '') . "</span>
+            </div>
+        </div>
+
+        <div class='labres-row'>
+            <div class='labres-field labres-w-100'>
+                <span class='labres-label'>Preferred Lab Room:</span>
+                <span class='labres-value' style='min-width: 350pt;'>" . htmlspecialchars($formData['scilabName'] ?? '') . "</span>
+            </div>
+        </div>
+
+        <div class='labres-row'>
+            <div class='labres-field labres-w-50'>
+                <span class='labres-label'>Requested by:</span>
+                <span class='labres-value' style='min-width: 200pt;'>" . htmlspecialchars($requesterName) . "</span>
+            </div>
+            <div class='labres-field labres-w-50'>
+                <span class='labres-label'>Date Requested:</span>
+                <span class='labres-value' style='min-width: 160pt;'>" . htmlspecialchars($dateRequested) . "</span>
+            </div>
+        </div>
+
+        <div class='labres-student-list'>
+            <p>If user of the lab is a group, list down the names of students.</p>
+            __LABRES_STUDENTS__
+        </div>
+
+        <div class='labres-signature-section'>
+            <div class='labres-row'>
+                <div class='labres-field labres-w-100'>
+                    <span class='labres-label'>Endorsed by:</span>
+                    <span class='labres-signature-line'>" . htmlspecialchars($formData['teacherInCharge'] ?? '') . "</span>
+                    <span class='labres-signature-label'>Subject Teacher/Unit Head</span>
+                    " . ($endorsedOn !== '' ? "<span class='labres-approved-on'>$endorsedOn</span>" : '') . "
+                </div>
+            </div>
+            <div class='labres-row' style='margin-top: 8pt;'>
+                <div class='labres-field labres-w-100'>
+                    <span class='labres-label'>Approved by:</span>
+                    <span class='labres-signature-line'>" . htmlspecialchars($srsString) . "</span>
+                    <span class='labres-signature-label'>SRS / SRA</span>
+                    " . ($approvedOn !== '' ? "<span class='labres-approved-on'>$approvedOn</span>" : '') . "
+                </div>
+            </div>
+        </div>
+
+        <div class='labres-footer-text'>
+            PSHS-00-F-CID-05-Ver02-Rev1-10/18/20
+        </div>
+
+    </div>
+
 </body>
 </html>
 ";
 
-// Fill reservation form student lines (up to 5)
+// Fill reservation form student lines (up to 3)
 $labresStudents = '';
-for ($i = 1; $i <= 5; $i++) {
+for ($i = 1; $i <= 3; $i++) {
     $studentValue = htmlspecialchars($students[$i - 1] ?? '');
     $labresStudents .= "<div class='labres-student-item'>{$i}. <span class='labres-student-line'>{$studentValue}</span></div>";
 }
