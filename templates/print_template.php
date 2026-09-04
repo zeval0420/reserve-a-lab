@@ -9,7 +9,7 @@ if (!file_exists('../vendor/autoload.php')) {
 }
 require_once '../vendor/autoload.php';
 
-if (!file_exists('../helperFiles/db_connection.php')) {
+if (!file_exists('../../scilab/helperFiles/db_connection.php')) {
     die('Error: helperFiles/db_connection.php not found. Check directory case sensitivity (helperFiles vs helperfiles).');
 }
 include('../../scilab/helperFiles/db_connection.php');
@@ -152,10 +152,13 @@ $dateRequested = date('F d, Y', strtotime($formData['dateRequested']));
 
 // Fetch SRS/SRA names for "Approved by"
 $srsNames = [];
-$srsStmt = $conn->prepare("SELECT firstname, middlename, lastname FROM accounts WHERE position IN ('Sci. Res. Assist.', 'Sci. Research Specialist I') AND status = 'active'");
+$srsStmt = $conn->prepare("SELECT firstname, middlename, lastname, employeeID FROM accounts WHERE position IN ('Sci. Res. Assist.', 'Sci. Research Specialist I') AND status = 'active'");
 $srsStmt->execute();
 $srsResult = $srsStmt->get_result();
 while ($row = $srsResult->fetch_assoc()) {
+    if (isset($row['employeeID']) && $row['employeeID'] === 'E001') {
+        continue; // exclude test account (Gabriel James Valdez, employeeID E001)
+    }
     $mi = !empty($row['middlename']) ? substr($row['middlename'], 0, 1) . '. ' : '';
     $srsNames[] = strtoupper($row['firstname'] . ' ' . $mi . $row['lastname']);
 }
