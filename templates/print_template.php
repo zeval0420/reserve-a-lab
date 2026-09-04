@@ -461,7 +461,7 @@ $html = "
         }
 
         .page-reagent {
-            font-size: 9pt;
+            font-size: 8pt;
             page-break-before: always;
         }
 
@@ -471,9 +471,39 @@ $html = "
         }
 
         .page-permit {
-            font-size: 9pt;
+            font-size: 8pt;
             page-break-before: always;
         }
+
+        /* ============ Page 2: Reagent form - compact so it fits one page ============ */
+        .page-reagent th, .page-reagent td { font-size: 7pt; }
+        .page-reagent td { padding: 2pt; min-height: 12pt; }
+        .page-reagent .form-row { margin-bottom: 3pt; }
+        .page-reagent .form-field .value { min-height: 12pt; font-size: 8pt; }
+        .page-reagent .material-section { margin: 6pt 0; }
+        .page-reagent table { margin: 4pt 0; }
+        .page-reagent .notes { margin: 6pt 0; font-size: 7.5pt; }
+        .page-reagent .notes li { margin-bottom: 1pt; }
+        .page-reagent .signature-label { font-size: 7.5pt; margin-top: -7pt; }
+        .page-reagent .student-list { margin: 5pt 0; }
+        .page-reagent .student-list li { min-height: 15pt; margin-bottom: 1pt; padding: 1pt 0; }
+        .page-reagent .footer-text { font-size: 8pt; margin-top: 8pt; }
+
+        /* ============ Page 3: Work Permit - compact so it fits one page ============ */
+        .page-permit .permit-header { margin-bottom: 8pt; }
+        .page-permit .permit-header-text p { font-size: 8pt; margin-bottom: 1pt; }
+        .page-permit .permit-title { font-size: 10pt; margin: 8pt 0 6pt 0; }
+        .page-permit .permit-row { margin-bottom: 5pt; }
+        .page-permit .permit-field { font-size: 8pt; }
+        .page-permit .permit-value { min-height: 11pt; font-size: 8pt; }
+        .page-permit .permit-line-block { margin-bottom: 4pt; font-size: 8pt; }
+        .page-permit .permit-multi-lines span { min-height: 11pt; margin-bottom: 2pt; font-size: 8pt; }
+        .page-permit .permit-note { font-size: 8pt; margin: 1pt 0; }
+        .page-permit .permit-signature-section { margin-top: 6pt; }
+        .page-permit .permit-signature-line { min-height: 12pt; min-width: 180pt; font-size: 8pt; }
+        .page-permit .permit-signature-label { font-size: 7.5pt; margin-top: 1pt; }
+        .page-permit .permit-approval-block { margin-top: 8pt; }
+        .page-permit .permit-footer-text { font-size: 8pt; margin-top: 12pt; }
 
         /* ============ Page 4: Laboratory Reservation Form ============ */
         .labres-header { margin-bottom: 8pt; }
