@@ -738,7 +738,9 @@
                                     <tr id="row-<?= $row['id'] ?>" class="<?= $flagged ? 'request-flagged-row' : '' ?>">
                                         <td><span style="display:none;"><?= $row['id'] ?></span><?= $i++ ?></td>
                                         <td><?= htmlspecialchars($fullName) ?></td>
-                                        <?php if ($statusFilter === 'Approved'): ?><td><?= htmlspecialchars($row['controlNumber']) ?></td><?php endif; ?>
+                                        <?php if ($statusFilter === 'Approved'):
+                                            $ctrlPrimary = ($row['control_equipment'] ?? '') ?: (($row['control_reagent'] ?? '') ?: (($row['control_permit'] ?? '') ?: (($row['control_reservation'] ?? '') ?: ($row['controlNumber'] ?? ''))));
+                                        ?><td><?= htmlspecialchars($ctrlPrimary) ?></td><?php endif; ?>
                                         <td><?= htmlspecialchars($row['scilabName']) ?></td>
                                         <td><?= htmlspecialchars("Grade ".$row['gradeLevel']." - ".$row['sections']) ?></td>
                                         <td><?= htmlspecialchars($row['subject']) ?></td>
@@ -763,9 +765,12 @@
                                                     <button class="btn-liquid-success approve-btn" style="width: 90%; margin-bottom: 10px; padding-left:0; padding-right:0;" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>Force Approve</button>
                                                     <button class="btn-liquid-danger reject-btn" style="width: 90%; padding-left:0; padding-right:0;" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>Reject</button>
                                                 <?php elseif ($statusFilter === 'Approved'): ?>
-                                                    <a href="templates/print_template.php?id=<?= $row['id'] ?>" target="_blank" class="btn-liquid">
+                                                    <a href="templates/print_template.php?id=<?= $row['id'] ?>" target="_blank" class="btn-liquid" style="width: 90%; margin-bottom: 10px; display:block; text-align:center; padding-left:0; padding-right:0;">
                                                         <i class="glyphicon glyphicon-print"></i> Print
                                                     </a>
+                                                    <button class="btn-liquid edit-control-btn" style="width: 90%; padding-left:0; padding-right:0;" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>
+                                                        <i class="glyphicon glyphicon-edit"></i> Edit Control #'s
+                                                    </button>
                                                 <?php endif; ?>
                                             </td>
                                         <?php endif; ?>
@@ -791,8 +796,20 @@
                                 <div id="admin-conflict-warning"></div>
                                 <div id="approveDetails"></div>
                                 <div class="form-group mt-3">
-                                    <label for="controlNumber">Control Number:</label>
-                                    <input type="text" class="form-control liquid-input" name="controlNumber" id="controlNumber" placeholder="Enter Control Number" required>
+                                    <label for="control_equipment">Control Number - Equipment Form:</label>
+                                    <input type="text" class="form-control liquid-input" name="control_equipment" id="control_equipment" placeholder="e.g. CIID-20-001">
+                                </div>
+                                <div class="form-group">
+                                    <label for="control_reagent">Control Number - Reagent Form:</label>
+                                    <input type="text" class="form-control liquid-input" name="control_reagent" id="control_reagent" placeholder="e.g. RG-001">
+                                </div>
+                                <div class="form-group">
+                                    <label for="control_permit">Control Number - Work Permit:</label>
+                                    <input type="text" class="form-control liquid-input" name="control_permit" id="control_permit" placeholder="e.g. PT-001">
+                                </div>
+                                <div class="form-group">
+                                    <label for="control_reservation">Control Number - Lab Reservation Form:</label>
+                                    <input type="text" class="form-control liquid-input" name="control_reservation" id="control_reservation" placeholder="e.g. CID-05-0042">
                                 </div>
                                 <div class="form-group">
                                     <label for="approveRemarks">Remarks:</label>
@@ -802,6 +819,43 @@
                             <div class="modal-footer">
                                 <input type="hidden" name="approveId" id="approveId">
                                 <button type="submit" class="btn-liquid-success">Confirm</button>
+                                <button type="button" class="btn-liquid-secondary" data-dismiss="modal">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Edit Control Numbers Modal -->
+            <div class="modal fade" id="editControlModal" tabindex="-1" role="dialog">
+                <div class="modal-dialog modal-lg" role="document">
+                    <div class="modal-content">
+                        <form id="editControlForm">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Edit Control Numbers</h5>
+                                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="form-group mt-3">
+                                    <label for="ec_control_equipment">Control Number - Equipment Form:</label>
+                                    <input type="text" class="form-control liquid-input" name="ec_control_equipment" id="ec_control_equipment" placeholder="e.g. CIID-20-001">
+                                </div>
+                                <div class="form-group">
+                                    <label for="ec_control_reagent">Control Number - Reagent Form:</label>
+                                    <input type="text" class="form-control liquid-input" name="ec_control_reagent" id="ec_control_reagent" placeholder="e.g. RG-001">
+                                </div>
+                                <div class="form-group">
+                                    <label for="ec_control_permit">Control Number - Work Permit:</label>
+                                    <input type="text" class="form-control liquid-input" name="ec_control_permit" id="ec_control_permit" placeholder="e.g. PT-001">
+                                </div>
+                                <div class="form-group">
+                                    <label for="ec_control_reservation">Control Number - Lab Reservation Form:</label>
+                                    <input type="text" class="form-control liquid-input" name="ec_control_reservation" id="ec_control_reservation" placeholder="e.g. CID-05-0042">
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <input type="hidden" name="ec_request_id" id="ec_request_id">
+                                <button type="submit" class="btn-liquid-success">Save</button>
                                 <button type="button" class="btn-liquid-secondary" data-dismiss="modal">Cancel</button>
                             </div>
                         </form>
@@ -911,7 +965,10 @@
             $('.approve-btn').click(function () {
                 const data = $(this).data('request');
                 $('#approveId').val(data.id);
-                $('#controlNumber').val('');
+                $('#control_equipment').val('');
+                $('#control_reagent').val('');
+                $('#control_permit').val('');
+                $('#control_reservation').val('');
                 $('#approveRemarks').val('');
                 $('#approveDetails').html(`
                     <p><strong>Requester:</strong> ${data.requesterName || data.requesterEmployeeID}</p>
@@ -964,19 +1021,60 @@
             $('#approveForm').submit(function (e) {
                 e.preventDefault();
                 const id = $('#approveId').val();
-                const control = $('#controlNumber').val().trim();
+                const controlEquipment = $('#control_equipment').val().trim();
+                const controlReagent = $('#control_reagent').val().trim();
+                const controlPermit = $('#control_permit').val().trim();
+                const controlReservation = $('#control_reservation').val().trim();
                 const remarks = $('#approveRemarks').val().trim();
 
-                if (control === '') {
-                    showToast('Control Number required.', 'warning');
-                    return;
-                }
-
-                $.post('ajax/ajax_admin_action.php', { action: 'force_approve', id: id, controlNumber: control, remarks: remarks }, function (response) {
+                $.post('ajax/ajax_admin_action.php', {
+                    action: 'force_approve',
+                    id: id,
+                    control_equipment: controlEquipment,
+                    control_reagent: controlReagent,
+                    control_permit: controlPermit,
+                    control_reservation: controlReservation,
+                    remarks: remarks
+                }, function (response) {
                     const isSuccess = response.toLowerCase().includes('approved');
                     showToast(response, isSuccess ? 'success' : 'error');
                     if (isSuccess) {
                         setTimeout(() => location.reload(), 1500);
+                    }
+                });
+            });
+
+            // EDIT CONTROL NUMBERS (approved requests)
+            $('.edit-control-btn').click(function () {
+                const data = $(this).data('request');
+                $('#ec_request_id').val(data.id);
+                $('#ec_control_equipment').val(data.control_equipment || '');
+                $('#ec_control_reagent').val(data.control_reagent || '');
+                $('#ec_control_permit').val(data.control_permit || '');
+                $('#ec_control_reservation').val(data.control_reservation || '');
+                $('#editControlModal').modal('show');
+            });
+
+            $('#editControlForm').submit(function (e) {
+                e.preventDefault();
+                const id = $('#ec_request_id').val();
+                const controlEquipment = $('#ec_control_equipment').val().trim();
+                const controlReagent = $('#ec_control_reagent').val().trim();
+                const controlPermit = $('#ec_control_permit').val().trim();
+                const controlReservation = $('#ec_control_reservation').val().trim();
+
+                $.post('ajax/ajax_admin_action.php', {
+                    action: 'update_control_numbers',
+                    id: id,
+                    control_equipment: controlEquipment,
+                    control_reagent: controlReagent,
+                    control_permit: controlPermit,
+                    control_reservation: controlReservation
+                }, function (response) {
+                    const isSuccess = response.toLowerCase().includes('updated') || response.toLowerCase().includes('success');
+                    showToast(response, isSuccess ? 'success' : 'error');
+                    if (isSuccess) {
+                        setTimeout(() => location.reload(), 1200);
                     }
                 });
             });

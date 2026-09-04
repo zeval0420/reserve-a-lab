@@ -135,32 +135,21 @@
             exit();
         }
         elseif ($_POST['action'] === 'approve') {
-            $controlNumber = isset($_POST['controlNumber']) ? (int) $_POST['controlNumber'] : 0;
+            $controlEquipment = trim($_POST['control_equipment'] ?? '');
+            $controlReagent = trim($_POST['control_reagent'] ?? '');
+            $controlPermit = trim($_POST['control_permit'] ?? '');
+            $controlReservation = trim($_POST['control_reservation'] ?? '');
             $remarks = $_POST['remarks'] ?? '';
 
-            if ($controlNumber <= 0) {
-                echo "Invalid control number.";
-                exit();
-            }
+            $controlPrimary = $controlEquipment ?: ($controlReagent ?: ($controlPermit ?: $controlReservation));
+            $legacyControl = is_numeric($controlPrimary) ? (int)$controlPrimary : 0;
 
-            // Check for control number duplication
-            $checkStmt = $conn->prepare("SELECT id FROM scilab_form_requests WHERE controlNumber = ? AND id != ?");
-            $checkStmt->bind_param("ii", $controlNumber, $id);
-            $checkStmt->execute();
-            $checkResult = $checkStmt->get_result();
-            if ($checkResult->num_rows > 0) {
-                echo "Control number already exists.";
-                $checkStmt->close();
-                exit();
-            }
-            $checkStmt->close();
-
-            $stmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Approved', supervisor_status = 'approved', subject_teacher_status = 'approved', lab_personnel_status = 'approved', cid_chief_status = 'approved', supervisor_approved_at = NOW(), subject_teacher_approved_at = NOW(), lab_personnel_approved_at = NOW(), cid_chief_approved_at = NOW(), supervisor_approved_by = ?, subject_teacher_approved_by = ?, lab_personnel_approved_by = ?, cid_chief_approved_by = ?, controlNumber = ?, feedback = ? WHERE id = ?");
-            $stmt->bind_param("ssssisi", $adminName, $adminName, $adminName, $adminName, $controlNumber, $remarks, $id);
+            $stmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Approved', supervisor_status = 'approved', subject_teacher_status = 'approved', lab_personnel_status = 'approved', cid_chief_status = 'approved', supervisor_approved_at = NOW(), subject_teacher_approved_at = NOW(), lab_personnel_approved_at = NOW(), cid_chief_approved_at = NOW(), supervisor_approved_by = ?, subject_teacher_approved_by = ?, lab_personnel_approved_by = ?, cid_chief_approved_by = ?, controlNumber = ?, control_equipment = ?, control_reagent = ?, control_permit = ?, control_reservation = ?, feedback = ? WHERE id = ?");
+            $stmt->bind_param("ssssisssssi", $adminName, $adminName, $adminName, $adminName, $legacyControl, $controlEquipment, $controlReagent, $controlPermit, $controlReservation, $remarks, $id);
             $stmt->execute();
 
             if ($stmt->affected_rows > 0) {
-                sendNotificationEmail($conn, $id, 'approved', $controlNumber);
+                sendNotificationEmail($conn, $id, 'approved', $controlPrimary);
                 scilab_deduct_inventory($conn, $id);
                 echo "Request approved.";
             } else {
@@ -170,34 +159,41 @@
             exit();
         }
         elseif ($_POST['action'] === 'force_approve') {
-            $controlNumber = isset($_POST['controlNumber']) ? (int) $_POST['controlNumber'] : 0;
+            $controlEquipment = trim($_POST['control_equipment'] ?? '');
+            $controlReagent = trim($_POST['control_reagent'] ?? '');
+            $controlPermit = trim($_POST['control_permit'] ?? '');
+            $controlReservation = trim($_POST['control_reservation'] ?? '');
             $remarks = $_POST['remarks'] ?? '';
 
-            if ($controlNumber <= 0) {
-                echo "Invalid control number.";
-                exit();
-            }
+            $controlPrimary = $controlEquipment ?: ($controlReagent ?: ($controlPermit ?: $controlReservation));
+            $legacyControl = is_numeric($controlPrimary) ? (int)$controlPrimary : 0;
 
-            // Check for control number duplication
-            $checkStmt = $conn->prepare("SELECT id FROM scilab_form_requests WHERE controlNumber = ? AND id != ?");
-            $checkStmt->bind_param("ii", $controlNumber, $id);
-            $checkStmt->execute();
-            $checkResult = $checkStmt->get_result();
-            if ($checkResult->num_rows > 0) {
-                echo "Control number already exists.";
-                $checkStmt->close();
-                exit();
-            }
-            $checkStmt->close();
-
-            $stmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Approved', supervisor_status = 'approved', subject_teacher_status = 'approved', lab_personnel_status = 'approved', cid_chief_status = 'approved', supervisor_approved_at = NOW(), subject_teacher_approved_at = NOW(), lab_personnel_approved_at = NOW(), cid_chief_approved_at = NOW(), supervisor_approved_by = ?, subject_teacher_approved_by = ?, lab_personnel_approved_by = ?, cid_chief_approved_by = ?, controlNumber = ?, feedback = ? WHERE id = ?");
-            $stmt->bind_param("ssssisi", $adminName, $adminName, $adminName, $adminName, $controlNumber, $remarks, $id);
+            $stmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Approved', supervisor_status = 'approved', subject_teacher_status = 'approved', lab_personnel_status = 'approved', cid_chief_status = 'approved', supervisor_approved_at = NOW(), subject_teacher_approved_at = NOW(), lab_personnel_approved_at = NOW(), cid_chief_approved_at = NOW(), supervisor_approved_by = ?, subject_teacher_approved_by = ?, lab_personnel_approved_by = ?, cid_chief_approved_by = ?, controlNumber = ?, control_equipment = ?, control_reagent = ?, control_permit = ?, control_reservation = ?, feedback = ? WHERE id = ?");
+            $stmt->bind_param("ssssisssssi", $adminName, $adminName, $adminName, $adminName, $legacyControl, $controlEquipment, $controlReagent, $controlPermit, $controlReservation, $remarks, $id);
             $stmt->execute();
 
             if ($stmt->affected_rows > 0) {
-                sendNotificationEmail($conn, $id, 'approved', $controlNumber);
+                sendNotificationEmail($conn, $id, 'approved', $controlPrimary);
                 scilab_deduct_inventory($conn, $id);
                 echo "Request approved.";
+            } else {
+                echo "Update failed.";
+            }
+            $stmt->close();
+            exit();
+        }
+        elseif ($_POST['action'] === 'update_control_numbers') {
+            $controlEquipment = trim($_POST['control_equipment'] ?? '');
+            $controlReagent = trim($_POST['control_reagent'] ?? '');
+            $controlPermit = trim($_POST['control_permit'] ?? '');
+            $controlReservation = trim($_POST['control_reservation'] ?? '');
+
+            $stmt = $conn->prepare("UPDATE scilab_form_requests SET control_equipment = ?, control_reagent = ?, control_permit = ?, control_reservation = ? WHERE id = ?");
+            $stmt->bind_param("ssssi", $controlEquipment, $controlReagent, $controlPermit, $controlReservation, $id);
+            $stmt->execute();
+
+            if ($stmt->affected_rows > 0) {
+                echo "Control numbers updated.";
             } else {
                 echo "Update failed.";
             }

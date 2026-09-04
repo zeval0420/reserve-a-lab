@@ -28,6 +28,10 @@ if (!$formID) {
 $stmt = $conn->prepare("
     SELECT 
         fr.controlNumber,
+        fr.control_equipment,
+        fr.control_reagent,
+        fr.control_permit,
+        fr.control_reservation,
         fr.sy,
         fr.gradeLevel,
         fr.sections,
@@ -532,7 +536,7 @@ $html = "
         <div class='control-right'>
             <div class='control-field'>
                 <label>Control No:</label>
-                <span class='value' style='min-width: 60pt;'>" . htmlspecialchars($formData['controlNumber'] ?? '') . "</span>
+                <span class='value' style='min-width: 60pt;'>" . htmlspecialchars($formData['control_equipment'] ?? '') . "</span>
             </div>
             <div class='control-field'>
                 <label>SY:</label>
@@ -768,7 +772,7 @@ $html .= "
         <div class='control-right'>
             <div class='control-field'>
                 <label>Control No:</label>
-                <span class='value' style='min-width: 60pt;'>" . htmlspecialchars($formData['controlNumber'] ?? '') . "</span>
+                <span class='value' style='min-width: 60pt;'>" . htmlspecialchars($formData['control_reagent'] ?? '') . "</span>
             </div>
             <div class='control-field'>
                 <label>SY:</label>
@@ -995,7 +999,7 @@ $html .= "
 
         <div class='permit-title'>
             SCIENCE LABORATORY WORK PERMIT No:
-            <span class='permit-value' style='min-width: 200pt;'>" . htmlspecialchars($formData['controlNumber'] ?? '') . "</span>
+            <span class='permit-value' style='min-width: 200pt;'>" . htmlspecialchars($formData['control_permit'] ?? '') . "</span>
         </div>
 
         <div class='permit-row'>
@@ -1121,7 +1125,7 @@ $html .= "
             <div class='labres-field labres-w-50'></div>
             <div class='labres-field labres-w-25'>
                 <span class='labres-label'>Control No:</span>
-                <span class='labres-value' style='min-width: 80pt;'>" . htmlspecialchars($formData['controlNumber'] ?? '') . "</span>
+                <span class='labres-value' style='min-width: 80pt;'>" . htmlspecialchars($formData['control_reservation'] ?? '') . "</span>
             </div>
             <div class='labres-field labres-w-25'>
                 <span class='labres-label'>SY:</span>
@@ -1243,7 +1247,7 @@ $dompdf->loadHtml($html);
 $dompdf->setPaper('A4', 'portrait');
 $dompdf->render();
 
-$filename = "Lab_Request_Form_" . ($formData['controlNumber'] ?? $formID) . ".pdf";
+$filename = "Lab_Request_Form_" . (($formData['control_equipment'] ?? '') !== '' ? $formData['control_equipment'] : ($formData['controlNumber'] ?? $formID)) . ".pdf";
 $dompdf->stream($filename, ["Attachment" => false]);
 
 ?>
