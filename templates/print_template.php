@@ -448,7 +448,10 @@ $html = "
             font-style: italic;
             color: #444;
             text-align: center;
-            margin-top: 20pt;
+            position: fixed;
+            bottom: 15mm;
+            left: 20mm;
+            right: 20mm;
             padding-top: 6pt;
             border-top: 1px solid #999;
             line-height: 1.4;
