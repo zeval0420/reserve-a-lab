@@ -1167,9 +1167,15 @@ function getStepIcon($class)
         <?php elseif ($hasAlreadyActed): ?>
         <div class="card" style="margin-top: 24px;">
             <div class="card-inner" style="text-align: center; padding: 24px 32px;">
-                <p style="font-size: 15px; font-weight: 700; color: <?= $lastAction === 'approved' ? 'var(--success)' : 'var(--danger)' ?>; margin: 0;">
-                    You have already <?= $lastAction === 'approved' ? 'approved' : 'rejected' ?> this request.
+                <?php if ($lastAction === 'approved'): ?>
+                <p style="font-size: 15px; font-weight: 700; color: var(--success); margin: 0;">
+                    You have already approved this request.
                 </p>
+                <?php else: ?>
+                <p style="font-size: 15px; font-weight: 700; color: var(--danger); margin: 0;">
+                    You have denied this request due to <?= htmlspecialchars($request['feedback'] ?? 'the reason provided.') ?>
+                </p>
+                <?php endif; ?>
             </div>
         </div>
         <?php endif; ?>

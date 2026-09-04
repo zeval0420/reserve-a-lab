@@ -526,6 +526,246 @@ function sendRejectionNotificationToRequester($conn, $request, $rejectionReason,
     }
 }
 
+function scilab_resolve_requester_email($conn, $requesterID) {
+    $email = null;
+    $stmt = $conn->prepare("SELECT email FROM accounts WHERE employeeID = ?");
+    if ($stmt) {
+        $stmt->bind_param("s", $requesterID);
+        $stmt->execute();
+        if ($row = $stmt->get_result()->fetch_assoc()) {
+            $email = $row['email'];
+        }
+        $stmt->close();
+    }
+    if (!$email) {
+        $stmt = $conn->prepare("SELECT email FROM student WHERE LRN = ?");
+        if ($stmt) {
+            $stmt->bind_param("s", $requesterID);
+            $stmt->execute();
+            if ($row = $stmt->get_result()->fetch_assoc()) {
+                $email = $row['email'];
+            }
+            $stmt->close();
+        }
+    }
+    return $email ?: null;
+}
+
+function scilab_resolve_teacher_in_charge_emails($conn, $teacherInCharge) {
+    $emails = [];
+    if (empty($teacherInCharge)) return $emails;
+    $stmt = $conn->prepare("SELECT email, TRIM(CONCAT(lastname, ', ', firstname, ' ', IFNULL(middlename, ''))) AS fullname FROM accounts WHERE status = 'active'");
+    if (!$stmt) return $emails;
+    $stmt->execute();
+    $res = $stmt->get_result();
+    while ($row = $res->fetch_assoc()) {
+        $fn = trim($row['fullname'] ?? '');
+        if ($fn !== '' && stripos($teacherInCharge, $fn) !== false) {
+            $emails[] = $row['email'];
+        }
+    }
+    $stmt->close();
+    return array_unique($emails);
+}
+
+function scilab_resolve_auh_emails($conn, $subject, $gradeLevel = null) {
+    $designation = scilab_auh_designation($conn, $subject, $gradeLevel);
+    if ($designation === null) return [];
+
+    $syResult = $conn->query("SELECT value FROM current WHERE description = 'School Year' ORDER BY id DESC LIMIT 1");
+    $sy = ($syResult && $syResult->num_rows > 0) ? $syResult->fetch_assoc()['value'] : null;
+    if (!$sy) return [];
+
+    $emails = [];
+    $auhStmt = $conn->prepare("SELECT DISTINCT employeeID FROM designation WHERE sy = ? AND designation = ?");
+    if (!$auhStmt) return $emails;
+    $auhStmt->bind_param("ss", $sy, $designation);
+    $auhStmt->execute();
+    $auhRes = $auhStmt->get_result();
+    while ($auh = $auhRes->fetch_assoc()) {
+        $emp = $conn->prepare("SELECT email FROM accounts WHERE employeeID = ? AND status = 'active'");
+        if ($emp) {
+            $emp->bind_param("s", $auh['employeeID']);
+            $emp->execute();
+            if ($row = $emp->get_result()->fetch_assoc()) {
+                $emails[] = $row['email'];
+            }
+            $emp->close();
+        }
+    }
+    $auhStmt->close();
+    return array_unique($emails);
+}
+
+function scilab_resolve_lab_personnel_emails($conn) {
+    $emails = [];
+    $res = $conn->query("SELECT email FROM accounts WHERE status = 'active' AND (position = 'Sci. Res. Assist.' OR position = 'Sci. Research Specialist I')");
+    if ($res) {
+        while ($row = $res->fetch_assoc()) {
+            if (!empty($row['email'])) $emails[] = $row['email'];
+        }
+    }
+    return array_unique($emails);
+}
+
+function scilab_resolve_cid_chief_emails($conn) {
+    $emails = [];
+    $res = $conn->query("SELECT email FROM accounts WHERE status = 'active' AND position LIKE '%Chief%'");
+    if ($res) {
+        while ($row = $res->fetch_assoc()) {
+            if (!empty($row['email'])) $emails[] = $row['email'];
+        }
+    }
+    return array_unique($emails);
+}
+
+function scilab_send_status_email($emails, $subject, $bodyHtml) {
+    global $email_smtp_host, $email_smtp_user, $email_smtp_password, $email_smtp_secure, $email_smtp_port, $email_sender;
+
+    if (empty($emails)) return;
+    $emails = array_unique(array_filter($emails, function ($e) {
+        return filter_var($e, FILTER_VALIDATE_EMAIL);
+    }));
+    if (empty($emails)) return;
+
+    foreach ($emails as $email) {
+        $mail = new PHPMailer(true);
+        try {
+            $mail->isSMTP();
+            $mail->Host = $email_smtp_host;
+            $mail->SMTPAuth = true;
+            $mail->Username = $email_smtp_user;
+            $mail->Password = $email_smtp_password;
+            $mail->SMTPSecure = $email_smtp_secure;
+            $mail->Port = $email_smtp_port;
+
+            $mail->setFrom($email_sender, 'PSHS-IRC SciLab');
+            $mail->addAddress($email);
+
+            $mail->isHTML(true);
+            $mail->Subject = $subject;
+            $mail->Body = $bodyHtml;
+            $mail->send();
+        } catch (Exception $e) {
+            error_log("Status email failed to {$email}: " . ($mail->ErrorInfo ?? $e->getMessage()));
+        }
+    }
+}
+
+/**
+ * Notify the requester (student) and every prerequisite approver whose stage is
+ * already approved, using the SAME subject that was used to send the approval link
+ * to each specific personnel (so each recipient gets one email thread per request).
+ *
+ * $currentStage: 'supervisor' | 'subject_teacher' | 'lab_personnel' | 'cid_chief' | 'force_approve'
+ * $event: 'approve' | 'reject'
+ */
+function scilab_notify_stage_status($conn, $request, $currentStage, $event, $reason = null) {
+    global $active_server;
+
+    $id = $request['id'] ?? 0;
+    $stageOrder = ['supervisor' => 0, 'subject_teacher' => 1, 'lab_personnel' => 2, 'cid_chief' => 3];
+    $isForce = ($currentStage === 'force_approve');
+    $currIdx = $isForce ? 999 : ($stageOrder[$currentStage] ?? -1);
+
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
+    $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/" . $active_server;
+    $trackerLink = $baseURL . "/supervisor_approve.php?id=" . $id;
+
+    $stageLabels = [
+        'supervisor' => 'Supervisor',
+        'subject_teacher' => 'Area Unit Head (AUH)',
+        'lab_personnel' => 'Lab Personnel',
+        'cid_chief' => 'CID Chief',
+        'force_approve' => 'Administrator (Force Approval)',
+    ];
+    $stageLabel = $stageLabels[$currentStage] ?? ucwords(str_replace('_', ' ', $currentStage));
+
+    // Resolve requester display name
+    $requesterName = $request['requesterEmployeeID'] ?? '';
+    $nameStmt = $conn->prepare("SELECT firstname, middlename, lastname FROM accounts WHERE employeeID = ?");
+    if ($nameStmt) {
+        $nameStmt->bind_param("s", $requesterName);
+        $nameStmt->execute();
+        if ($row = $nameStmt->get_result()->fetch_assoc()) {
+            $requesterName = trim(($row['firstname'] ?? '') . ' ' . ($row['middlename'] ?? '') . ' ' . ($row['lastname'] ?? ''));
+        }
+        $nameStmt->close();
+    }
+    if ($requesterName === $request['requesterEmployeeID']) {
+        $nameStmt = $conn->prepare("SELECT firstname, middlename, lastname FROM student WHERE LRN = ?");
+        if ($nameStmt) {
+            $nameStmt->bind_param("s", $request['requesterEmployeeID']);
+            $nameStmt->execute();
+            if ($row = $nameStmt->get_result()->fetch_assoc()) {
+                $requesterName = trim(($row['firstname'] ?? '') . ' ' . ($row['middlename'] ?? '') . ' ' . ($row['lastname'] ?? ''));
+            }
+            $nameStmt->close();
+        }
+    }
+
+    $verb = ($event === 'approve') ? 'approved' : 'rejected';
+    $reasonHtml = ($event === 'reject' && $reason) ? '<br><br><strong>Reason:</strong> ' . htmlspecialchars($reason) : '';
+
+    // Common body used for all recipients
+    $body = '<p>This is a status update regarding your laboratory reservation request <strong>SLR-' . intval($id) . '</strong>.</p>'
+        . '<p><strong>Facility:</strong> ' . htmlspecialchars($request['scilabName'] ?? '') . '<br>'
+        . '<strong>Requested By:</strong> ' . htmlspecialchars($requesterName) . '<br>'
+        . '<strong>Date/Time:</strong> ' . htmlspecialchars(($request['inclusiveDate'] ?? '') . ' ' . ($request['inclusiveTime'] ?? '')) . '</p>'
+        . '<p><strong>' . htmlspecialchars($stageLabel) . '</strong> has ' . $verb . ' this request.' . $reasonHtml . '</p>'
+        . '<p>You can track the progress of this request here: <a href="' . htmlspecialchars($trackerLink) . '">View Request Status</a></p>';
+
+    // --- Student / requester (single constant subject => one thread) ---
+    $studentSubject = 'Your SciLab Reservation Request - SLR-' . intval($id);
+    $requesterEmail = scilab_resolve_requester_email($conn, $request['requesterEmployeeID'] ?? '');
+    if ($requesterEmail) {
+        scilab_send_status_email([$requesterEmail], $studentSubject, $body);
+    }
+
+    // --- Prerequisite approvers (their own approval-link subject => their thread) ---
+    $message = [
+        'Action Required: New SciLab Request for Approval - SLR-' . intval($id),
+        'Action Required: Area Unit Head (AUH) Approval Needed - SLR-' . intval($id),
+        'New SciLab Request Submitted (Approved by Area Unit Head) - SLR-' . intval($id),
+        'Action Required: CID Chief Final Approval Needed - SLR-' . intval($id),
+    ];
+
+    // Only notify approvers strictly BEFORE the current stage whose stage is already 'approved'
+    $prior = [];
+    if ($isForce) {
+        $prior = ['supervisor', 'subject_teacher', 'lab_personnel', 'cid_chief'];
+    } else {
+        if ($currIdx > 0 && (($request['supervisor_status'] ?? '') === 'approved')) $prior[] = 'supervisor';
+        if ($currIdx > 1 && (($request['subject_teacher_status'] ?? '') === 'approved')) $prior[] = 'subject_teacher';
+        if ($currIdx > 2 && (($request['lab_personnel_status'] ?? '') === 'approved')) $prior[] = 'lab_personnel';
+        if ($currIdx > 3 && (($request['cid_chief_status'] ?? '') === 'approved')) $prior[] = 'cid_chief';
+    }
+
+    $stageEmailResolver = [
+        'supervisor' => function () use ($conn, $request) {
+            return scilab_resolve_teacher_in_charge_emails($conn, $request['teacherInCharge'] ?? '');
+        },
+        'subject_teacher' => function () use ($conn, $request) {
+            return scilab_resolve_auh_emails($conn, $request['subject'] ?? '', $request['gradeLevel'] ?? null);
+        },
+        'lab_personnel' => function () use ($conn) {
+            return scilab_resolve_lab_personnel_emails($conn);
+        },
+        'cid_chief' => function () use ($conn) {
+            return scilab_resolve_cid_chief_emails($conn);
+        },
+    ];
+
+    foreach ($prior as $stage) {
+        if (!isset($message[$stageOrder[$stage] ?? -1])) continue;
+        if (!isset($stageEmailResolver[$stage])) continue;
+        $emails = $stageEmailResolver[$stage]();
+        if (!empty($emails)) {
+            scilab_send_status_email($emails, $message[$stageOrder[$stage]], $body);
+        }
+    }
+}
+
 if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
     $scilabName = $_POST['venue'] ?? '';
     $grade = intval($_POST['grade_level'] ?? 0);
@@ -870,72 +1110,26 @@ if ($updateStmt->execute()) {
         // Automatically deduct the requested materials from inventory
         scilab_deduct_inventory($conn, $requestId);
 
-        $requesterID = $request['requesterEmployeeID'];
-        $requesterEmail = null;
-
-        // Try fetching email from accounts
-        $stmtEmail = $conn->prepare("SELECT email FROM accounts WHERE employeeID = ?");
-        $stmtEmail->bind_param("s", $requesterID);
-        $stmtEmail->execute();
-        $resEmail = $stmtEmail->get_result();
-        if ($row = $resEmail->fetch_assoc()) {
-            $requesterEmail = $row['email'];
-        } else {
-            // Try fetching email from student
-            $stmtEmail = $conn->prepare("SELECT email FROM student WHERE LRN = ?");
-            if ($stmtEmail) {
-                $stmtEmail->bind_param("s", $requesterID);
-                $stmtEmail->execute();
-                $resEmail = $stmtEmail->get_result();
-                if ($row = $resEmail->fetch_assoc()) {
-                    $requesterEmail = $row['email'];
-                }
-            }
-        }
-
-        if ($requesterEmail) {
-            try {
-                $mail = new PHPMailer(true);
-                $mail->isSMTP();
-                $mail->Host = $email_smtp_host;
-                $mail->SMTPAuth = true;
-                $mail->Username = $email_smtp_user;
-                $mail->Password = $email_smtp_password;
-                $mail->SMTPSecure = $email_smtp_secure;
-                $mail->Port = $email_smtp_port;
-
-                $mail->setFrom($email_sender, 'PSHS-IRC SciLab');
-                $mail->addAddress($requesterEmail);
-                $mail->isHTML(true);
-                $mail->Subject = 'SciLab Request Approved - SLR-' . $requestId;
-                
-                if ($fieldPrefix === 'force_approve') {
-                    $mail->Body = 'Your request for ' . htmlspecialchars($request['scilabName']) . ' on ' . htmlspecialchars($request['inclusiveDate']) . ' has been FORCE APPROVED by an Administrator.';
-                } else {
-                    $mail->Body = 'Your request for ' . htmlspecialchars($request['scilabName']) . ' on ' . htmlspecialchars($request['inclusiveDate']) . ' has been fully approved by the CID Chief.';
-                }
-
-                $mail->send();
-            } catch (Exception $e) {
-                error_log("Failed to send approval email: " . $mail->ErrorInfo);
-            }
-        }
+        scilab_notify_stage_status($conn, $request, $fieldPrefix, 'approve');
     } elseif ($fieldPrefix === 'supervisor' && $action === 'approve') {
+        scilab_notify_stage_status($conn, $request, 'supervisor', 'approve');
         if (!sendNotificationToSubjectTeacher($conn, $requestId)) {
             // No AUH resolvable for this subject — auto-approve this stage and notify Lab Personnel.
             $autoStmt = $conn->prepare("UPDATE scilab_form_requests SET subject_teacher_status = 'approved', subject_teacher_approved_at = NOW(), subject_teacher_approved_by = 'Auto-approved (no AUH resolved)' WHERE id = ?");
             $autoStmt->bind_param("i", $requestId);
             $autoStmt->execute();
             $autoStmt->close();
+            scilab_notify_stage_status($conn, $request, 'subject_teacher', 'approve');
             sendNotificationToAdmins($conn, $requestId);
         }
     } elseif ($fieldPrefix === 'subject_teacher' && $action === 'approve') {
+        scilab_notify_stage_status($conn, $request, 'subject_teacher', 'approve');
         sendNotificationToAdmins($conn, $requestId);
     } elseif ($fieldPrefix === 'lab_personnel' && $action === 'approve') {
+        scilab_notify_stage_status($conn, $request, 'lab_personnel', 'approve');
         sendNotificationToCIDChief($conn, $requestId);
     } elseif ($action === 'reject') {
-        $rejectedBy = ucwords(str_replace('_', ' ', $fieldPrefix));
-        sendRejectionNotificationToRequester($conn, $request, $reason, $rejectedBy);
+        scilab_notify_stage_status($conn, $request, $fieldPrefix, 'reject', $reason);
     }
 
     echo json_encode(['success' => true]);
