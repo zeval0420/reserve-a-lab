@@ -10,6 +10,7 @@
     include('../../scilab/helperFiles/db_connection.php');
     include('../helperFiles/session_handler.php');
     include('../helperFiles/variableDeclarations.php');
+    include_once('../helperFiles/scilab_email.php');
 
     // Get session data
     $email = $_SESSION['email'];
@@ -23,64 +24,13 @@
         return date("g:i A", strtotime($time));
     }
 
-    function sendNotificationEmail($conn, $requestID, $status, $controlNumber = null) {
-        global $email_smtp_host, $email_smtp_user, $email_smtp_password, $email_smtp_secure, $email_smtp_port, $email_sender;
-
-        $stmt = $conn->prepare("SELECT r.*, a.email, a.firstname, a.middlename, a.lastname 
-                                FROM scilab_form_requests r
-                                JOIN accounts a ON r.requesterEmployeeID = a.employeeID
-                                WHERE r.id = ?");
+    function scilab_fetch_request($conn, $requestID) {
+        $stmt = $conn->prepare("SELECT * FROM scilab_form_requests WHERE id = ?");
         $stmt->bind_param("i", $requestID);
         $stmt->execute();
-        $result = $stmt->get_result();
-        if (!$result || $result->num_rows === 0) return;
-
-        $row = $result->fetch_assoc();
-        $email = $row['email'];
-        $fullName = trim($row['firstname'] . ' ' . $row['middlename'] . ' ' . $row['lastname']);
-
-        // Load the approved.php HTML template
-        $templatePath = __DIR__ . '/../templates/approved_email.php';
-        $bodyTemplate = file_get_contents($templatePath);
-
-        // Fill in placeholders
-        $replacements = [
-            '[NAME]' => $fullName,
-            '[STATUS]' => '<span style="color:' . (strtoupper($status) === 'APPROVED' ? 'green' : (strtoupper($status) === 'REJECTED' ? 'red' : 'black')) . '">' . strtoupper($status) . '</span>',
-            '[Control Number]' => $controlNumber ?? 'N/A',
-            '[Facility]' => htmlspecialchars($row['scilabName']),
-            '[Grade & Section]' => "Grade {$row['gradeLevel']} - {$row['sections']}",
-            '[Subject]' => htmlspecialchars($row['subject']),
-            '[Concurrent Topic]' => htmlspecialchars($row['subjectTopic']),
-            '[Schedule]' => htmlspecialchars("{$row['inclusiveDate']} at {$row['inclusiveTime']}"),
-        ];
-
-        foreach ($replacements as $key => $val) {
-            $bodyTemplate = str_replace($key, $val, $bodyTemplate);
-        }
-
-        // Send Email
-        $mail = new PHPMailer(true);
-        try {
-            $mail->isSMTP();
-            $mail->Host = $email_smtp_host; 
-            $mail->SMTPAuth = true;
-            $mail->Username = $email_smtp_user;
-            $mail->Password = $email_smtp_password;
-            $mail->SMTPSecure = $email_smtp_secure;
-            $mail->Port = $email_smtp_port;
-
-            $mail->setFrom($email_sender, 'SciLab Admin');
-            $mail->addAddress($email, $fullName);
-
-            $mail->isHTML(true);
-            $mail->Subject = "SciLab Request - " . ucfirst($status) . " - SLR-" . $requestID;
-            $mail->Body    = $bodyTemplate;
-
-            $mail->send();
-        } catch (Exception $e) {
-            error_log("Email sending failed to {$email}: {$mail->ErrorInfo}");
-        }
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $row;
     }
 
 
@@ -149,7 +99,10 @@
             $stmt->execute();
 
             if ($stmt->affected_rows > 0) {
-                sendNotificationEmail($conn, $id, 'approved', $controlPrimary);
+                $request = scilab_fetch_request($conn, $id);
+                if ($request) {
+                    scilab_notify_stage_status($conn, $request, 'force_approve', 'approve');
+                }
                 scilab_deduct_inventory($conn, $id);
                 echo "Request approved.";
             } else {
@@ -173,7 +126,10 @@
             $stmt->execute();
 
             if ($stmt->affected_rows > 0) {
-                sendNotificationEmail($conn, $id, 'approved', $controlPrimary);
+                $request = scilab_fetch_request($conn, $id);
+                if ($request) {
+                    scilab_notify_stage_status($conn, $request, 'force_approve', 'approve');
+                }
                 scilab_deduct_inventory($conn, $id);
                 echo "Request approved.";
             } else {
@@ -208,7 +164,10 @@
             $stmt->execute();
 
             if ($stmt->affected_rows > 0) {
-                sendNotificationEmail($conn, $id, 'rejected');
+                $request = scilab_fetch_request($conn, $id);
+                if ($request) {
+                    scilab_notify_stage_status($conn, $request, 'force_approve', 'reject', $feedback);
+                }
                 echo "Request rejected.";
             } else {
                 echo "Update failed.";
