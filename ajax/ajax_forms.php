@@ -65,7 +65,7 @@ function sendSubmissionNotificationToAdmins($conn, $data, $formID)
     if ($admins->num_rows === 0)
         return;
 
-    $subjectLine = "New SciLab Request Submitted - SLR-" . $formID;
+    $subjectLine = "SciLab Request SLR-" . $formID;
     $templatePath = __DIR__ . "/../templates/request_email_template.html";
 
     if (file_exists($templatePath)) {
@@ -122,7 +122,7 @@ function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails
     if (empty($supervisorEmails))
         return;
 
-    $subjectLine = "Action Required: New SciLab Request for Approval - SLR-" . $formID;
+    $subjectLine = "SciLab Request SLR-" . $formID;
     $templatePath = __DIR__ . "/../templates/supervisor_request_email_template.html";
 
     if (file_exists($templatePath)) {
