@@ -1157,37 +1157,168 @@
             });
 
             $('.view-btn').on('click', function () {
-
                 const data = $(this).data('request');
                 const status = $(this).data('status');
 
                 const materialText = $(this).data('materials-detailed') || '—';
                 const teacher = data.teacherInCharge ? data.teacherInCharge : '—';
 
-                const html = `
-                    <p><strong>Lab:</strong> ${data.scilabName}</p>
-                    <p><strong>Grade - Section:</strong> Grade ${data.gradeLevel} - ${data.sections}</p>
-                    <p><strong>Subject:</strong> ${data.subject}</p>
-                    <p><strong>Topic:</strong> ${data.subjectTopic}</p>
-                    <p><strong>Date of Use:</strong> ${data.inclusiveDate} (${data.inclusiveTime})</p>
-                    <p>
-                        <strong>Requested Materials:</strong><br>
-                        ${materialText}
-                    </p>
-                    <p><strong>Teacher-in-Charge:</strong> ${teacher}</p>
+                const modalBody = `
+                    <!-- Requester Information -->
+                    <p class="custom-modal-section-title">Requester Information</p>
+
+                    <div class="detail-grid">
+
+                        <div class="detail-field">
+                            <div class="detail-label">Full Name</div>
+                            <div class="detail-value">
+                                ${data.requesterName || data.requesterEmployeeID || '—'}
+                            </div>
+                        </div>
+
+                        <div class="detail-field">
+                            <div class="detail-label">Student / Faculty ID</div>
+                            <div class="detail-value">
+                                ${data.requesterEmployeeID || '—'}
+                            </div>
+                        </div>
+
+                        <div class="detail-field">
+                            <div class="detail-label">Department</div>
+                            <div class="detail-value">
+                                ${data.requesterDepartment || '—'}
+                            </div>
+                        </div>
+
+                        <div class="detail-field">
+                            <div class="detail-label">Contact Email</div>
+                            <div class="detail-value">
+                                ${data.requesterEmail || '—'}
+                            </div>
+                        </div>
+
+                    </div>
+
+
+                    <!-- Reservation Details -->
+                    <p class="custom-modal-section-title">Reservation Details</p>
+
+                    <div class="detail-grid">
+
+                        <div class="detail-field">
+                            <div class="detail-label">Laboratory</div>
+                            <div class="detail-value">
+                                ${data.scilabName || '—'}
+                            </div>
+                        </div>
+
+                        <div class="detail-field">
+                            <div class="detail-label">Date of Use</div>
+                            <div class="detail-value">
+                                ${data.inclusiveDate || '—'}
+                            </div>
+                        </div>
+
+                        <div class="detail-field">
+                            <div class="detail-label">Time</div>
+                            <div class="detail-value">
+                                ${data.inclusiveTime || '—'}
+                            </div>
+                        </div>
+
+                        <div class="detail-field">
+                            <div class="detail-label">Teacher-in-Charge</div>
+                            <div class="detail-value">
+                                ${teacher}
+                            </div>
+                        </div>
+
+                        <div class="detail-field">
+                            <div class="detail-label">Grade Level</div>
+                            <div class="detail-value">
+                                ${data.gradeLevel || '—'}
+                            </div>
+                        </div>
+
+                        <div class="detail-field">
+                            <div class="detail-label">Section/s</div>
+                            <div class="detail-value">
+                                ${data.sections || '—'}
+                            </div>
+                        </div>
+
+                        <div class="detail-field">
+                            <div class="detail-label">Subject</div>
+                            <div class="detail-value">
+                                ${data.subject || '—'}
+                            </div>
+                        </div>
+
+                        <div class="detail-field">
+                            <div class="detail-label">Topic</div>
+                            <div class="detail-value">
+                                ${data.subjectTopic || '—'}
+                            </div>
+                        </div>
+
+                    </div>
+
+
+                    <!-- Requested Materials -->
+                    <p class="custom-modal-section-title">Requested Materials</p>
+
+                    <div class="detail-grid">
+                        <div class="detail-field full-width">
+
+                            <div class="detail-label">Materials</div>
+
+                            <div class="detail-value" style="display: block;">
+                                ${materialText}
+                            </div>
+
+                        </div>
+                    </div>
                 `;
 
+
                 if (status === 'Approved') {
-                    $('#approveControlNumber').text('Control #: ' + data.controlNumber);
-                    $('#approveDetails').html(html);
-                    $('#approveModal').modal('show');
+
+                    $('#approveControlNumber').html(
+                        'Control Number: <strong>' + (data.controlNumber || '—') + '</strong>'
+                    );
+
+                    $('#approveDetails').html(modalBody);
+
+                    $('#approveModal').addClass('open');
+                    $('body').css('overflow', 'hidden');
                 }
 
+
                 if (status === 'Rejected') {
-                    $('#rejectDetails').html(html);
-                    $('#rejectFeedback').val(data.feedback || '—');
-                    $('#rejectModal').modal('show');
+
+                    const rejectedBody = modalBody + `
+                        <!-- Feedback -->
+                        <p class="custom-modal-section-title">Feedback</p>
+
+                        <div class="detail-grid">
+                            <div class="detail-field full-width">
+
+                                <div class="detail-label">Feedback</div>
+
+                                <div class="detail-value" style="display: block;">
+                                    ${data.feedback || '—'}
+                                </div>
+
+                            </div>
+                        </div>
+                    `;
+
+                    $('#rejectDetails').html(rejectedBody);
+
+                    $('#rejectModal').addClass('open');
+                    $('body').css('overflow', 'hidden');
                 }
+
 
                 if (status === 'Pending') {
                     window.location.href = 'supervisor_approve.php?id=' + data.id;
