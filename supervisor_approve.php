@@ -632,7 +632,7 @@ function getStepIcon($class)
             inset: 0;
             background: rgba(11, 27, 98, 0.45);
             backdrop-filter: blur(4px);
-            z-index: 200;
+            z-index: 200000;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -689,7 +689,7 @@ function getStepIcon($class)
             position: sticky;
             top: 0;
             background: var(--card-bg);
-            z-index: 1;
+            z-index: 10000;
             border-radius: var(--radius-card) var(--radius-card) 0 0;
         }
 
