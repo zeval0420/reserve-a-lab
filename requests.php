@@ -640,36 +640,199 @@
             </div>
         </div>
 
-        <!-- APPROVED MODAL -->
-        <div class="modal fade" id="approveModal">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Approved Request</h5>
-                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+        <!-- ============================================================
+            APPROVED MODAL
+        ============================================================ -->
+        <div class="custom-modal-overlay"
+            id="approveModal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="approveModalTitle">
+
+            <div class="custom-modal" id="approve-modal">
+
+                <!-- Modal Header -->
+                <div class="custom-modal-header">
+
+                    <div class="custom-modal-header-left">
+
+                        <h2 id="approveModalTitle">
+                            Approved Request
+                        </h2>
+
+                        <p>
+                            Request ID:
+                            <strong id="approveRequestId">—</strong>
+                        </p>
+
+                        <p>
+                            Control Number:
+                            <strong id="approveControlNumber">—</strong>
+                        </p>
+
                     </div>
-                    <div class="modal-body">
-                        <h4 id="approveControlNumber"></h4>
-                        <div id="approveDetails"></div>
-                    </div>
+
+                    <button type="button"
+                            class="custom-modal-close"
+                            id="approveModalClose"
+                            aria-label="Close modal">
+
+                        <svg viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2.2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            width="16"
+                            height="16">
+
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="18" x2="18" y2="6" />
+
+                        </svg>
+
+                    </button>
+
                 </div>
+
+                <!-- Modal Body -->
+                <div class="custom-modal-body">
+
+                    <p class="custom-modal-section-title">
+                        Reservation Details
+                    </p>
+
+                    <div class="detail-grid">
+
+                        <div class="detail-field full-width">
+                            <div id="approveDetails"></div>
+                        </div>
+
+                    </div>
+
+                </div>
+
             </div>
         </div>
 
-        <!-- REJECTED MODAL -->
-        <div class="modal fade" id="rejectModal">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Rejected Request</h5>
-                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+        
+        <!-- ============================================================
+            REJECTED MODAL
+        ============================================================ -->
+        <div class="custom-modal-overlay"
+            id="rejectModal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="rejectModalTitle">
+
+            <div class="custom-modal" id="reject-modal">
+
+                <!-- Modal Header -->
+                <div class="custom-modal-header">
+
+                    <div class="custom-modal-header-left">
+
+                        <h2 id="rejectModalTitle">
+                            Rejected Request
+                        </h2>
+
+                        <p>
+                            Request ID:
+                            <strong id="rejectRequestId">—</strong>
+                        </p>
+
                     </div>
-                    <div class="modal-body">
-                        <div id="rejectDetails"></div>
-                        <label>Feedback</label>
-                        <textarea id="rejectFeedback" class="form-control" readonly></textarea>
-                    </div>
+
+                    <button type="button"
+                            class="custom-modal-close"
+                            id="rejectModalClose"
+                            aria-label="Close modal">
+
+                        <svg viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2.2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            width="16"
+                            height="16">
+
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="18" x2="18" y2="6" />
+
+                        </svg>
+
+                    </button>
+
                 </div>
+
+                <!-- Modal Body -->
+                <div class="custom-modal-body">
+
+                    <!-- Reservation Details -->
+                    <p class="custom-modal-section-title">
+                        Reservation Details
+                    </p>
+
+                    <div class="detail-grid">
+
+                        <div class="detail-field full-width">
+                            <div id="rejectDetails"></div>
+                        </div>
+
+                    </div>
+
+                    <!-- Requested Materials -->
+                    <p class="custom-modal-section-title">
+                        Requested Materials
+                    </p>
+
+                    <div class="detail-grid">
+
+                        <div class="detail-field full-width">
+
+                            <div class="detail-label">
+                                Materials
+                            </div>
+
+                            <div class="detail-value"
+                                style="display: block;">
+                                <!-- Materials are included inside rejectDetails
+                                    by the existing JavaScript -->
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Feedback -->
+                    <p class="custom-modal-section-title">
+                        Feedback
+                    </p>
+
+                    <div class="detail-grid">
+
+                        <div class="detail-field full-width">
+
+                            <div class="detail-label">
+                                Rejection Feedback
+                            </div>
+
+                            <div class="detail-value"
+                                style="display: block;">
+
+                                <div id="rejectFeedback">
+                                    —
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
             </div>
         </div>
 
