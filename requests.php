@@ -976,7 +976,7 @@
                             class="custom-modal-close"
                             id="approveModalClose"
                             aria-label="Close modal">
-                        <span style="font-size: 300%">×</span>
+                        <span>×</span>
                     </button>
 
                 </div>
@@ -1018,7 +1018,7 @@
                             class="custom-modal-close"
                             id="rejectModalClose"
                             aria-label="Close modal">
-                        <span style="font-size: 300%">×</span>
+                        <span>×</span>
                     </button>
 
                 </div>
