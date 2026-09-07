@@ -4,8 +4,8 @@
 <!-- Local Header and Footer CSS -->
 <link rel="stylesheet" href="css/universal.css">
 <link rel="stylesheet" href="css/header.css">
-<link rel="stylesheet" href="css/modals.css">
 <link rel="stylesheet" href="css/footer.css">
+<link rel="stylesheet" href="css/modals.css">
 
 <!-- Favicon -->
 <link rel="icon" type="image/x-icon" href="img/logo.png">

@@ -1220,7 +1220,7 @@
 
                     const rejectedBody = modalBody + `
                         <!-- Feedback -->
-                        <p class="custom-modal-section-title">Feedback</p>
+                        <p class="custom-modal-section-title">Feedback Field</p>
 
                         <div class="detail-grid">
                             <div class="detail-field full-width">
