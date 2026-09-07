@@ -1191,7 +1191,7 @@ function getStepIcon($class)
             <!-- Modal Header -->
             <div class="custom-modal-header">
                 <div class="custom-modal-header-left">
-                    <h2 id="modalTitle">Full Reservation Details</h2>
+                    <h2 id="modalTitle">FULL RESERVATION DETAILS</h2>
                     <p>Request ID:
                         <strong>REQ-<?= htmlspecialchars(str_pad($requestId, 4, '0', STR_PAD_LEFT)) ?></strong>
                     </p>
