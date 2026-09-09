@@ -187,7 +187,7 @@
         <title>My Requests</title>
         <?php include('helperFiles/headData.php'); ?>
         <style>
-            body { background-color: red; }
+            body { background-color: #f5f5f5; }
             .form-container { background-color: #fff; padding: 25px; margin: 25px auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); width: 98%; }
             .table th { background-color: #2B55C4; color: white; text-align: center; white-space: nowrap; }
             .table td, .table th { font-size: 13px; vertical-align: middle; }
