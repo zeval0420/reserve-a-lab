@@ -90,7 +90,7 @@
     // Creates a placeholder string for SQL IN clause
     $inClause = "'" . implode("','", $CLASSIFICATIONS) . "'";
 
-    $result = $conn->query("SELECT classification, item, description, unit, laboratory
+    $result = $conn->query("SELECT classification, item, description, unit, laboratory, quantity
                             FROM scilab_inventory 
                             WHERE classification IN ($inClause) AND (status IS NULL OR status != 'Removed')
                             ORDER BY classification, item ASC");
@@ -114,11 +114,15 @@
             if (!isset($itemOptions[$class][$item])) {
                 $itemOptions[$class][$item] = [
                     'descriptions' => [],
-                    'unit' => $unit
+                    'quantities' => [],
+                    'unit' => $unit,
+                    'total' => 0
                 ];
             }
 
             $itemOptions[$class][$item]['descriptions'][] = $desc;
+            $itemOptions[$class][$item]['quantities'][$desc] = intval($row['quantity']);
+            $itemOptions[$class][$item]['total'] += intval($row['quantity']);
         }
     }
 
@@ -578,6 +582,46 @@
             return '';
         }
 
+        /* Resolve the stocked quantity available for a selected item.
+         * Consumables match the exact inventory description row (falling back
+         * to the item total); Reagents use the item's total stock since their
+         * description is a free-text field. */
+        function getAvailableQty(itemKey, classType, desc) {
+            if (!itemKey || !classType) return null;
+            const itemsObj = itemDescriptions[classType];
+            if (!itemsObj || !itemsObj[itemKey]) return null;
+            const v = itemsObj[itemKey];
+
+            if (classType === 'Consumable' && desc && v.quantities && Object.prototype.hasOwnProperty.call(v.quantities, desc)) {
+                return v.quantities[desc];
+            }
+
+            return (typeof v.total === 'number') ? v.total : null;
+        }
+
+        /* Apply the "/available" hint and enforce it as the quantity max on
+         * Consumable and Reagent rows whenever the item/description changes. */
+        function applyAvailability($row) {
+            const classType = $row.closest('tbody').data('classification');
+            if (classType !== 'Consumable' && classType !== 'Reagent') return;
+
+            const itemKey = $row.find('.item-select').val();
+            const desc = $row.find('.description-select, .description-input').val() || '';
+            const $qty = $row.find('.quantity-input');
+            const $avail = $row.find('.quantity-available');
+            const available = getAvailableQty(itemKey, classType, desc);
+
+            if (available === null || available < 1) {
+                $qty.removeAttr('max');
+                $avail.text('').hide();
+                return;
+            }
+
+            $qty.attr('max', available);
+            $avail.text('/ ' + available).show();
+            if (parseInt($qty.val()) > available) $qty.val(available);
+        }
+
         /* 
          * Delegated handler: Synchronize description lists and unit labels immediately upon 
          * an item selection changing. Evaluates the proper classification context automatically. 
@@ -625,6 +669,17 @@
 
             /* Fallback minimum sanity assignment for inputs failing parser standards. */
             if (!$qty.val() || isNaN($qty.val()) || parseInt($qty.val()) < 1) $qty.val(1);
+
+            applyAvailability($row);
+        });
+
+        /* Recompute availability when a description-specific selection changes. */
+        $(document).on('change', '.description-select', function () {
+            applyAvailability($(this).closest('tr'));
+        });
+        /* Reagents use a free-text description; update on each keystroke. */
+        $(document).on('input', '.description-input', function () {
+            applyAvailability($(this).closest('tr'));
         });
 
         /* Setup generic locked initializations for UI table components upon appending to the DOM. */
@@ -678,8 +733,9 @@
                 <tr>
                     <td>
                         <div style="display: flex; align-items: center;">
-                            <input type="number" class="form-control quantity-input liquid-input" name="quantity[]" min="1" value="1" style="width: 60%;" disabled>
-                            <input type="text" class="form-control unit-input liquid-input" name="unit[]" style="width: 40%; margin-left: 5px;" placeholder="Unit" disabled>
+                            <input type="number" class="form-control quantity-input liquid-input" name="quantity[]" min="1" value="1" style="width: 45%;" disabled>
+                            <span class="quantity-available" style="margin-left: 4px; min-width: 38px; color: #666; white-space: nowrap; font-weight: normal;"></span>
+                            <input type="text" class="form-control unit-input liquid-input" name="unit[]" style="width: 30%; margin-left: 4px;" placeholder="Unit" disabled>
                         </div>
                     </td>
                     <td>
@@ -780,6 +836,8 @@
             /* Automatic quantity input normalization upon UI entry changes. */
             $(document).on('input', '.quantity-input', function() {
                 if (parseInt(this.value) < 1 || isNaN(this.value)) this.value = 1;
+                const max = parseInt($(this).attr('max'));
+                if (max && parseInt(this.value) > max) this.value = max;
             });
 
             /* 
@@ -872,6 +930,31 @@
                     $('input[name="end_time"]').addClass('is-invalid');
                     isValid = false;
                 }
+
+                // Check consumable/reagent quantities against available stock
+                $('.material-table tbody[data-classification]').each(function () {
+                    const classType = $(this).data('classification');
+                    if (classType !== 'Consumable' && classType !== 'Reagent') return;
+
+                    $(this).find('tr').each(function () {
+                        const $r = $(this);
+                        const itemVal = $r.find('select[name="item[]"]').val();
+                        if (!itemVal) return;
+
+                        const $qty = $r.find('input[name="quantity[]"]');
+                        const qty = parseInt($qty.val()) || 0;
+                        const desc = $r.find('select[name="description[]"], input[name="description[]"]').val() || '';
+                        const available = getAvailableQty(itemVal, classType, desc);
+
+                        if (available !== null && qty > available) {
+                            showToast("Requested quantity for " + itemVal + " exceeds available stock (" + available + ").", 'warning');
+                            $qty.addClass('is-invalid');
+                            isValid = false;
+                        } else {
+                            $qty.removeClass('is-invalid');
+                        }
+                    });
+                });
 
                 if (!isValid) return false;
 

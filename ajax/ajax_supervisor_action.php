@@ -37,6 +37,52 @@ function formatTime($time) {
     return date("g:i A", strtotime($time));
 }
 
+/**
+ * Resolve the currently available stock for an inventory item, mirroring the
+ * client-side display rules: Consumables match the exact description row
+ * (falling back to the item total), Reagents use the item's total stock.
+ * Returns [availableQty, classification] or [null, null] when not tracked.
+ */
+function scilab_available_quantity($conn, $item, $desc)
+{
+    $item = trim((string)$item);
+    if ($item === '') return [null, null];
+
+    $stmt = $conn->prepare("SELECT classification, description, quantity FROM scilab_inventory WHERE item = ? AND (status IS NULL OR status != 'Removed') ORDER BY quantity DESC, id ASC");
+    if (!$stmt) return [null, null];
+    $stmt->bind_param("s", $item);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    $classification = null;
+    $total = 0;
+    $exactRowQty = null;
+    $requestedDesc = trim((string)$desc);
+
+    while ($row = $result->fetch_assoc()) {
+        $total += intval($row['quantity']);
+        if ($classification === null) {
+            $classification = trim((string)$row['classification']);
+        }
+        if ($exactRowQty === null && $requestedDesc !== '' && strcasecmp(trim((string)$row['description']), $requestedDesc) === 0) {
+            $exactRowQty = intval($row['quantity']);
+        }
+    }
+    $stmt->close();
+
+    if ($classification === null) return [null, null];
+
+    $isConsumable = strcasecmp($classification, 'Consumable') === 0;
+    $isReagent = strcasecmp($classification, 'Reagent') === 0;
+    if (!$isConsumable && !$isReagent) return [null, null];
+
+    if ($isConsumable && $requestedDesc !== '' && $exactRowQty !== null) {
+        return [$exactRowQty, $classification];
+    }
+
+    return [$total, $classification];
+}
+
 function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails, $formID) {
     global $email_smtp_host, $email_smtp_user, $email_smtp_password, $email_smtp_secure, $email_smtp_port, $email_sender, $active_server;
 
@@ -496,6 +542,28 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
         exit();
     }
 
+    // Decode merged materials early so stock can be validated before a request row is created
+    $mergedMaterials = [];
+    if (isset($_POST['mergedMaterials'])) {
+        $decoded = json_decode($_POST['mergedMaterials'], true);
+        if (is_array($decoded)) {
+            $mergedMaterials = $decoded;
+        }
+    }
+
+    foreach ($mergedMaterials as $mat) {
+        $item = trim((string)($mat['item'] ?? ''));
+        $qty = isset($mat['qty']) ? (int)$mat['qty'] : 1;
+        $desc = trim((string)($mat['desc'] ?? ''));
+        if ($item === '' || $qty < 1) continue;
+
+        [$available, $class] = scilab_available_quantity($conn, $item, $desc);
+        if ($available !== null && $qty > $available) {
+            echo "Insufficient stock for " . $item . " (available: " . $available . "). Please adjust the requested quantity.";
+            exit();
+        }
+    }
+
     $syResult = $conn->query("SELECT value FROM current WHERE description = 'School Year' ORDER BY id DESC LIMIT 1");
     $schoolYear = ($syResult && $syResult->num_rows > 0) ? $syResult->fetch_assoc()['value'] : 'N/A';
 
@@ -585,19 +653,16 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
     $materials = [];
     $stmt2 = $conn->prepare("INSERT INTO scilab_material_requests (formID, item, quantity, unit, description) VALUES (?, ?, ?, ?, ?)");
 
-    if (isset($_POST['mergedMaterials'])) {
-        $mergedMaterials = json_decode($_POST['mergedMaterials'], true);
-        if (is_array($mergedMaterials)) {
-            foreach ($mergedMaterials as $mat) {
-                $item = trim($mat['item'] ?? '');
-                $unit = trim($mat['unit'] ?? 'N/A');
-                $desc = trim($mat['desc'] ?? 'N/A');
-                $qty = isset($mat['qty']) ? (int)$mat['qty'] : 1;
-                if ($item !== '') {
-                    $stmt2->bind_param("isiss", $formID, $item, $qty, $unit, $desc);
-                    $stmt2->execute();
-                    $materials[] = "{$qty} {$unit} of {$item} ({$desc})";
-                }
+    if (is_array($mergedMaterials)) {
+        foreach ($mergedMaterials as $mat) {
+            $item = trim($mat['item'] ?? '');
+            $unit = trim($mat['unit'] ?? 'N/A');
+            $desc = trim($mat['desc'] ?? 'N/A');
+            $qty = isset($mat['qty']) ? (int)$mat['qty'] : 1;
+            if ($item !== '') {
+                $stmt2->bind_param("isiss", $formID, $item, $qty, $unit, $desc);
+                $stmt2->execute();
+                $materials[] = "{$qty} {$unit} of {$item} ({$desc})";
             }
         }
     }
