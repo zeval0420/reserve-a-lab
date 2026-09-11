@@ -625,7 +625,7 @@ function getStepIcon($class)
         }
 
         /* ============================================================
-       MODAL OVERLAY
+    MODAL OVERLAY
     ============================================================ */
         .custom-modal-overlay {
             position: fixed;
