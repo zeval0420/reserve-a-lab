@@ -815,7 +815,7 @@
             .required-asterisk {
                 color: #DC2626;
                 font-weight: 800;
-                font-size: 18px;
+                font-size: 16px;
             }
         </style>
     </head>
