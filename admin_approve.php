@@ -1532,7 +1532,7 @@
                 // ========================================================
                 // SHOW CUSTOM MODAL
                 // ========================================================
-                $('#approveModal').addClass('show');
+                $('#approveModal').addClass('open');
                 $('body').addClass('modal-open');
             });
 
@@ -1541,7 +1541,7 @@
             // FORCE APPROVE MODAL - CLOSE BUTTONS
             // ============================================================
             $('#approveModalCloseTop, #approveModalCancelBtn').click(function () {
-                $('#approveModal').removeClass('show');
+                $('#approveModal').removeClass('open');
                 $('body').removeClass('modal-open');
             });
 
@@ -1551,7 +1551,7 @@
             // ============================================================
             $('#approveModal').click(function (e) {
                 if (e.target === this) {
-                    $('#approveModal').removeClass('show');
+                    $('#approveModal').removeClass('open');
                     $('body').removeClass('modal-open');
                 }
             });
