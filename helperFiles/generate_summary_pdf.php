@@ -247,9 +247,9 @@ if (empty($categorizedItems)) {
             $description = $item['description'] ? htmlspecialchars($item['description']) : 'N/A';
             $unit = $item['unit'] ? ' ' . htmlspecialchars($item['unit']) : '';
             $requestorName = trim(
-                COALESCE($item['firstname'], $item['student_firstname']) . ' ' .
-                COALESCE($item['middlename'], $item['student_middlename']) . ' ' .
-                COALESCE($item['lastname'], $item['student_lastname'])
+                ($item['firstname'] ?? $item['student_firstname'] ?? '') . ' ' .
+                ($item['middlename'] ?? $item['student_middlename'] ?? '') . ' ' .
+                ($item['lastname'] ?? $item['student_lastname'] ?? '')
             );
 
             $html .= "
