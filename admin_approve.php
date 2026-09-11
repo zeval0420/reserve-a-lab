@@ -794,6 +794,23 @@
                     gap: 12px;
                     flex-wrap: wrap;
                 }
+
+            /* Extend Force Approve input fields to fill their outlined containers */
+            #approveModal .detail-value .liquid-input {
+                width: 100%;
+                box-sizing: border-box;
+                border: none;
+                outline: none;
+                background: transparent;
+            }
+
+            /* Remarks textarea */
+            #approveModal .detail-value textarea.liquid-input {
+                width: 100%;
+                min-height: 90px;
+                resize: vertical;
+                box-sizing: border-box;
+            }
         </style>
     </head>
     <body>

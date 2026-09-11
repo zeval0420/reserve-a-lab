@@ -1180,7 +1180,7 @@ function getStepIcon($class)
                 </div>
 
                 <!-- Pending Conflict Warning -->
-                <div id="pendingConflictWarning" style="margin-top: 18px;"></div>
+                <div id="pendingConflictWarning"></div>
 
             </div>
         </div>
@@ -1416,7 +1416,7 @@ function getStepIcon($class)
                     if (res.conflict_type === 'pending') {
 
                         $('#pendingConflictWarning').html(`
-                            <div class="alert alert-warning" style="margin-bottom:0; border-radius:8px;">
+                            <div class="alert alert-warning" style="margin-top:18px; margin-bottom:0; border-radius:8px;">
                                 <strong>
                                     <i class="glyphicon glyphicon-warning-sign"></i>
                                     Pending Conflict:
