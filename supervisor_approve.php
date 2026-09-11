@@ -1147,24 +1147,45 @@ function getStepIcon($class)
 
         <?php if ($canApproveCurrentStep): ?>
         <div class="card" style="margin-top: 24px;">
-            <div class="card-inner" style="display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
-                <div>
-                    <p class="section-label" style="margin-bottom: 4px;">Action Required</p>
-                    <p style="font-size: 14px; color: var(--text-secondary); margin: 0;">Please review and approve or reject this request.</p>
+            <div class="card-inner">
+
+                <!-- Action Required Header + Buttons -->
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+                    <div>
+                        <p class="section-label" style="margin-bottom: 4px;">Action Required</p>
+                        <p style="font-size: 14px; color: var(--text-secondary); margin: 0;">
+                            Please review and approve or reject this request.
+                        </p>
+                    </div>
+
+                    <div style="display: flex; gap: 12px; flex-shrink: 0;">
+                        <button class="btn btn-danger" id="pageRejectBtn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"/>
+                                <line x1="15" y1="9" x2="9" y2="15"/>
+                                <line x1="9" y1="9" x2="15" y2="15"/>
+                            </svg>
+                            Reject
+                        </button>
+
+                        <button class="btn btn-success" id="pageApproveBtn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                            Approve
+                        </button>
+                    </div>
                 </div>
-                <div style="display: flex; gap: 12px; flex-shrink: 0;">
-                    <button class="btn btn-danger" id="pageRejectBtn">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-                        Reject
-                    </button>
-                    <button class="btn btn-success" id="pageApproveBtn">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                        Approve
-                    </button>
-                </div>
+
+                <!-- Pending Conflict Warning -->
+                <div id="pendingConflictWarning" style="margin-top: 18px;"></div>
+
             </div>
         </div>
         <?php elseif ($hasAlreadyActed): ?>
+
         <div class="card" style="margin-top: 24px;">
             <div class="card-inner" style="text-align: center; padding: 24px 32px;">
                 <?php if ($lastAction === 'approved'): ?>
@@ -1349,6 +1370,67 @@ function getStepIcon($class)
             const progress = approvedCount / (totalSteps - 1); // 0 → 1
             const clampedPct = Math.min(Math.max(progress, 0), 1) * 100;
             document.getElementById('trackerProgress').style.width = clampedPct + '%';
+        })();
+
+        /* ============================================================
+        PENDING CONFLICT CHECK
+        ============================================================ */
+        (function checkPendingConflict() {
+
+            const conflictWarning = document.getElementById('pendingConflictWarning');
+
+            if (!conflictWarning) {
+                return;
+            }
+
+            const scilabName = <?= json_encode($laboratoryName) ?>;
+            const inclusiveDate = <?= json_encode($date) ?>;
+            const inclusiveTime = <?= json_encode($time) ?>;
+
+            // Parse inclusiveTime (e.g. "09:30 to 11:30")
+            const timeParts = (inclusiveTime || '').split(' to ');
+
+            if (
+                timeParts.length !== 2 ||
+                !scilabName ||
+                !inclusiveDate
+            ) {
+                return;
+            }
+
+            $.post('ajax/ajax_forms.php', {
+                action: 'check_conflict',
+                scilabName: scilabName,
+                date: inclusiveDate,
+                startTime: timeParts[0].trim(),
+                endTime: timeParts[1].trim(),
+                exclude_id: <?= json_encode($requestId) ?>
+            }, function(res) {
+
+                if (res.status === 'success') {
+
+                    /* ====================================================
+                    PENDING CONFLICT
+                    Same functionality/design as admin_approve.php
+                    ==================================================== */
+                    if (res.conflict_type === 'pending') {
+
+                        $('#pendingConflictWarning').html(`
+                            <div class="alert alert-warning" style="margin-bottom:0; border-radius:8px;">
+                                <strong>
+                                    <i class="glyphicon glyphicon-warning-sign"></i>
+                                    Pending Conflict:
+                                </strong>
+                                There is another pending request for this timeframe
+                                (${res.details.time} - ${res.details.subject}).
+                            </div>
+                        `);
+
+                    }
+                }
+
+            }, 'json');
+
         })();
 
         /* ============================================================

@@ -783,48 +783,207 @@
                 </div>
             </div>
 
-            <!-- Approve Modal -->
-            <div class="modal fade" id="approveModal" tabindex="-1" role="dialog">
-                <div class="modal-dialog modal-lg" role="document">
-                    <div class="modal-content">
-                        <form id="approveForm">
-                            <div class="modal-header">
-                                <h5 class="modal-title">Force Approve Request</h5>
-                                <button type="button" class="close" data-dismiss="modal">&times;</button>
-                            </div>
-                            <div class="modal-body">
-                                <div id="admin-conflict-warning"></div>
-                                <div id="approveDetails"></div>
-                                <div class="form-group mt-3">
-                                    <label for="control_equipment">Control Number - Equipment Form:</label>
-                                    <input type="text" class="form-control liquid-input" name="control_equipment" id="control_equipment" placeholder="e.g. CIID-20-001">
-                                </div>
-                                <div class="form-group">
-                                    <label for="control_reagent">Control Number - Reagent Form:</label>
-                                    <input type="text" class="form-control liquid-input" name="control_reagent" id="control_reagent" placeholder="e.g. RG-001">
-                                </div>
-                                <div class="form-group">
-                                    <label for="control_permit">Control Number - Work Permit:</label>
-                                    <input type="text" class="form-control liquid-input" name="control_permit" id="control_permit" placeholder="e.g. PT-001">
-                                </div>
-                                <div class="form-group">
-                                    <label for="control_reservation">Control Number - Lab Reservation Form:</label>
-                                    <input type="text" class="form-control liquid-input" name="control_reservation" id="control_reservation" placeholder="e.g. CID-05-0042">
-                                </div>
-                                <div class="form-group">
-                                    <label for="approveRemarks">Remarks:</label>
-                                    <textarea class="form-control liquid-input" name="approveRemarks" id="approveRemarks" placeholder="Enter remarks (optional)"></textarea>
-                                </div>
-                            </div>
-                            <div class="modal-footer">
-                                <input type="hidden" name="approveId" id="approveId">
-                                <button type="submit" class="btn-liquid-success">Confirm</button>
-                                <button type="button" class="btn-liquid-secondary" data-dismiss="modal">Cancel</button>
-                            </div>
-                        </form>
+            <!-- ============================================================
+                MODAL — FORCE APPROVE
+            ============================================================ -->
+            <div class="custom-modal-overlay" id="approveModal" role="dialog" aria-modal="true" aria-labelledby="approveModalTitle">
+                <div class="custom-modal" id="custom-approve-modal">
+
+                    <!-- Modal Header -->
+                    <div class="custom-modal-header">
+                        <div class="custom-modal-header-left">
+                            <h2 id="approveModalTitle">FORCE APPROVE REQUEST</h2>
+                            <p>Request ID:
+                                <strong id="approveRequestId">REQ-0000</strong>
+                            </p>
+                        </div>
+
+                        <button type="button" class="custom-modal-close" id="approveModalCloseTop" aria-label="Close modal">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                                stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
+                        </button>
                     </div>
-                </div>
+
+                    <!-- Modal Body -->
+                    <div class="custom-modal-body">
+
+                        <!-- Pending Conflict -->
+                        <div id="admin-conflict-warning"></div>
+
+                        <!-- Requester Information -->
+                        <p class="custom-modal-section-title">Requester Information</p>
+
+                        <div class="detail-grid">
+
+                            <div class="detail-field">
+                                <div class="detail-label">Full Name</div>
+                                <div class="detail-value" id="approveRequesterName">—</div>
+                            </div>
+
+                            <div class="detail-field">
+                                <div class="detail-label">Student / Faculty ID</div>
+                                <div class="detail-value" id="approveRequesterID">—</div>
+                            </div>
+
+                            <div class="detail-field">
+                                <div class="detail-label">Department</div>
+                                <div class="detail-value" id="approveRequesterDept">—</div>
+                            </div>
+
+                            <div class="detail-field">
+                                <div class="detail-label">Contact Email</div>
+                                <div class="detail-value" id="approveRequesterEmail">—</div>
+                            </div>
+
+                        </div>
+
+                        <!-- Reservation Details -->
+                        <p class="custom-modal-section-title">Reservation Details</p>
+
+                        <div class="detail-grid">
+
+                            <div class="detail-field">
+                                <div class="detail-label">Laboratory</div>
+                                <div class="detail-value" id="approveLaboratory">—</div>
+                            </div>
+
+                            <div class="detail-field">
+                                <div class="detail-label">Date of Use</div>
+                                <div class="detail-value" id="approveDate">—</div>
+                            </div>
+
+                            <div class="detail-field">
+                                <div class="detail-label">Time</div>
+                                <div class="detail-value" id="approveTime">—</div>
+                            </div>
+
+                            <div class="detail-field">
+                                <div class="detail-label">Teacher-in-Charge</div>
+                                <div class="detail-value" id="approveTeacher">—</div>
+                            </div>
+
+                            <div class="detail-field">
+                                <div class="detail-label">Subject</div>
+                                <div class="detail-value" id="approveSubject">—</div>
+                            </div>
+
+                            <div class="detail-field">
+                                <div class="detail-label">Topic</div>
+                                <div class="detail-value" id="approveTopic">—</div>
+                            </div>
+
+                            <div class="detail-field full-width">
+                                <div class="detail-label">Purpose / Activity</div>
+                                <div class="detail-value" id="approvePurpose">—</div>
+                            </div>
+
+                        </div>
+
+                        <!-- Requested Materials -->
+                        <p class="custom-modal-section-title">Requested Materials</p>
+
+                        <div class="detail-grid">
+                            <div class="detail-field full-width">
+                                <div class="detail-label">Materials</div>
+                                <div class="detail-value" id="approveMaterials" style="display: block;">
+                                    —
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Control Numbers -->
+                        <p class="custom-modal-section-title">Control Numbers</p>
+
+                        <div class="detail-grid">
+
+                            <div class="detail-field">
+                                <div class="detail-label">Equipment Form</div>
+                                <div class="detail-value" style="padding: 0;">
+                                    <input type="text"
+                                        class="liquid-input"
+                                        name="control_equipment"
+                                        id="control_equipment"
+                                        placeholder="e.g. CIID-20-001">
+                                </div>
+                            </div>
+
+                            <div class="detail-field">
+                                <div class="detail-label">Reagent Form</div>
+                                <div class="detail-value" style="padding: 0;">
+                                    <input type="text"
+                                        class="liquid-input"
+                                        name="control_reagent"
+                                        id="control_reagent"
+                                        placeholder="e.g. RG-001">
+                                </div>
+                            </div>
+
+                            <div class="detail-field">
+                                <div class="detail-label">Work Permit</div>
+                                <div class="detail-value" style="padding: 0;">
+                                    <input type="text"
+                                        class="liquid-input"
+                                        name="control_permit"
+                                        id="control_permit"
+                                        placeholder="e.g. PT-001">
+                                </div>
+                            </div>
+
+                            <div class="detail-field">
+                                <div class="detail-label">Lab Reservation Form</div>
+                                <div class="detail-value" style="padding: 0;">
+                                    <input type="text"
+                                        class="liquid-input"
+                                        name="control_reservation"
+                                        id="control_reservation"
+                                        placeholder="e.g. CID-05-0042">
+                                </div>
+                            </div>
+
+                            <div class="detail-field full-width">
+                                <div class="detail-label">Remarks</div>
+                                <div class="detail-value" style="padding: 0;">
+                                    <textarea
+                                        class="liquid-input"
+                                        name="approveRemarks"
+                                        id="approveRemarks"
+                                        placeholder="Enter remarks (optional)"
+                                        rows="3"></textarea>
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </div><!-- /custom-modal-body -->
+
+                    <!-- Modal Footer -->
+                    <div class="custom-modal-footer" id="approveModalFooter">
+
+                        <input type="hidden" name="approveId" id="approveId">
+
+                        <button type="submit"
+                            form="approveForm"
+                            class="btn-liquid-success"
+                            id="confirmForceApproveBtn">
+                            Confirm Force Approval
+                        </button>
+
+                        <button type="button"
+                            class="btn-liquid-secondary"
+                            id="approveModalCancelBtn">
+                            Cancel
+                        </button>
+
+                    </div>
+
+                </div><!-- /custom-modal -->
             </div>
+
+            <!-- Hidden form used for Force Approve submission -->
+            <form id="approveForm" style="display:none;"></form>
 
             <!-- Edit Control Numbers Modal -->
             <div class="modal fade" id="editControlModal" tabindex="-1" role="dialog">
@@ -961,33 +1120,111 @@
                 table.search(searchParam).draw();
             }
 
-            // APPROVE BUTTON
+            // ============================================================
+            // FORCE APPROVE BUTTON
+            // ============================================================
             $('.approve-btn').click(function () {
                 const data = $(this).data('request');
+
+                // Request ID
                 $('#approveId').val(data.id);
+
+                const formattedRequestId = String(data.id).padStart(4, '0');
+                $('#approveRequestId').text('REQ-' + formattedRequestId);
+
+                // Clear previous values
                 $('#control_equipment').val('');
                 $('#control_reagent').val('');
                 $('#control_permit').val('');
                 $('#control_reservation').val('');
                 $('#approveRemarks').val('');
-                $('#approveDetails').html(`
-                    <p><strong>Requester:</strong> ${data.requesterName || data.requesterEmployeeID}</p>
-                    <p><strong>Subject:</strong> ${data.subject}</p>
-                    <p><strong>Topic:</strong> ${data.subjectTopic}</p>
-                    <p><strong>Date of Use:</strong> ${data.inclusiveDate}</p>
-                    <p><strong>Time:</strong> ${data.inclusiveTime}</p>
-                    <p>
-                        <strong>Requested Materials:</strong><br>
-                        ${data.materialsDetailed}
-                    </p>
-                `);
-                
+
+                // ========================================================
+                // REQUESTER INFORMATION
+                // ========================================================
+                $('#approveRequesterName').text(
+                    data.requesterName || data.requesterEmployeeID || '—'
+                );
+
+                $('#approveRequesterID').text(
+                    data.requesterID ||
+                    data.requesterEmployeeID ||
+                    data.employeeID ||
+                    '—'
+                );
+
+                $('#approveRequesterDept').text(
+                    data.requesterDept ||
+                    data.department ||
+                    '—'
+                );
+
+                $('#approveRequesterEmail').text(
+                    data.requesterEmail ||
+                    data.email ||
+                    '—'
+                );
+
+                // ========================================================
+                // RESERVATION DETAILS
+                // ========================================================
+                $('#approveLaboratory').text(
+                    data.scilabName || '—'
+                );
+
+                $('#approveDate').text(
+                    data.inclusiveDate || '—'
+                );
+
+                $('#approveTime').text(
+                    data.inclusiveTime || '—'
+                );
+
+                $('#approveTeacher').text(
+                    data.teacherInCharge ||
+                    data.teacher ||
+                    data.teacherName ||
+                    '—'
+                );
+
+                $('#approveSubject').text(
+                    data.subject || '—'
+                );
+
+                $('#approveTopic').text(
+                    data.subjectTopic || '—'
+                );
+
+                $('#approvePurpose').text(
+                    data.purpose ||
+                    data.activity ||
+                    '—'
+                );
+
+                // Requested materials already contain the formatted
+                // [quantity x] item (description) HTML from PHP.
+                $('#approveMaterials').html(
+                    data.materialsDetailed || '—'
+                );
+
+                // ========================================================
+                // RESET CONFLICT WARNING
+                // ========================================================
                 $('#admin-conflict-warning').empty();
-                $('#approveForm button[type="submit"]').prop('disabled', false);
-                
-                // Parse inclusiveTime (e.g. "09:30 to 11:30" or similar depending on AM/PM)
-                let timeParts = data.inclusiveTime.split(' to ');
-                if (timeParts.length === 2 && data.scilabName && data.inclusiveDate) {
+
+                $('#confirmForceApproveBtn').prop('disabled', false);
+
+                // ========================================================
+                // CHECK FOR CONFLICT
+                // ========================================================
+                // Parse inclusiveTime (e.g. "09:30 to 11:30")
+                let timeParts = (data.inclusiveTime || '').split(' to ');
+
+                if (
+                    timeParts.length === 2 &&
+                    data.scilabName &&
+                    data.inclusiveDate
+                ) {
                     $.post('ajax/ajax_forms.php', {
                         action: 'check_conflict',
                         scilabName: data.scilabName,
@@ -996,15 +1233,29 @@
                         endTime: timeParts[1].trim(),
                         exclude_id: data.id
                     }, function(res) {
+
                         if (res.status === 'success') {
+
+                            // ====================================================
+                            // APPROVED CONFLICT
+                            // Existing behavior retained exactly
+                            // ====================================================
                             if (res.conflict_type === 'approved') {
+
                                 $('#admin-conflict-warning').html(`
                                     <div class="alert alert-danger" style="margin-bottom:15px; border-radius:8px;">
                                         <strong><i class="glyphicon glyphicon-ban-circle"></i> Severe Conflict:</strong> An <b>approved</b> request already exists for this timeframe (${res.details.time}). Force approving this will double-book the room.
                                     </div>
                                 `);
-                                $('#approveForm button[type="submit"]').prop('disabled', true);
+
+                                $('#confirmForceApproveBtn').prop('disabled', true);
+
+                            // ====================================================
+                            // PENDING CONFLICT
+                            // Existing behavior retained exactly
+                            // ====================================================
                             } else if (res.conflict_type === 'pending') {
+
                                 $('#admin-conflict-warning').html(`
                                     <div class="alert alert-warning" style="margin-bottom:15px; border-radius:8px;">
                                         <strong><i class="glyphicon glyphicon-warning-sign"></i> Pending Conflict:</strong> There is another pending request for this timeframe (${res.details.time} - ${res.details.subject}).
@@ -1012,10 +1263,35 @@
                                 `);
                             }
                         }
+
                     }, 'json');
                 }
 
-                $('#approveModal').modal('show');
+                // ========================================================
+                // SHOW CUSTOM MODAL
+                // ========================================================
+                $('#approveModal').addClass('show');
+                $('body').addClass('modal-open');
+            });
+
+
+            // ============================================================
+            // FORCE APPROVE MODAL - CLOSE BUTTONS
+            // ============================================================
+            $('#approveModalCloseTop, #approveModalCancelBtn').click(function () {
+                $('#approveModal').removeClass('show');
+                $('body').removeClass('modal-open');
+            });
+
+
+            // ============================================================
+            // FORCE APPROVE MODAL - CLICK OUTSIDE
+            // ============================================================
+            $('#approveModal').click(function (e) {
+                if (e.target === this) {
+                    $('#approveModal').removeClass('show');
+                    $('body').removeClass('modal-open');
+                }
             });
 
             $('#approveForm').submit(function (e) {

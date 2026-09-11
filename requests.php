@@ -669,41 +669,6 @@
                 gap: 12px;
                 flex-wrap: wrap;
             }
-
-            /* ---- Status toast ---- */
-            .toast {
-                position: fixed;
-                bottom: 32px;
-                left: 50%;
-                transform: translateX(-50%) translateY(20px);
-                background: var(--primary);
-                color: #fff;
-                padding: 13px 22px;
-                border-radius: 12px;
-                font-size: 14px;
-                font-weight: 600;
-                box-shadow: 0 8px 28px rgba(11, 27, 98, 0.3);
-                z-index: 500;
-                opacity: 0;
-                transition: opacity 0.3s ease, transform 0.3s ease;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                white-space: nowrap;
-            }
-
-            .toast.show {
-                opacity: 1;
-                transform: translateX(-50%) translateY(0);
-            }
-
-            .toast.success {
-                background: var(--success);
-            }
-
-            .toast.error {
-                background: var(--danger);
-            }
         </style>
     </head>
 
