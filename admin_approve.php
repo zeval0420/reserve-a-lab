@@ -795,21 +795,55 @@
                     flex-wrap: wrap;
                 }
 
-            /* Extend Force Approve input fields to fill their outlined containers */
-            #approveModal .detail-value .liquid-input {
+            /* ============================================================
+            FORCE APPROVE INPUT FIELDS
+            ============================================================ */
+
+            #approveModal .detail-field {
+                min-width: 0;
+            }
+
+            #approveModal .detail-value {
                 width: 100%;
                 box-sizing: border-box;
+                padding: 0;
+                min-height: 38px;
+            }
+
+            #approveModal .detail-value .liquid-input {
+                display: block;
+                width: 100%;
+                height: 38px;
+                min-width: 0;
+                margin: 0;
+                padding: 8px 12px;
+                box-sizing: border-box;
+
                 border: none;
                 outline: none;
                 background: transparent;
+
+                font-size: 14px;
+                font-weight: 600;
+                color: var(--text-primary);
             }
 
-            /* Remarks textarea */
+            /* Remarks */
+            #approveModal .detail-field.full-width .detail-value {
+                padding: 0;
+            }
+
             #approveModal .detail-value textarea.liquid-input {
                 width: 100%;
                 min-height: 90px;
+                height: auto;
                 resize: vertical;
                 box-sizing: border-box;
+            }
+
+            .required-asterisk {
+                color: #DC2626;
+                font-weight: 800;
             }
         </style>
     </head>
@@ -1179,7 +1213,7 @@
                         <div class="detail-grid">
 
                             <div class="detail-field">
-                                <div class="detail-label">Equipment Form</div>
+                                <div class="detail-label">Equipment Form <span class="required-asterisk">*</span></div>
                                 <div class="detail-value" style="padding: 0;">
                                     <input type="text"
                                         class="liquid-input"
@@ -1190,7 +1224,7 @@
                             </div>
 
                             <div class="detail-field">
-                                <div class="detail-label">Reagent Form</div>
+                                <div class="detail-label">Reagent Form <span class="required-asterisk">*</span></div>
                                 <div class="detail-value" style="padding: 0;">
                                     <input type="text"
                                         class="liquid-input"
@@ -1201,7 +1235,7 @@
                             </div>
 
                             <div class="detail-field">
-                                <div class="detail-label">Work Permit</div>
+                                <div class="detail-label">Work Permit <span class="required-asterisk">*</span></div>
                                 <div class="detail-value" style="padding: 0;">
                                     <input type="text"
                                         class="liquid-input"
@@ -1212,7 +1246,7 @@
                             </div>
 
                             <div class="detail-field">
-                                <div class="detail-label">Lab Reservation Form</div>
+                                <div class="detail-label">Lab Reservation Form <span class="required-asterisk">*</span></div>
                                 <div class="detail-value" style="padding: 0;">
                                     <input type="text"
                                         class="liquid-input"
