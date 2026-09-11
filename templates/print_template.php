@@ -1142,6 +1142,10 @@ $html .= "
             PSHS-08-F-CID-13-Rev0-11/07/19
         </div>
 
+        <div class='system-record-note'>
+            This document is an electronically generated record of the Laboratory Reservation System. The corresponding reservation request has been duly reviewed and digitally approved through the system.
+        </div>
+
     </div>
 
     <div class='page page-labres'>
@@ -1246,6 +1250,10 @@ $html .= "
 
         <div class='labres-footer-text'>
             PSHS-00-F-CID-05-Ver02-Rev1-10/18/20
+        </div>
+
+        <div class='system-record-note'>
+            This document is an electronically generated record of the Laboratory Reservation System. The corresponding reservation request has been duly reviewed and digitally approved through the system.
         </div>
 
     </div>
