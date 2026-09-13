@@ -256,9 +256,9 @@
                 }
                 
                 $requestorName = trim(
-                    COALESCE($row['firstname'], $row['student_firstname']) . ' ' .
-                    COALESCE($row['middlename'], $row['student_middlename']) . ' ' .
-                    COALESCE($row['lastname'], $row['student_lastname'])
+                    ($row['firstname'] ?? $row['student_firstname'] ?? '') . ' ' .
+                    ($row['middlename'] ?? $row['student_middlename'] ?? '') . ' ' .
+                    ($row['lastname'] ?? $row['student_lastname'] ?? '')
                 );
                 
                 // Add the item to its category
