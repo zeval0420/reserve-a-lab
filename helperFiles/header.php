@@ -113,6 +113,7 @@
             </div>
             <div class="modal-body">
                 <form id="changePasswordForm">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '') ?>">
                     <div class="form-group">
                         <label>Current Password</label>
                         <input type="password" name="current_password" class="form-control liquid-input" required>

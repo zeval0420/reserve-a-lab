@@ -347,9 +347,10 @@
 
         <div class="container">
             <div class="form-container">
-                <form method="post" action="#">
+                <form method="post" action="#" id="reservationForm">
                     <input type="hidden" name="employee_id" value="<?= htmlspecialchars($userID) ?>">
                     <input type="hidden" name="requestor_name" value="<?= htmlspecialchars($username) ?>">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '') ?>">
 
                     <!-- Venue Selection -->
                     <div class="form-group">
@@ -512,6 +513,8 @@
     <!-- JavaScript -->
     <script> 
         const CLASSIFICATIONS = <?= json_encode($DISPLAY_CLASSIFICATIONS) ?>;
+        /* Base path for AJAX targets, derived server-side so it always matches the deployed folder. */
+        const SITE_BASE_PATH = <?= json_encode(rtrim(str_replace('\\', '/', dirname($_SERVER['PHP_SELF'])), '/')) ?>;
 
         const $container = $('#materials-container');
         CLASSIFICATIONS.forEach(classification => {
@@ -798,7 +801,7 @@
         }
 
         function resetForm() {
-            const form = $('form')[0];
+            const form = $('#reservationForm')[0];
             form.reset();
 
             // Reset sections multiselect
@@ -844,7 +847,7 @@
              * Form submission lifecycle handler. Intercepts native events 
              * to construct summary review modals before confirming POST mechanics. 
              */
-            $('form').submit(function(e) {
+            $('#reservationForm').submit(function(e) {
                 e.preventDefault();
 
                 /* Visual reset mapping for form cues prior to running secondary validation loops. */
@@ -964,8 +967,9 @@
                 const start = $('input[name="start_time"]').val();
                 const end = $('input[name="end_time"]').val();
 
-                $.post('ajax/ajax_forms.php', {
+                $.post(SITE_BASE_PATH + '/ajax/ajax_forms.php', {
                     action: 'check_conflict',
+                    csrf_token: $('input[name="csrf_token"]', '#reservationForm').val(),
                     scilabName: venue,
                     date: date,
                     startTime: start,
@@ -1168,7 +1172,7 @@
                 });
 
                 // Create FormData for AJAX
-                const formData = new FormData($('form')[0]);
+                const formData = new FormData($('#reservationForm')[0]);
                 formData.append('action', 'request_submission');
                 formData.append('mergedMaterials', JSON.stringify(Object.values(itemsMap)));
 
@@ -1200,7 +1204,7 @@
                  * Relies on standard JSON parsing resolving server logic responses functionally mapped against the UI.
                  */
                 $.ajax({
-                    url: 'ajax/ajax_supervisor_action.php',
+                    url: SITE_BASE_PATH + '/ajax/ajax_supervisor_action.php',
                     type: 'POST',
                     data: formData,
                     processData: false,
@@ -1235,16 +1239,29 @@
                         let errorMsg = "Failed to submit request due to server error.";
                         try {
                             const response = JSON.parse(xhr.responseText);
-                            errorMsg = "Server Error: " + (response.message || errorMsg);
-                            if (response.file) {
-                                console.error(`Error in ${response.file} on line ${response.line}`);
+                            if (response.status === 'session_expired') {
+                                errorMsg = "Session expired. Please log in again.";
+                            } else {
+                                errorMsg = "Server Error: " + (response.message || errorMsg);
+                                if (response.file) {
+                                    console.error(`Error in ${response.file} on line ${response.line}`);
+                                }
                             }
                         } catch (e) {
-                            errorMsg = "Server Error: " + xhr.statusText;
+                            if (xhr.status === 401) {
+                                errorMsg = "Session expired. Please log in again.";
+                            } else if (xhr.status === 403) {
+                                errorMsg = "Security validation failed. Please refresh and try again.";
+                            } else if (xhr.status === 0) {
+                                errorMsg = "Request blocked by the browser or server. Check console for details.";
+                            } else {
+                                errorMsg = "Server Error (" + xhr.status + "): " + xhr.statusText;
+                            }
                         }
                         
                         showToast(errorMsg, 'error');
                         console.error("Submission Failed:", error);
+                        console.error("HTTP Status:", xhr.status);
                         console.error("Response:", xhr.responseText);
                     }
                 });

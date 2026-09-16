@@ -3,6 +3,14 @@ include('../../scilab/helperFiles/db_connection.php');
 include('../helperFiles/session_handler.php');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'change_password') {
+    $csrfToken = $_POST['csrf_token'] ?? '';
+    if (!is_string($csrfToken) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'error', 'message' => 'Invalid or missing security token. Please refresh the page and try again.']);
+        exit;
+    }
+
     $employeeID = $_SESSION['employeeID'] ?? null;
     $currentPassword = $_POST['current_password'] ?? '';
     $newPassword = $_POST['new_password'] ?? '';

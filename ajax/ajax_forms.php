@@ -462,6 +462,13 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
 } elseif (isset($_POST['action']) && $_POST['action'] === 'check_conflict') {
     header('Content-Type: application/json');
 
+    $csrfToken = $_POST['csrf_token'] ?? '';
+    if (!is_string($csrfToken) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $csrfToken)) {
+        http_response_code(403);
+        echo json_encode(['status' => 'error', 'message' => 'Invalid or missing security token. Please refresh the page and try again.']);
+        exit();
+    }
+
     $scilabName = $_POST['scilabName'] ?? '';
     $date = $_POST['date'] ?? '';
     $startTime = $_POST['startTime'] ?? '';

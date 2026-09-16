@@ -21,10 +21,21 @@ set_error_handler(function($severity, $message, $file, $line) {
     throw new ErrorException($message, 0, $severity, $file, $line);
 });
 
-include('../../scilab/helperFiles/db_connection.php');
-include('../helperFiles/session_handler.php');
-include('../helperFiles/variableDeclarations.php');
-include_once('../helperFiles/scilab_email.php');
+// Convert fatal errors (which bypass the handlers above) into a readable JSON response
+// so the client never receives an empty HTTP 500 body.
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR])) {
+        http_response_code(500);
+        header('Content-Type: application/json');
+        echo json_encode([
+            'status' => 'error',
+            'message' => $error['message'],
+            'file' => $error['file'],
+            'line' => $error['line']
+        ]);
+    }
+});
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
@@ -32,6 +43,23 @@ use PHPMailer\PHPMailer\Exception;
 require '../PHPMailer/src/Exception.php';
 require '../PHPMailer/src/PHPMailer.php';
 require '../PHPMailer/src/SMTP.php';
+
+try {
+    include('../../scilab/helperFiles/db_connection.php');
+    include('../helperFiles/session_handler.php');
+    include('../helperFiles/variableDeclarations.php');
+    include_once('../helperFiles/scilab_email.php');
+} catch (\Throwable $e) {
+    http_response_code(500);
+    header('Content-Type: application/json');
+    echo json_encode([
+        'status' => 'error',
+        'message' => 'Server initialization failed: ' . $e->getMessage(),
+        'file' => $e->getFile(),
+        'line' => $e->getLine()
+    ]);
+    exit();
+}
 
 function formatTime($time) {
     return date("g:i A", strtotime($time));
@@ -518,6 +546,14 @@ function sendNotificationToCIDChief($conn, $requestID) {
 }
 
 if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
+    $csrfToken = $_POST['csrf_token'] ?? '';
+    if (!is_string($csrfToken) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'error', 'message' => 'Invalid or missing security token. Please refresh the page and try again.']);
+        exit();
+    }
+
     $scilabName = $_POST['venue'] ?? '';
     $grade = intval($_POST['grade_level'] ?? 0);
     $sections = isset($_POST['sections']) && is_array($_POST['sections']) ? implode(', ', $_POST['sections']) : ($_POST['sections'] ?? '');
