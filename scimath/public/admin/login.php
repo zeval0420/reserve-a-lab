@@ -62,7 +62,7 @@ $pageTitle = 'Sign in';
 
             <div class="institution">
                 <div class="logo-circle">
-                    <img src="../../../img/logo.png" alt="PSHS Logo">
+                    <img src="../../../img/logo.png" alt="PSHS Logo" width="44" height="44">
                 </div>
                 <div class="inst-text">
                     <p class="inst-line1">Department of Science and Technology</p>

@@ -13,7 +13,7 @@ $pageTitle = $pageTitle ?? 'Admin';
 <header class="topbar">
     <div class="topbar-inner">
         <a href="../admin/index.php" class="brand">
-            <img src="../../../img/logo.png" alt="PSHS Logo">
+            <img src="../../../img/logo.png" alt="PSHS Logo" width="28" height="28">
             Competition Admin
         </a>
         <?php if (Auth::check()): ?>
