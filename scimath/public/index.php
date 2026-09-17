@@ -14,6 +14,15 @@ $events = Event::allOrderedByDate();
 
 <header class="hero">
     <div class="hero-inner">
+        <div class="hero-institution">
+            <div class="hero-logo">
+                <img src="../../img/logo.png" alt="PSHS Logo">
+            </div>
+            <div class="hero-inst-text">
+                <div class="line1">Department of Science and Technology</div>
+                <div class="line2">Philippine Science High School &middot; Ilocos Region Campus</div>
+            </div>
+        </div>
         <span class="hero-eyebrow">Competition Management</span>
         <h1>SciMath Competition System</h1>
         <p>Configure competitions, run the live control panel, and broadcast results to the venue screen — all from one place.</p>
