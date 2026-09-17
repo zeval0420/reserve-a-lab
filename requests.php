@@ -21,6 +21,8 @@
         $stmt->bind_param("s", $email);
         $stmt->execute();
         $userID = $stmt->get_result()->fetch_assoc()['LRN'] ?? null;
+    } elseif (isset($_SESSION['role']) && $_SESSION['role'] === 'guest') {
+        $userID = $_SESSION['employeeID'] ?? 'Guest';
     } else {
         $stmt = $conn->prepare("SELECT employeeID FROM accounts WHERE email = ?");
         $stmt->bind_param("s", $email);
