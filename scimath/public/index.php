@@ -8,66 +8,67 @@ $events = Event::allOrderedByDate();
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SciMath Competition System</title>
-<link rel="stylesheet" href="/assets/admin.css">
+<link rel="stylesheet" href="assets/index.css">
 </head>
 <body>
-<header class="topbar">
-    <div class="topbar-inner">
-        <a href="/index.php" class="brand">SciMath Competition System</a>
+
+<header class="hero">
+    <div class="hero-inner">
+        <span class="hero-eyebrow">Competition Management</span>
+        <h1>SciMath Competition System</h1>
+        <p>Configure competitions, run the live control panel, and broadcast results to the venue screen — all from one place.</p>
     </div>
 </header>
+
 <main class="page">
-    <h1>SciMath Competition System</h1>
-    <p class="subtitle">Manage competitions: configure events, run the live control panel, and broadcast results to the venue screen.</p>
-
-    <div class="two-col" style="margin-bottom:8px;">
-        <div class="card">
+    <div class="feature-grid">
+        <div class="feature-card">
             <h2>Admin Panel</h2>
-            <p class="muted">Create and configure events — add categories, contestants, questions, and scoring settings.</p>
-            <p><a class="btn btn-primary" href="/admin/login.php">Open Admin Panel</a></p>
+            <p>Create and configure events — add categories, contestants, questions, and scoring settings.</p>
+            <a class="btn btn-primary" href="admin/login.php">Open Admin Panel</a>
         </div>
-        <div class="card">
+        <div class="feature-card">
             <h2>Operator Console</h2>
-            <p class="muted">Run a live competition — control the timer, reveal questions, and score contestants in real time.</p>
-            <p><a class="btn btn-primary" href="/operator/index.php">Open Operator Console</a></p>
+            <p>Run a live competition — control the timer, reveal questions, and score contestants in real time.</p>
+            <a class="btn btn-primary" href="operator/index.php">Open Operator Console</a>
+        </div>
+        <div class="feature-card">
+            <h2>Display Screen</h2>
+            <p>Broadcast questions and live standings to the venue projector — open a display below, no login required.</p>
+            <span class="muted-hint">Pick an event below</span>
         </div>
     </div>
 
-    <div class="card">
-        <h2 style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-            <span>Events</span>
-            <a class="btn btn-small" href="/admin/index.php">Manage events</a>
-        </h2>
+    <h2 class="section-title">Current Events</h2>
+    <p class="section-subtitle">Open the display for an event on the venue projector, operate it from your laptop, or configure it in the admin panel.</p>
 
-        <?php if ($events === []): ?>
-            <p class="muted">No events yet. <a href="/admin/index.php">Create your first event</a> to get started.</p>
-        <?php else: ?>
-        <table>
-            <thead>
-                <tr><th>Name</th><th>Date</th><th>Status</th><th></th></tr>
-            </thead>
-            <tbody>
-            <?php foreach ($events as $ev): ?>
-                <tr>
-                    <td>
-                        <?= htmlspecialchars($ev['name']) ?>
-                        <?php if ($ev['subtitle']): ?><br><span class="muted"><?= htmlspecialchars($ev['subtitle']) ?></span><?php endif; ?>
-                    </td>
-                    <td><?= $ev['event_date'] ? htmlspecialchars($ev['event_date']) : '<span class="muted">—</span>' ?></td>
-                    <td><span class="badge badge-<?= htmlspecialchars($ev['status']) ?>"><?= htmlspecialchars($ev['status']) ?></span></td>
-                    <td class="row-actions">
-                        <a class="btn btn-small" href="/display/event.php?id=<?= (int) $ev['id'] ?>">Display</a>
-                        <a class="btn btn-small" href="/operator/event.php?id=<?= (int) $ev['id'] ?>">Operate</a>
-                        <a class="btn btn-small" href="/admin/event.php?id=<?= (int) $ev['id'] ?>">Configure</a>
-                    </td>
-                </tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
-        <?php endif; ?>
-    </div>
+    <?php if ($events === []): ?>
+        <div class="empty-state">
+            <p>No events yet. Create your first event to get started.</p>
+            <a class="btn btn-primary" href="admin/index.php">Create an event</a>
+        </div>
+    <?php else: ?>
+        <div class="event-grid">
+        <?php foreach ($events as $ev): ?>
+            <div class="event-card">
+                <div class="event-card-name"><?= htmlspecialchars($ev['name']) ?></div>
+                <?php if ($ev['subtitle']): ?><p class="event-card-subtitle"><?= htmlspecialchars($ev['subtitle']) ?></p><?php endif; ?>
+                <div class="event-card-meta">
+                    <span><?= $ev['event_date'] ? htmlspecialchars($ev['event_date']) : 'TBA' ?></span>
+                    <span class="badge badge-<?= htmlspecialchars($ev['status']) ?>"><?= htmlspecialchars($ev['status']) ?></span>
+                </div>
+                <div class="event-card-actions">
+                    <a class="btn" href="display/event.php?id=<?= (int) $ev['id'] ?>">Display</a>
+                    <a class="btn" href="operator/event.php?id=<?= (int) $ev['id'] ?>">Operate</a>
+                    <a class="btn" href="admin/event.php?id=<?= (int) $ev['id'] ?>">Configure</a>
+                </div>
+            </div>
+        <?php endforeach; ?>
+        </div>
+    <?php endif; ?>
 
-    <p class="muted" style="font-size:0.85rem;">Open the <strong>Display</strong> link for an event on the venue projector — no login required.</p>
+    <p class="footer-note">Admin and operator access require a login. The display screen is public and needs no account.</p>
 </main>
+
 </body>
 </html>

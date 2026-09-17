@@ -33,6 +33,8 @@
 
                     <p class="mt-2 mb-1 font-weight-bold">Gabriel James Valdez</p>
                     <p class="mt-2 mb-1 font-weight-bold">Zyx Leiabe A. Barangan</p>
+                    <p class="mt-2 mb-1 font-weight-bold">Xyzy De Vera</p>
+                    <p class="mt-2 mb-1 font-weight-bold">Elijah Alimpia</p>
                     <p class="mt-2 mb-1 font-weight-bold">Rojan Joefel C. Dumlao</p>
 
                 </div>
@@ -40,16 +42,15 @@
                     <br />
                     <p class="mt-2 mb-1 font-weight-bold" style="font-size: 16px; font-weight: bold;">RESEARCH PROJECT
                     </p>
-                    <p class="mt-2 mb-1 font-weight-bold">Grade 11</p>
+                    <p class="mt-2 mb-1 font-weight-bold">Grade 12</p>
                     <br />
-                    <p class="mt-2 mb-1 font-weight-bold" style="font-size: 16px; font-weight: bold;">Adviser: June
-                        Leonel Ngayaan</p>
-                    <p class="mt-2 mb-1 font-weight-bold">School Year: 2025-2026</p>
+                    <p class="mt-2 mb-1 font-weight-bold" style="font-size: 16px; font-weight: bold;">Adviser: Dominic Patric Galdonez</p>
+                    <p class="mt-2 mb-1 font-weight-bold">School Year: 2026-2027</p>
                 </div>
             </div>
         </div>
         <div class="text-center mt-3" style="margin-top: 0">
-            <small>&copy; 2025 PSHS IRC. All rights reserved.</small>
+            <small>&copy; 2026 PSHS IRC. All rights reserved.</small>
         </div>
     </div>
 </footer>
