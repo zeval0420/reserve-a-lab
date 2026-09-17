@@ -1018,7 +1018,8 @@
                                         $materialText = isset($materials[$formID]) ? implode("", $materials[$formID]) : '—';
                                         $row['materialsDetailed'] = isset($materialsDetailed[$formID]) ? implode("", $materialsDetailed[$formID]) : '—';
                                         $teacherInCharge = !empty($row['teacherInCharge']) ? htmlspecialchars($row['teacherInCharge']) : '—';
-                                        $flagged = (!empty($row['dateRequested']) && strtotime($row['dateRequested']) >= strtotime('-3 days'));
+                                        $flagged = (!empty($row['dateRequested']) && !empty($row['inclusiveDate']) && (strtotime($row['inclusiveDate']) - strtotime($row['dateRequested'])) < 3 * 86400);
+                                        $daysBeforeUse = $flagged ? max(0, (int)floor((strtotime($row['inclusiveDate']) - strtotime($row['dateRequested'])) / 86400)) : 0;
                                 ?>
                                     <tr id="row-<?= $row['id'] ?>" class="<?= $flagged ? 'request-flagged-row' : '' ?>">
                                         <td><span style="display:none;"><?= $row['id'] ?></span><?= $i++ ?></td>
@@ -1033,7 +1034,7 @@
                                         <td><?= htmlspecialchars($row['inclusiveDate']).' ('.htmlspecialchars($row['inclusiveTime']).')' ?></td>
                                         <td><?= $materialText ?></td>
                                         <td><?= $teacherInCharge ?></td>
-                                        <td><?= $flagged ? '<span class="request-flag-badge" title="Requested less than 3 days ago">FLAGGED</span><div class="request-flag-sub">' . htmlspecialchars(date('M d, Y', strtotime($row['dateRequested']))) . '</div>' : '<span class="request-flag-none">—</span>' ?></td>
+                                        <td><?= $flagged ? '<span class="request-flag-badge" title="Requested less than 3 days before lab use">FLAGGED</span><div class="request-flag-sub">' . $daysBeforeUse . ' day(s) before use</div>' : '<span class="request-flag-none">—</span>' ?></td>
 
                                         <?php if ($statusFilter === 'Approved'): ?>
                                             <td><?= htmlspecialchars($row['feedback'] ?? '—') ?></td>

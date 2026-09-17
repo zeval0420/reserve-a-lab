@@ -169,7 +169,7 @@
                     const serverItems = response.items.map(item => ({
                         type: 'warning',
                         timestamp: item.submitted,
-                        message: `<strong>${item.requester}</strong> requested <strong>${item.lab}</strong>.<br><small>For ${item.date} ${item.time}</small>${item.flag ? `<span class="request-flag">FLAGGED < 3 days</span>` : ''}`,
+                        message: `<strong>${item.requester}</strong> requested <strong>${item.lab}</strong>.<br><small>For ${item.date} ${item.time}</small>${item.flag ? `<span class="request-flag">FLAGGED &lt;3 days before use</span>` : ''}`,
                         source: 'server',
                         link: `admin_approve.php?status=Pending&search=${item.id}`,
                         flag: item.flag ? 1 : 0
