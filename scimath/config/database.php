@@ -3,18 +3,21 @@
 /**
  * Database connection configuration.
  *
- * Values are read from environment variables so the same code deploys to
- * dev/staging/production without edits. Defaults below match the local dev
- * database created for this project (see README.md "Local development").
+ * Uses the same connection settings as the rest of the reserve-a-lab /
+ * scilab pages by including the shared db_connection.php helper. The values
+ * below come from that file, so the scimath app always talks to the same
+ * database (dbadmin) as the rest of the system.
  */
 
+require_once __DIR__ . '/../../../scilab/helperFiles/db_connection.php';
+
 return [
-    'driver'   => 'mysql',
-    'host'     => getenv('DB_HOST') ?: '127.0.0.1',
-    'port'     => getenv('DB_PORT') ?: '3306',
-    'database' => getenv('DB_DATABASE') ?: 'dbadmin',
-    'username' => getenv('DB_USERNAME') ?: 'root',
-    'password' => getenv('DB_PASSWORD') ?: '',
-    'charset'  => 'utf8mb4',
+    'driver'    => 'mysql',
+    'host'      => $servername,
+    'port'      => '3306',
+    'database'  => $database,
+    'username'  => $username,
+    'password'  => $password,
+    'charset'   => 'utf8mb4',
     'collation' => 'utf8mb4_unicode_ci',
 ];
