@@ -6,12 +6,12 @@ $eventId = (int) ($_GET['id'] ?? 0);
 $event = $eventId > 0 ? Event::find($eventId) : null;
 if ($event === null) {
     Flash::error('That event could not be found.');
-    header('Location: /operator/index.php');
+    header('Location: ' . relative_url('/operator/index.php'));
     exit;
 }
 if (!in_array($event['status'], [EventStatus::READY, EventStatus::ACTIVE, EventStatus::COMPLETED], true)) {
     Flash::error('This event is not ready to run yet. Configure it in the admin panel first.');
-    header('Location: /operator/index.php');
+    header('Location: ' . relative_url('/operator/index.php'));
     exit;
 }
 
@@ -30,7 +30,7 @@ $allQuestions = Question::forEvent($eventId, true);
 $pageTitle = $event['name'] . ' — Operator';
 require __DIR__ . '/../admin/includes/header.php';
 ?>
-<link rel="stylesheet" href="/assets/operator.css">
+<link rel="stylesheet" href="../assets/operator.css">
 
 <div id="op-root"
      data-event-id="<?= $eventId ?>"
@@ -45,7 +45,7 @@ require __DIR__ . '/../admin/includes/header.php';
         <div class="op-event-controls">
             <button type="button" class="btn btn-primary" id="op-btn-start-event">Start Event</button>
             <button type="button" class="btn btn-danger" id="op-btn-end-event">End Event</button>
-            <a href="/operator/index.php" class="btn btn-small">Switch event</a>
+            <a href="index.php" class="btn btn-small">Switch event</a>
         </div>
     </div>
 
@@ -121,6 +121,6 @@ require __DIR__ . '/../admin/includes/header.php';
     <p class="op-poll-indicator" id="op-poll-indicator">Live — updating every second</p>
 </div>
 
-<script src="/assets/operator.js"></script>
+<script src="../assets/operator.js"></script>
 
 <?php require __DIR__ . '/../admin/includes/footer.php'; ?>

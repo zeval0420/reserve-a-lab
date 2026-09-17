@@ -3,7 +3,7 @@ require_once __DIR__ . '/../../../src/bootstrap.php';
 Auth::requireAdmin();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: /admin/index.php');
+    header('Location: ' . relative_url('/admin/index.php'));
     exit;
 }
 Csrf::verify();
@@ -12,7 +12,7 @@ $eventId = (int) ($_POST['event_id'] ?? 0);
 $event = Event::find($eventId);
 if ($event === null) {
     Flash::error('That event could not be found.');
-    header('Location: /admin/index.php');
+    header('Location: ' . relative_url('/admin/index.php'));
     exit;
 }
 
@@ -22,7 +22,7 @@ if ($questionId !== null) {
     $existing = Question::find($questionId);
     if ($existing === null || (int) $existing['event_id'] !== $eventId) {
         Flash::error('That question could not be found for this event.');
-        header('Location: /admin/event.php?id=' . $eventId . '#questions');
+        header('Location: ' . relative_url('/admin/event.php?id=' . $eventId . '#questions'));
         exit;
     }
 }
@@ -52,7 +52,7 @@ if ($existing === null && !$hasNewImage) {
 if ($v->hasErrors()) {
     Flash::error('Please fix the highlighted errors: ' . implode(' ', $v->errors()));
     $editParam = $questionId !== null ? '&edit_question=' . $questionId : '';
-    header('Location: /admin/event.php?id=' . $eventId . $editParam . '#questions');
+    header('Location: ' . relative_url('/admin/event.php?id=' . $eventId . $editParam . '#questions'));
     exit;
 }
 
@@ -77,7 +77,7 @@ try {
 } catch (RuntimeException $e) {
     Flash::error($e->getMessage());
     $editParam = $questionId !== null ? '&edit_question=' . $questionId : '';
-    header('Location: /admin/event.php?id=' . $eventId . $editParam . '#questions');
+    header('Location: ' . relative_url('/admin/event.php?id=' . $eventId . $editParam . '#questions'));
     exit;
 }
 
@@ -99,4 +99,4 @@ try {
     }
 }
 
-header('Location: /admin/event.php?id=' . $eventId . '#questions');
+header('Location: ' . relative_url('/admin/event.php?id=' . $eventId . '#questions'));

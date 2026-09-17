@@ -7,17 +7,17 @@ $pageTitle = $pageTitle ?? 'Admin';
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><?= htmlspecialchars($pageTitle) ?> — Competition Admin</title>
-<link rel="stylesheet" href="/assets/admin.css">
+<link rel="stylesheet" href="../assets/admin.css">
 </head>
 <body>
 <header class="topbar">
     <div class="topbar-inner">
-        <a href="/admin/index.php" class="brand">Competition Admin</a>
+        <a href="../admin/index.php" class="brand">Competition Admin</a>
         <?php if (Auth::check()): ?>
         <nav class="topnav">
-            <a href="/admin/index.php">Events</a>
+            <a href="../admin/index.php">Events</a>
             <span class="topnav-user">Signed in as <?= htmlspecialchars((string) Auth::username()) ?></span>
-            <a href="/admin/logout.php" class="topnav-logout">Log out</a>
+            <a href="../admin/logout.php" class="topnav-logout">Log out</a>
         </nav>
         <?php endif; ?>
     </div>

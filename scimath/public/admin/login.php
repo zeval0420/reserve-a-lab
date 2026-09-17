@@ -10,11 +10,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = (string) ($_POST['password'] ?? '');
 
     if (Auth::attempt($username, $password)) {
-        $return = $_GET['return'] ?? '/admin/index.php';
-        // Only ever redirect to a local admin path -- never follow an
-        // absolute/external URL from the query string.
-        if (!is_string($return) || !str_starts_with($return, '/admin/')) {
-            $return = '/admin/index.php';
+        $return = $_GET['return'] ?? relative_url('/admin/index.php');
+        // Only ever redirect to a local path -- never follow an
+        // absolute/external URL from the query string. Allow absolute
+        // (host-rooted) paths, which is what Auth::requireAdmin passes.
+        if (!is_string($return) || $return === ''
+            || str_contains($return, '://')
+            || str_starts_with($return, '//')
+            || str_starts_with($return, '\\')) {
+            $return = relative_url('/admin/index.php');
         }
         header('Location: ' . $return);
         exit;
@@ -24,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 if (Auth::check()) {
-    header('Location: /admin/index.php');
+    header('Location: ' . relative_url('/admin/index.php'));
     exit;
 }
 

@@ -56,8 +56,8 @@ class Auth
     public static function requireAdmin(): void
     {
         if (!self::check()) {
-            $return = $_SERVER['REQUEST_URI'] ?? '/admin/index.php';
-            header('Location: /admin/login.php?return=' . urlencode($return));
+            $return = $_SERVER['REQUEST_URI'] ?? relative_url('/admin/index.php');
+            header('Location: ' . relative_url('/admin/login.php') . '?return=' . urlencode($return));
             exit;
         }
     }

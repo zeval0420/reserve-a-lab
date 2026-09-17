@@ -3,7 +3,7 @@ require_once __DIR__ . '/../../../src/bootstrap.php';
 Auth::requireAdmin();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: /admin/index.php');
+    header('Location: ' . relative_url('/admin/index.php'));
     exit;
 }
 Csrf::verify();
@@ -12,7 +12,7 @@ $eventId = (int) ($_POST['event_id'] ?? 0);
 $event = Event::find($eventId);
 if ($event === null) {
     Flash::error('That event could not be found.');
-    header('Location: /admin/index.php');
+    header('Location: ' . relative_url('/admin/index.php'));
     exit;
 }
 
@@ -21,7 +21,7 @@ if ($categoryId !== null) {
     $existing = Category::find($categoryId);
     if ($existing === null || (int) $existing['event_id'] !== $eventId) {
         Flash::error('That category could not be found for this event.');
-        header('Location: /admin/event.php?id=' . $eventId . '#categories');
+        header('Location: ' . relative_url('/admin/event.php?id=' . $eventId . '#categories'));
         exit;
     }
 }
@@ -33,7 +33,7 @@ $description = $v->optionalString($_POST, 'description', 'Description', 255);
 if ($v->hasErrors()) {
     Flash::error('Please fix the highlighted errors: ' . implode(' ', $v->errors()));
     $editParam = $categoryId !== null ? '&edit_category=' . $categoryId : '';
-    header('Location: /admin/event.php?id=' . $eventId . $editParam . '#categories');
+    header('Location: ' . relative_url('/admin/event.php?id=' . $eventId . $editParam . '#categories'));
     exit;
 }
 
@@ -60,4 +60,4 @@ try {
     }
 }
 
-header('Location: /admin/event.php?id=' . $eventId . '#categories');
+header('Location: ' . relative_url('/admin/event.php?id=' . $eventId . '#categories'));

@@ -32,3 +32,31 @@ require_once __DIR__ . '/Support/Uploader.php';
 require_once __DIR__ . '/Support/EventValidator.php';
 require_once __DIR__ . '/Services/CompetitionRuntimeException.php';
 require_once __DIR__ . '/Services/CompetitionRuntime.php';
+
+/**
+ * Build a path-relative URL for an app-internal target (e.g.
+ * "/admin/index.php") from the currently-executing script.
+ *
+ * Works no matter which subfolder the app is served from: it walks up from
+ * the current script's directory (resolved physically) until it reaches the
+ * public web root, then appends the target minus its leading slash. The
+ * browser resolves the result relative to the page it's on.
+ *
+ * Example: executing script = .../public/admin/actions/event_save.php,
+ * target = "/admin/index.php" -> returns "../../admin/index.php".
+ */
+function relative_url(string $target): string
+{
+    $public = rtrim(str_replace('\\', '/', realpath(__DIR__ . '/../public')), '/');
+    $current = dirname(realpath($_SERVER['SCRIPT_FILENAME'] ?? __DIR__ . '/index.php'));
+    $current = rtrim(str_replace('\\', '/', $current), '/');
+
+    $up = '';
+    $rest = $current;
+    while ($rest !== $public && str_starts_with($rest, $public . '/')) {
+        $up .= '../';
+        $rest = dirname($rest);
+    }
+
+    return $up . ltrim($target, '/');
+}

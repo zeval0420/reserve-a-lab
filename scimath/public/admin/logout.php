@@ -2,5 +2,5 @@
 require_once __DIR__ . '/../../src/bootstrap.php';
 
 Auth::logout();
-header('Location: /admin/login.php');
+header('Location: ' . relative_url('/admin/login.php'));
 exit;

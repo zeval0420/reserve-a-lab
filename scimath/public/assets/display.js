@@ -54,7 +54,7 @@
     function renderCover(eventInfo) {
         var bg = document.getElementById('disp-cover-bg');
         if (eventInfo.cover_image_path) {
-            bg.style.backgroundImage = "url('/" + eventInfo.cover_image_path + "')";
+            bg.style.backgroundImage = "url('../" + eventInfo.cover_image_path + "')";
             bg.style.display = '';
         } else {
             bg.style.display = 'none';
@@ -62,13 +62,13 @@
 
         var logo = document.getElementById('disp-cover-logo');
         if (eventInfo.logo_path) {
-            logo.src = '/' + eventInfo.logo_path;
-            logo.style.display = '';
-        } else {
-            logo.style.display = 'none';
-        }
+logo.src = '../' + eventInfo.logo_path;
+        logo.style.display = '';
+    } else {
+        logo.style.display = 'none';
+    }
 
-        document.getElementById('disp-cover-name').textContent = eventInfo.name;
+    document.getElementById('disp-cover-name').textContent = eventInfo.name;
         var subtitleEl = document.getElementById('disp-cover-subtitle');
         subtitleEl.textContent = eventInfo.subtitle || '';
         subtitleEl.style.display = eventInfo.subtitle ? '' : 'none';
@@ -88,7 +88,7 @@
         document.getElementById('disp-timer').parentElement.style.visibility = presentation.show_timer ? 'visible' : 'hidden';
 
         var img = document.getElementById('disp-q-image');
-        var newSrc = '/' + q.image_path;
+        var newSrc = '../' + q.image_path;
         if (!img.src.endsWith(newSrc)) img.src = newSrc;
     }
 
@@ -121,12 +121,12 @@
     function renderFinal(eventInfo, rankings) {
         var logo = document.getElementById('disp-final-logo');
         if (eventInfo.logo_path) {
-            logo.src = '/' + eventInfo.logo_path;
-            logo.style.display = '';
-        } else {
-            logo.style.display = 'none';
-        }
-        document.getElementById('disp-final-event-name').textContent = eventInfo.name;
+logo.src = '../' + eventInfo.logo_path;
+        logo.style.display = '';
+    } else {
+        logo.style.display = 'none';
+    }
+    document.getElementById('disp-final-event-name').textContent = eventInfo.name;
 
         var champions = rankings.filter(function (r) { return r.rank === 1; });
         var championEl = document.getElementById('disp-champion');
@@ -173,7 +173,7 @@
     // it just keeps showing the last good state and keeps retrying.
 
     function poll() {
-        fetch('/api/display.php?event_id=' + eventId, { credentials: 'same-origin' })
+        fetch('../api/display.php?event_id=' + eventId, { credentials: 'same-origin' })
             .then(function (r) { return r.json(); })
             .then(function (res) {
                 if (res.ok) applyState(res);

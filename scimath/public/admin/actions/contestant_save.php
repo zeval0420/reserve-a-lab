@@ -3,7 +3,7 @@ require_once __DIR__ . '/../../../src/bootstrap.php';
 Auth::requireAdmin();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: /admin/index.php');
+    header('Location: ' . relative_url('/admin/index.php'));
     exit;
 }
 Csrf::verify();
@@ -12,7 +12,7 @@ $eventId = (int) ($_POST['event_id'] ?? 0);
 $event = Event::find($eventId);
 if ($event === null) {
     Flash::error('That event could not be found.');
-    header('Location: /admin/index.php');
+    header('Location: ' . relative_url('/admin/index.php'));
     exit;
 }
 
@@ -22,7 +22,7 @@ if ($contestantId !== null) {
     $existing = Contestant::find($contestantId);
     if ($existing === null || (int) $existing['event_id'] !== $eventId) {
         Flash::error('That contestant could not be found for this event.');
-        header('Location: /admin/event.php?id=' . $eventId . '#contestants');
+        header('Location: ' . relative_url('/admin/event.php?id=' . $eventId . '#contestants'));
         exit;
     }
 }
@@ -36,7 +36,7 @@ $startingScore = $v->requiredInt($_POST, 'starting_score', 'Starting score', -10
 if ($v->hasErrors()) {
     Flash::error('Please fix the highlighted errors: ' . implode(' ', $v->errors()));
     $editParam = $contestantId !== null ? '&edit_contestant=' . $contestantId : '';
-    header('Location: /admin/event.php?id=' . $eventId . $editParam . '#contestants');
+    header('Location: ' . relative_url('/admin/event.php?id=' . $eventId . $editParam . '#contestants'));
     exit;
 }
 
@@ -65,7 +65,7 @@ try {
 } catch (RuntimeException $e) {
     Flash::error($e->getMessage());
     $editParam = $contestantId !== null ? '&edit_contestant=' . $contestantId : '';
-    header('Location: /admin/event.php?id=' . $eventId . $editParam . '#contestants');
+    header('Location: ' . relative_url('/admin/event.php?id=' . $eventId . $editParam . '#contestants'));
     exit;
 }
 
@@ -87,4 +87,4 @@ try {
     }
 }
 
-header('Location: /admin/event.php?id=' . $eventId . '#contestants');
+header('Location: ' . relative_url('/admin/event.php?id=' . $eventId . '#contestants'));

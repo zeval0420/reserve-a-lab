@@ -3,7 +3,7 @@ require_once __DIR__ . '/../../../src/bootstrap.php';
 Auth::requireAdmin();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: /admin/index.php');
+    header('Location: ' . relative_url('/admin/index.php'));
     exit;
 }
 Csrf::verify();
@@ -14,7 +14,7 @@ $contestantId = (int) ($_POST['contestant_id'] ?? 0);
 $contestant = Contestant::find($contestantId);
 if ($contestant === null || (int) $contestant['event_id'] !== $eventId) {
     Flash::error('That contestant could not be found for this event.');
-    header('Location: /admin/event.php?id=' . $eventId . '#contestants');
+    header('Location: ' . relative_url('/admin/event.php?id=' . $eventId . '#contestants'));
     exit;
 }
 
@@ -33,4 +33,4 @@ if ($hasScores) {
     Flash::success("\"{$contestant['name']}\" was removed.");
 }
 
-header('Location: /admin/event.php?id=' . $eventId . '#contestants');
+header('Location: ' . relative_url('/admin/event.php?id=' . $eventId . '#contestants'));

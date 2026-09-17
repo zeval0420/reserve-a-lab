@@ -3,7 +3,7 @@ require_once __DIR__ . '/../../../src/bootstrap.php';
 Auth::requireAdmin();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: /admin/index.php');
+    header('Location: ' . relative_url('/admin/index.php'));
     exit;
 }
 Csrf::verify();
@@ -15,7 +15,7 @@ $direction = (string) ($_POST['direction'] ?? '');
 $contestant = Contestant::find($contestantId);
 if ($contestant === null || (int) $contestant['event_id'] !== $eventId || !in_array($direction, ['up', 'down'], true)) {
     Flash::error('Could not reorder that contestant.');
-    header('Location: /admin/event.php?id=' . $eventId . '#contestants');
+    header('Location: ' . relative_url('/admin/event.php?id=' . $eventId . '#contestants'));
     exit;
 }
 
@@ -31,4 +31,4 @@ if ($index !== false) {
     }
 }
 
-header('Location: /admin/event.php?id=' . $eventId . '#contestants');
+header('Location: ' . relative_url('/admin/event.php?id=' . $eventId . '#contestants'));

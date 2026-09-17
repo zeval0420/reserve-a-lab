@@ -3,7 +3,7 @@ require_once __DIR__ . '/../../../src/bootstrap.php';
 Auth::requireAdmin();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: /admin/index.php');
+    header('Location: ' . relative_url('/admin/index.php'));
     exit;
 }
 Csrf::verify();
@@ -14,7 +14,7 @@ $categoryId = (int) ($_POST['category_id'] ?? 0);
 $category = Category::find($categoryId);
 if ($category === null || (int) $category['event_id'] !== $eventId) {
     Flash::error('That category could not be found for this event.');
-    header('Location: /admin/event.php?id=' . $eventId . '#categories');
+    header('Location: ' . relative_url('/admin/event.php?id=' . $eventId . '#categories'));
     exit;
 }
 
@@ -23,4 +23,4 @@ Category::delete($categoryId);
 // questions that used this category simply become uncategorized.
 
 Flash::success('Category deleted.');
-header('Location: /admin/event.php?id=' . $eventId . '#categories');
+header('Location: ' . relative_url('/admin/event.php?id=' . $eventId . '#categories'));

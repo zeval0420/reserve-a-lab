@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         CompetitionSession::createFor((int) $event['id']);
 
         Flash::success("Event \"{$name}\" created. Configure it below.");
-        header('Location: /admin/event.php?id=' . $event['id']);
+        header('Location: ' . relative_url('/admin/event.php?id=' . $event['id']));
         exit;
     }
 
@@ -55,13 +55,13 @@ require __DIR__ . '/includes/header.php';
                     <?php foreach ($events as $ev): ?>
                         <tr>
                             <td>
-                                <a href="/admin/event.php?id=<?= (int) $ev['id'] ?>"><?= htmlspecialchars($ev['name']) ?></a>
+                                <a href="event.php?id=<?= (int) $ev['id'] ?>"><?= htmlspecialchars($ev['name']) ?></a>
                                 <?php if ($ev['subtitle']): ?><br><span class="muted"><?= htmlspecialchars($ev['subtitle']) ?></span><?php endif; ?>
                             </td>
                             <td><?= $ev['event_date'] ? htmlspecialchars($ev['event_date']) : '<span class="muted">—</span>' ?></td>
                             <td><span class="badge badge-<?= htmlspecialchars($ev['status']) ?>"><?= htmlspecialchars($ev['status']) ?></span></td>
                             <td class="row-actions">
-                                <a class="btn btn-small" href="/admin/event.php?id=<?= (int) $ev['id'] ?>">Configure</a>
+                                <a class="btn btn-small" href="event.php?id=<?= (int) $ev['id'] ?>">Configure</a>
                             </td>
                         </tr>
                     <?php endforeach; ?>

@@ -36,7 +36,7 @@ function acs_isEmptyDraft(array $event): bool
 $eventId = (int) ($_GET['id'] ?? 0);
 if ($eventId <= 0 || Event::find($eventId) === null) {
     Flash::error('That event could not be found.');
-    header('Location: /admin/index.php');
+    header('Location: ' . relative_url('/admin/index.php'));
     exit;
 }
 
@@ -64,7 +64,7 @@ require __DIR__ . '/includes/header.php';
         </p>
     </div>
     <div>
-        <a href="/admin/index.php" class="btn btn-small">&larr; All events</a>
+        <a href="index.php" class="btn btn-small">&larr; All events</a>
     </div>
 </div>
 
@@ -90,7 +90,7 @@ require __DIR__ . '/includes/header.php';
     <div class="two-col">
         <div class="card">
             <h2>Event details</h2>
-            <form method="post" action="/admin/actions/event_save.php" enctype="multipart/form-data">
+            <form method="post" action="actions/event_save.php" enctype="multipart/form-data">
                 <?= Csrf::field() ?>
                 <input type="hidden" name="event_id" value="<?= $eventId ?>">
                 <div class="field">
@@ -111,7 +111,7 @@ require __DIR__ . '/includes/header.php';
                     <div class="field">
                         <label for="logo">Event logo</label>
                         <?php if (!empty($event['logo_path'])): ?>
-                            <img class="thumb-lg" id="logo-preview" src="/<?= htmlspecialchars($event['logo_path']) ?>" alt="Current logo">
+                            <img class="thumb-lg" id="logo-preview" src="../<?= htmlspecialchars($event['logo_path']) ?>" alt="Current logo">
                             <label class="checkbox"><input type="checkbox" name="remove_logo" value="1"> Remove current logo</label>
                         <?php else: ?>
                             <img class="thumb-lg" id="logo-preview" style="display:none;" alt="Logo preview">
@@ -122,7 +122,7 @@ require __DIR__ . '/includes/header.php';
                     <div class="field">
                         <label for="cover_image">Cover photo</label>
                         <?php if (!empty($event['cover_image_path'])): ?>
-                            <img class="thumb-lg" id="cover-preview" src="/<?= htmlspecialchars($event['cover_image_path']) ?>" alt="Current cover">
+                            <img class="thumb-lg" id="cover-preview" src="../<?= htmlspecialchars($event['cover_image_path']) ?>" alt="Current cover">
                             <label class="checkbox"><input type="checkbox" name="remove_cover" value="1"> Remove current cover</label>
                         <?php else: ?>
                             <img class="thumb-lg" id="cover-preview" style="display:none;" alt="Cover preview">
@@ -140,7 +140,7 @@ require __DIR__ . '/includes/header.php';
             <h2>Status</h2>
             <p class="muted">Current status: <span class="badge badge-<?= htmlspecialchars($event['status']) ?>"><?= htmlspecialchars($event['status']) ?></span></p>
 
-            <form method="post" action="/admin/actions/event_status.php" class="btn-row" style="flex-wrap:wrap;">
+            <form method="post" action="actions/event_status.php" class="btn-row" style="flex-wrap:wrap;">
                 <?= Csrf::field() ?>
                 <input type="hidden" name="event_id" value="<?= $eventId ?>">
                 <?php foreach (acs_availableTransitions($event['status']) as $target): ?>
@@ -154,7 +154,7 @@ require __DIR__ . '/includes/header.php';
 
             <h3>Danger zone</h3>
             <?php if (acs_isEmptyDraft($event)): ?>
-                <form method="post" action="/admin/actions/event_delete.php"
+                <form method="post" action="actions/event_delete.php"
                       onsubmit="return confirm('Permanently delete this event? This cannot be undone.');">
                     <?= Csrf::field() ?>
                     <input type="hidden" name="event_id" value="<?= $eventId ?>">
@@ -162,7 +162,7 @@ require __DIR__ . '/includes/header.php';
                 </form>
                 <p class="hint">This event has no configured data yet, so it can be deleted outright.</p>
             <?php elseif ($event['status'] !== EventStatus::ARCHIVED): ?>
-                <form method="post" action="/admin/actions/event_status.php"
+                <form method="post" action="actions/event_status.php"
                       onsubmit="return confirm('Archive this event? It will be hidden from active use but its data and history are kept.');">
                     <?= Csrf::field() ?>
                     <input type="hidden" name="event_id" value="<?= $eventId ?>">
@@ -192,7 +192,7 @@ require __DIR__ . '/includes/header.php';
                         <tr>
                             <td class="row-actions">
                                 <?php if ($i > 0): ?>
-                                <form method="post" action="/admin/actions/category_reorder.php">
+                                <form method="post" action="actions/category_reorder.php">
                                     <?= Csrf::field() ?>
                                     <input type="hidden" name="event_id" value="<?= $eventId ?>">
                                     <input type="hidden" name="category_id" value="<?= (int) $cat['id'] ?>">
@@ -201,7 +201,7 @@ require __DIR__ . '/includes/header.php';
                                 </form>
                                 <?php endif; ?>
                                 <?php if ($i < count($event['categories']) - 1): ?>
-                                <form method="post" action="/admin/actions/category_reorder.php">
+                                <form method="post" action="actions/category_reorder.php">
                                     <?= Csrf::field() ?>
                                     <input type="hidden" name="event_id" value="<?= $eventId ?>">
                                     <input type="hidden" name="category_id" value="<?= (int) $cat['id'] ?>">
@@ -214,7 +214,7 @@ require __DIR__ . '/includes/header.php';
                             <td class="muted"><?= htmlspecialchars($cat['description'] ?? '') ?></td>
                             <td class="row-actions">
                                 <a class="btn btn-small" href="?id=<?= $eventId ?>&edit_category=<?= (int) $cat['id'] ?>#categories">Edit</a>
-                                <form method="post" action="/admin/actions/category_delete.php" data-confirm="Delete category &quot;<?= htmlspecialchars($cat['name'], ENT_QUOTES) ?>&quot;? Questions using it will become uncategorized.">
+                                <form method="post" action="actions/category_delete.php" data-confirm="Delete category &quot;<?= htmlspecialchars($cat['name'], ENT_QUOTES) ?>&quot;? Questions using it will become uncategorized.">
                                     <?= Csrf::field() ?>
                                     <input type="hidden" name="event_id" value="<?= $eventId ?>">
                                     <input type="hidden" name="category_id" value="<?= (int) $cat['id'] ?>">
@@ -230,7 +230,7 @@ require __DIR__ . '/includes/header.php';
 
         <div class="card">
             <h2><?= $editingCategory ? 'Edit category' : 'Add category' ?></h2>
-            <form method="post" action="/admin/actions/category_save.php">
+            <form method="post" action="actions/category_save.php">
                 <?= Csrf::field() ?>
                 <input type="hidden" name="event_id" value="<?= $eventId ?>">
                 <?php if ($editingCategory): ?><input type="hidden" name="category_id" value="<?= (int) $editingCategory['id'] ?>"><?php endif; ?>
@@ -268,7 +268,7 @@ require __DIR__ . '/includes/header.php';
                         <tr>
                             <td class="row-actions">
                                 <?php if ($i > 0): ?>
-                                <form method="post" action="/admin/actions/contestant_reorder.php">
+                                <form method="post" action="actions/contestant_reorder.php">
                                     <?= Csrf::field() ?><input type="hidden" name="event_id" value="<?= $eventId ?>">
                                     <input type="hidden" name="contestant_id" value="<?= (int) $c['id'] ?>">
                                     <input type="hidden" name="direction" value="up">
@@ -276,7 +276,7 @@ require __DIR__ . '/includes/header.php';
                                 </form>
                                 <?php endif; ?>
                                 <?php if ($i < count($event['contestants']) - 1): ?>
-                                <form method="post" action="/admin/actions/contestant_reorder.php">
+                                <form method="post" action="actions/contestant_reorder.php">
                                     <?= Csrf::field() ?><input type="hidden" name="event_id" value="<?= $eventId ?>">
                                     <input type="hidden" name="contestant_id" value="<?= (int) $c['id'] ?>">
                                     <input type="hidden" name="direction" value="down">
@@ -284,7 +284,7 @@ require __DIR__ . '/includes/header.php';
                                 </form>
                                 <?php endif; ?>
                             </td>
-                            <td><?php if (!empty($c['logo_path'])): ?><img class="thumb" src="/<?= htmlspecialchars($c['logo_path']) ?>" alt=""><?php endif; ?></td>
+                            <td><?php if (!empty($c['logo_path'])): ?><img class="thumb" src="../<?= htmlspecialchars($c['logo_path']) ?>" alt=""><?php endif; ?></td>
                             <td><?= htmlspecialchars($c['name']) ?></td>
                             <td class="muted"><?= htmlspecialchars($c['team_code'] ?? '') ?></td>
                             <td class="muted"><?= htmlspecialchars($c['organization'] ?? '') ?></td>
@@ -292,7 +292,7 @@ require __DIR__ . '/includes/header.php';
                             <td><?= ((int) $c['is_active']) ? 'Yes' : '<span class="muted">No</span>' ?></td>
                             <td class="row-actions">
                                 <a class="btn btn-small" href="?id=<?= $eventId ?>&edit_contestant=<?= (int) $c['id'] ?>#contestants">Edit</a>
-                                <form method="post" action="/admin/actions/contestant_delete.php" data-confirm="Remove &quot;<?= htmlspecialchars($c['name'], ENT_QUOTES) ?>&quot;? If it has recorded scores it will be deactivated instead of deleted, to preserve history.">
+                                <form method="post" action="actions/contestant_delete.php" data-confirm="Remove &quot;<?= htmlspecialchars($c['name'], ENT_QUOTES) ?>&quot;? If it has recorded scores it will be deactivated instead of deleted, to preserve history.">
                                     <?= Csrf::field() ?><input type="hidden" name="event_id" value="<?= $eventId ?>">
                                     <input type="hidden" name="contestant_id" value="<?= (int) $c['id'] ?>">
                                     <button type="submit" class="btn btn-small btn-danger">Remove</button>
@@ -307,7 +307,7 @@ require __DIR__ . '/includes/header.php';
 
         <div class="card">
             <h2><?= $editingContestant ? 'Edit contestant' : 'Add contestant' ?></h2>
-            <form method="post" action="/admin/actions/contestant_save.php" enctype="multipart/form-data">
+            <form method="post" action="actions/contestant_save.php" enctype="multipart/form-data">
                 <?= Csrf::field() ?>
                 <input type="hidden" name="event_id" value="<?= $eventId ?>">
                 <?php if ($editingContestant): ?><input type="hidden" name="contestant_id" value="<?= (int) $editingContestant['id'] ?>"><?php endif; ?>
@@ -331,7 +331,7 @@ require __DIR__ . '/includes/header.php';
                 <div class="field">
                     <label for="con_logo">Logo (optional)</label>
                     <?php if (!empty($editingContestant['logo_path'])): ?>
-                        <img class="thumb-lg" id="con-logo-preview" src="/<?= htmlspecialchars($editingContestant['logo_path']) ?>" alt="">
+                        <img class="thumb-lg" id="con-logo-preview" src="../<?= htmlspecialchars($editingContestant['logo_path']) ?>" alt="">
                         <label class="checkbox"><input type="checkbox" name="remove_logo" value="1"> Remove current logo</label>
                     <?php else: ?>
                         <img class="thumb-lg" id="con-logo-preview" style="display:none;" alt="">
@@ -375,7 +375,7 @@ require __DIR__ . '/includes/header.php';
                         <tr>
                             <td class="row-actions">
                                 <?php if ($i > 0): ?>
-                                <form method="post" action="/admin/actions/question_reorder.php">
+                                <form method="post" action="actions/question_reorder.php">
                                     <?= Csrf::field() ?><input type="hidden" name="event_id" value="<?= $eventId ?>">
                                     <input type="hidden" name="question_id" value="<?= (int) $q['id'] ?>">
                                     <input type="hidden" name="direction" value="up">
@@ -383,7 +383,7 @@ require __DIR__ . '/includes/header.php';
                                 </form>
                                 <?php endif; ?>
                                 <?php if ($i < count($event['questions']) - 1): ?>
-                                <form method="post" action="/admin/actions/question_reorder.php">
+                                <form method="post" action="actions/question_reorder.php">
                                     <?= Csrf::field() ?><input type="hidden" name="event_id" value="<?= $eventId ?>">
                                     <input type="hidden" name="question_id" value="<?= (int) $q['id'] ?>">
                                     <input type="hidden" name="direction" value="down">
@@ -391,7 +391,7 @@ require __DIR__ . '/includes/header.php';
                                 </form>
                                 <?php endif; ?>
                             </td>
-                            <td><img class="thumb" src="/<?= htmlspecialchars($q['image_path']) ?>" alt="Question <?= (int) $q['question_number'] ?>"></td>
+                            <td><img class="thumb" src="../<?= htmlspecialchars($q['image_path']) ?>" alt="Question <?= (int) $q['question_number'] ?>"></td>
                             <td>Q<?= (int) $q['question_number'] ?></td>
                             <td class="muted"><?= htmlspecialchars($catName) ?></td>
                             <td><?= $pts ?><?= $q['points'] === null ? ' <span class="muted">(default)</span>' : '' ?></td>
@@ -399,7 +399,7 @@ require __DIR__ . '/includes/header.php';
                             <td><?= ((int) $q['is_active']) ? 'Yes' : '<span class="muted">No</span>' ?></td>
                             <td class="row-actions">
                                 <a class="btn btn-small" href="?id=<?= $eventId ?>&edit_question=<?= (int) $q['id'] ?>#questions">Edit</a>
-                                <form method="post" action="/admin/actions/question_delete.php" data-confirm="Delete question Q<?= (int) $q['question_number'] ?>? If it has recorded scores it will be deactivated instead of deleted, to preserve history.">
+                                <form method="post" action="actions/question_delete.php" data-confirm="Delete question Q<?= (int) $q['question_number'] ?>? If it has recorded scores it will be deactivated instead of deleted, to preserve history.">
                                     <?= Csrf::field() ?><input type="hidden" name="event_id" value="<?= $eventId ?>">
                                     <input type="hidden" name="question_id" value="<?= (int) $q['id'] ?>">
                                     <button type="submit" class="btn btn-small btn-danger">Delete</button>
@@ -414,7 +414,7 @@ require __DIR__ . '/includes/header.php';
 
         <div class="card">
             <h2><?= $editingQuestion ? 'Edit question' : 'Add question' ?></h2>
-            <form method="post" action="/admin/actions/question_save.php" enctype="multipart/form-data">
+            <form method="post" action="actions/question_save.php" enctype="multipart/form-data">
                 <?= Csrf::field() ?>
                 <input type="hidden" name="event_id" value="<?= $eventId ?>">
                 <?php if ($editingQuestion): ?><input type="hidden" name="question_id" value="<?= (int) $editingQuestion['id'] ?>"><?php endif; ?>
@@ -458,7 +458,7 @@ require __DIR__ . '/includes/header.php';
                 <div class="field">
                     <label for="q_image">Question slide image <?= $editingQuestion ? '' : '*' ?></label>
                     <?php if (!empty($editingQuestion['image_path'])): ?>
-                        <img class="thumb-lg" id="q-image-preview" src="/<?= htmlspecialchars($editingQuestion['image_path']) ?>" alt="">
+                        <img class="thumb-lg" id="q-image-preview" src="../<?= htmlspecialchars($editingQuestion['image_path']) ?>" alt="">
                         <div class="hint">Upload a new file to replace the current slide.</div>
                     <?php else: ?>
                         <img class="thumb-lg" id="q-image-preview" style="display:none;" alt="">
@@ -486,7 +486,7 @@ require __DIR__ . '/includes/header.php';
 <div class="tab-panel" data-tab-panel="settings">
     <div class="card" style="max-width:640px;">
         <h2>Scoring &amp; timing defaults</h2>
-        <form method="post" action="/admin/actions/settings_save.php">
+        <form method="post" action="actions/settings_save.php">
             <?= Csrf::field() ?>
             <input type="hidden" name="event_id" value="<?= $eventId ?>">
             <input type="hidden" name="settings_id" value="<?= (int) $settings['id'] ?>">

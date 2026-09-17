@@ -16,7 +16,7 @@
 
     function apiGet(action, params) {
         var qs = new URLSearchParams(Object.assign({ action: action, event_id: eventId }, params || {}));
-        return fetch('/api/runtime.php?' + qs.toString(), { credentials: 'same-origin' })
+        return fetch('../api/runtime.php?' + qs.toString(), { credentials: 'same-origin' })
             .then(function (r) { return r.json(); });
     }
 
@@ -24,7 +24,7 @@
         var body = new URLSearchParams(Object.assign({
             action: action, event_id: eventId, csrf_token: csrfToken
         }, params || {}));
-        return fetch('/api/runtime.php', {
+        return fetch('../api/runtime.php', {
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -134,7 +134,7 @@
             document.getElementById('op-q-points').textContent = q.points;
             document.getElementById('op-q-time').textContent = q.time_seconds + 's';
             var img = document.getElementById('op-q-preview');
-            img.src = '/' + q.image_path;
+            img.src = '../' + q.image_path;
             img.style.display = '';
             document.getElementById('op-q-none').style.display = 'none';
         } else {

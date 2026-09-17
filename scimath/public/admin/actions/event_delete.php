@@ -3,7 +3,7 @@ require_once __DIR__ . '/../../../src/bootstrap.php';
 Auth::requireAdmin();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: /admin/index.php');
+    header('Location: ' . relative_url('/admin/index.php'));
     exit;
 }
 Csrf::verify();
@@ -12,7 +12,7 @@ $eventId = (int) ($_POST['event_id'] ?? 0);
 $event = Event::find($eventId);
 if ($event === null) {
     Flash::error('That event could not be found.');
-    header('Location: /admin/index.php');
+    header('Location: ' . relative_url('/admin/index.php'));
     exit;
 }
 
@@ -22,7 +22,7 @@ $hasData = Category::where(['event_id' => $eventId]) !== []
 
 if ($event['status'] !== EventStatus::DRAFT || $hasData) {
     Flash::error('Only empty draft events can be deleted. Archive this event instead to preserve its data.');
-    header('Location: /admin/event.php?id=' . $eventId . '#overview');
+    header('Location: ' . relative_url('/admin/event.php?id=' . $eventId . '#overview'));
     exit;
 }
 
@@ -33,4 +33,4 @@ Uploader::delete($event['cover_image_path']);
 Event::delete($eventId);
 
 Flash::success('Event deleted.');
-header('Location: /admin/index.php');
+header('Location: ' . relative_url('/admin/index.php'));

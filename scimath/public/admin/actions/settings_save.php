@@ -3,7 +3,7 @@ require_once __DIR__ . '/../../../src/bootstrap.php';
 Auth::requireAdmin();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: /admin/index.php');
+    header('Location: ' . relative_url('/admin/index.php'));
     exit;
 }
 Csrf::verify();
@@ -15,7 +15,7 @@ $settings = $event !== null ? EventSetting::forEvent($eventId) : null;
 
 if ($event === null || $settings === null || (int) $settings['id'] !== $settingsId) {
     Flash::error('That event/settings record could not be found.');
-    header('Location: /admin/index.php');
+    header('Location: ' . relative_url('/admin/index.php'));
     exit;
 }
 
@@ -27,7 +27,7 @@ $timerWarning = $v->optionalIntOrInherit($_POST, 'timer_warning_seconds', 'Timer
 
 if ($v->hasErrors()) {
     Flash::error('Please fix the highlighted errors: ' . implode(' ', $v->errors()));
-    header('Location: /admin/event.php?id=' . $eventId . '#settings');
+    header('Location: ' . relative_url('/admin/event.php?id=' . $eventId . '#settings'));
     exit;
 }
 
@@ -47,4 +47,4 @@ EventSetting::update($settingsId, [
 ]);
 
 Flash::success('Settings saved.');
-header('Location: /admin/event.php?id=' . $eventId . '#settings');
+header('Location: ' . relative_url('/admin/event.php?id=' . $eventId . '#settings'));

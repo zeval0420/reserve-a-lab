@@ -3,7 +3,7 @@ require_once __DIR__ . '/../../../src/bootstrap.php';
 Auth::requireAdmin();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: /admin/index.php');
+    header('Location: ' . relative_url('/admin/index.php'));
     exit;
 }
 Csrf::verify();
@@ -14,7 +14,7 @@ $questionId = (int) ($_POST['question_id'] ?? 0);
 $question = Question::find($questionId);
 if ($question === null || (int) $question['event_id'] !== $eventId) {
     Flash::error('That question could not be found for this event.');
-    header('Location: /admin/event.php?id=' . $eventId . '#questions');
+    header('Location: ' . relative_url('/admin/event.php?id=' . $eventId . '#questions'));
     exit;
 }
 
@@ -32,4 +32,4 @@ if ($hasScores) {
     Flash::success("Question Q{$question['question_number']} was deleted.");
 }
 
-header('Location: /admin/event.php?id=' . $eventId . '#questions');
+header('Location: ' . relative_url('/admin/event.php?id=' . $eventId . '#questions'));

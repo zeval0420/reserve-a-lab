@@ -15,7 +15,7 @@ require __DIR__ . '/../admin/includes/header.php';
 
 <div class="card">
     <?php if ($events === []): ?>
-        <p class="muted">No events are ready to run yet. <a href="/admin/index.php">Go to the admin panel</a> to configure one.</p>
+        <p class="muted">No events are ready to run yet. <a href="../admin/index.php">Go to the admin panel</a> to configure one.</p>
     <?php else: ?>
         <table>
             <thead><tr><th>Name</th><th>Date</th><th>Status</th><th></th></tr></thead>
@@ -25,7 +25,7 @@ require __DIR__ . '/../admin/includes/header.php';
                     <td><?= htmlspecialchars($ev['name']) ?></td>
                     <td><?= $ev['event_date'] ? htmlspecialchars($ev['event_date']) : '<span class="muted">—</span>' ?></td>
                     <td><span class="badge badge-<?= htmlspecialchars($ev['status']) ?>"><?= htmlspecialchars($ev['status']) ?></span></td>
-                    <td><a class="btn btn-primary btn-small" href="/operator/event.php?id=<?= (int) $ev['id'] ?>">Open control panel</a></td>
+                    <td><a class="btn btn-primary btn-small" href="event.php?id=<?= (int) $ev['id'] ?>">Open control panel</a></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>

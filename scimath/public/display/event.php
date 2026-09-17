@@ -23,7 +23,7 @@ $publicState = CompetitionRuntime::getPublicState($eventId);
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title><?= htmlspecialchars($event['name']) ?></title>
-<link rel="stylesheet" href="/assets/display.css">
+<link rel="stylesheet" href="../assets/display.css">
 </head>
 <body>
 
@@ -77,6 +77,6 @@ $publicState = CompetitionRuntime::getPublicState($eventId);
     <button type="button" id="disp-fullscreen-btn" class="disp-fullscreen-btn" title="Toggle fullscreen (F)">&#x26F6;</button>
 </div>
 
-<script src="/assets/display.js"></script>
+<script src="../assets/display.js"></script>
 </body>
 </html>
