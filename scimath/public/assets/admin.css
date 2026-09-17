@@ -73,8 +73,8 @@ a:hover { color: var(--primary); text-decoration: underline; }
 }
 .brand:hover { color: #ffffff; text-decoration: none; opacity: 0.9; }
 .brand img {
-    height: 36px;
-    width: 36px;
+    height: 28px;
+    width: 28px;
     border-radius: 50%;
     object-fit: contain;
     border: 1px solid rgba(255,255,255,0.3);
@@ -409,7 +409,7 @@ tr:last-child td { border-bottom: none; }
     margin-bottom: 1.5rem;
 }
 .logo-circle {
-    width: 52px; height: 52px;
+    width: 44px; height: 44px;
     border-radius: 50%;
     background: #fff;
     border: 1.5px solid var(--border);
