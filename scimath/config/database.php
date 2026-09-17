@@ -12,9 +12,9 @@ return [
     'driver'   => 'mysql',
     'host'     => getenv('DB_HOST') ?: '127.0.0.1',
     'port'     => getenv('DB_PORT') ?: '3306',
-    'database' => getenv('DB_DATABASE') ?: 'academic_competition',
-    'username' => getenv('DB_USERNAME') ?: 'acs_user',
-    'password' => getenv('DB_PASSWORD') ?: 'dev_password_change_me',
+    'database' => getenv('DB_DATABASE') ?: 'dbadmin',
+    'username' => getenv('DB_USERNAME') ?: 'root',
+    'password' => getenv('DB_PASSWORD') ?: '',
     'charset'  => 'utf8mb4',
     'collation' => 'utf8mb4_unicode_ci',
 ];
