@@ -195,7 +195,8 @@ function scilab_send_submission_confirmation($conn, $requestId) {
     if ($requesterName === ($data['requesterEmployeeID'] ?? '')) {
         $nameStmt = $conn->prepare("SELECT firstname, middlename, lastname FROM student WHERE LRN = ?");
         if ($nameStmt) {
-            $nameStmt->bind_param("s", $data['requesterEmployeeID'] ?? '');
+            $requesterLRN = (string)($data['requesterEmployeeID'] ?? '');
+            $nameStmt->bind_param("s", $requesterLRN);
             $nameStmt->execute();
             $row = $nameStmt->get_result()->fetch_assoc();
             $nameStmt->close();
@@ -351,7 +352,8 @@ function scilab_notify_stage_status($conn, $request, $currentStage, $event, $rea
     if ($requesterName === $request['requesterEmployeeID']) {
         $nameStmt = $conn->prepare("SELECT firstname, middlename, lastname FROM student WHERE LRN = ?");
         if ($nameStmt) {
-            $nameStmt->bind_param("s", $request['requesterEmployeeID']);
+            $requesterLRN = (string)$request['requesterEmployeeID'];
+            $nameStmt->bind_param("s", $requesterLRN);
             $nameStmt->execute();
             if ($row = $nameStmt->get_result()->fetch_assoc()) {
                 $requesterName = trim(($row['firstname'] ?? '') . ' ' . ($row['middlename'] ?? '') . ' ' . ($row['lastname'] ?? ''));
