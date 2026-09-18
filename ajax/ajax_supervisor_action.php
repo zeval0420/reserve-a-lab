@@ -317,40 +317,11 @@ function sendNotificationToSubjectTeacher($conn, $requestID) {
 
     if (!$data) return false;
 
-    // Resolve the AUH designation for this request's subject
-    $designation = scilab_auh_designation($conn, $data['subject'] ?? '', $data['gradeLevel'] ?? null);
-    if ($designation === null) {
-        error_log("No AUH designation resolvable for request {$requestID} (subject: " . ($data['subject'] ?? '') . ')');
-        return false;
-    }
-
-    // Get current school year
-    $syResult = $conn->query("SELECT value FROM current WHERE description = 'School Year' ORDER BY id DESC LIMIT 1");
-    if (!$syResult || !$sy = $syResult->fetch_assoc()['value'] ?? null) {
-        error_log("Unable to resolve current school year for request {$requestID}");
-        return false;
-    }
-
-    // Find designated AUH employee(s) for this school year
-    $auhStmt = $conn->prepare("SELECT DISTINCT employeeID FROM designation WHERE sy = ? AND designation = ?");
-    $auhStmt->bind_param("ss", $sy, $designation);
-    $auhStmt->execute();
-    $auhRes = $auhStmt->get_result();
-    $auhEmails = [];
-    while ($auh = $auhRes->fetch_assoc()) {
-        $empStmt = $conn->prepare("SELECT email FROM accounts WHERE employeeID = ? AND status = 'active'");
-        $empStmt->bind_param("s", $auh['employeeID']);
-        $empStmt->execute();
-        $empRes = $empStmt->get_result();
-        if ($emp = $empRes->fetch_assoc()) {
-            $auhEmails[] = $emp['email'];
-        }
-        $empStmt->close();
-    }
-    $auhStmt->close();
-
+    // Resolve active AUH email(s) for this request's subject (shared resolver).
+    $auhEmails = scilab_resolve_auh_emails($conn, $data['subject'] ?? '', $data['gradeLevel'] ?? null);
     if (empty($auhEmails)) {
-        error_log("No active AUH account found for {$designation} (SY {$sy})");
+        $designation = scilab_auh_designation($conn, $data['subject'] ?? '', $data['gradeLevel'] ?? null);
+        error_log("sendNotificationToSubjectTeacher: no active AUH email for request {$requestID} (subject: " . ($data['subject'] ?? '') . ", designation: " . ($designation ?? 'null') . ')');
         return false;
     }
 
@@ -751,6 +722,32 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
                 'students' => $studentList,
                 'requester' => $requesterName
             ], $teacherEmails, $formID);
+        }
+    }
+
+    // Send a confirmation email to the requester once the request is recorded.
+    scilab_send_submission_confirmation($conn, $formID);
+
+    // When a faculty/sysadmin submits, the supervisor stage is auto-approved at
+    // insert time, so the request must be pushed to the AUH exactly like a
+    // manual supervisor approval.
+    if ($isFacultyOrSysadmin) {
+        if (!sendNotificationToSubjectTeacher($conn, $formID)) {
+            $autoStmt = $conn->prepare("UPDATE scilab_form_requests SET subject_teacher_status = 'approved', subject_teacher_approved_at = NOW(), subject_teacher_approved_by = 'Auto-approved (no AUH resolved)' WHERE id = ?");
+            $autoStmt->bind_param("i", $formID);
+            $autoStmt->execute();
+            $autoStmt->close();
+
+            $reqStmt = $conn->prepare("SELECT * FROM scilab_form_requests WHERE id = ?");
+            $reqStmt->bind_param("i", $formID);
+            $reqStmt->execute();
+            $reqRow = $reqStmt->get_result()->fetch_assoc();
+            $reqStmt->close();
+
+            if ($reqRow) {
+                scilab_notify_stage_status($conn, $reqRow, 'subject_teacher', 'approve');
+                sendNotificationToAdmins($conn, $formID);
+            }
         }
     }
 

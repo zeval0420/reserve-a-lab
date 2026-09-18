@@ -158,7 +158,7 @@ if (!function_exists('scilab_auh_designation')) {
      */
     function scilab_auh_designation($conn, $subject, $gradeLevel = null)
     {
-        $subject = trim((string)$subject);
+        $subject = trim(preg_replace('/\s+/', ' ', (string)$subject));
         if ($subject === '') {
             return null;
         }
@@ -207,6 +207,7 @@ if (!function_exists('scilab_auh_designation')) {
             }
         }
 
+        error_log("scilab_auh_designation: no AUH designation resolvable for subject '{$subject}' (grade {$gradeLevel})");
         return null;
     }
 }

@@ -35,6 +35,7 @@ require '../PHPMailer/src/SMTP.php';
 include('../../scilab/helperFiles/db_connection.php');
 include('../helperFiles/session_handler.php');
 include('../helperFiles/variableDeclarations.php');
+include_once('../helperFiles/scilab_email.php');
 
 function formatTime($time)
 {
@@ -335,6 +336,9 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
             ], $teacherEmails, $formID);
         }
     }
+
+    // Send a confirmation email to the requester once the request is recorded.
+    scilab_send_submission_confirmation($conn, $formID);
 
     sendSubmissionNotificationToAdmins($conn, [
         'scilabName' => $scilabName,

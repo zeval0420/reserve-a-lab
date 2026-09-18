@@ -16,28 +16,47 @@ require_once __DIR__ . '/../PHPMailer/src/PHPMailer.php';
 require_once __DIR__ . '/../PHPMailer/src/SMTP.php';
 
 function scilab_resolve_requester_email($conn, $requesterID) {
-    $email = null;
+    $requesterID = trim((string)$requesterID);
+    if ($requesterID === '') {
+        return null;
+    }
+
+    // If the identifier is itself an email address, use it directly.
+    if (filter_var($requesterID, FILTER_VALIDATE_EMAIL)) {
+        return $requesterID;
+    }
+
+    // Faculty / personnel accounts.
     $stmt = $conn->prepare("SELECT email FROM accounts WHERE employeeID = ?");
     if ($stmt) {
         $stmt->bind_param("s", $requesterID);
         $stmt->execute();
         if ($row = $stmt->get_result()->fetch_assoc()) {
-            $email = $row['email'];
+            $email = trim($row['email'] ?? '');
+            if ($email !== '') {
+                $stmt->close();
+                return $email;
+            }
         }
         $stmt->close();
     }
-    if (!$email) {
-        $stmt = $conn->prepare("SELECT email FROM student WHERE LRN = ?");
-        if ($stmt) {
-            $stmt->bind_param("s", $requesterID);
-            $stmt->execute();
-            if ($row = $stmt->get_result()->fetch_assoc()) {
-                $email = $row['email'];
+
+    // Students: the email lives in student_directory, joined to student by LRN.
+    $stmt = $conn->prepare("SELECT d.studentEmail AS email FROM student_directory d JOIN student s ON d.LRN = s.LRN WHERE s.LRN = ?");
+    if ($stmt) {
+        $stmt->bind_param("s", $requesterID);
+        $stmt->execute();
+        if ($row = $stmt->get_result()->fetch_assoc()) {
+            $email = trim($row['email'] ?? '');
+            if ($email !== '') {
+                $stmt->close();
+                return $email;
             }
-            $stmt->close();
         }
+        $stmt->close();
     }
-    return $email ?: null;
+
+    return null;
 }
 
 function scilab_resolve_teacher_in_charge_emails($conn, $teacherInCharge) {
@@ -106,6 +125,114 @@ function scilab_resolve_cid_chief_emails($conn) {
         }
     }
     return array_unique($emails);
+}
+
+function scilab_send_submission_confirmation($conn, $requestId) {
+    $requestId = intval($requestId);
+    if ($requestId <= 0) return;
+
+    $stmt = $conn->prepare("SELECT * FROM scilab_form_requests WHERE id = ?");
+    if (!$stmt) return;
+    $stmt->bind_param("i", $requestId);
+    $stmt->execute();
+    $data = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if (!$data) return;
+
+    $requesterEmail = scilab_resolve_requester_email($conn, $data['requesterEmployeeID'] ?? '');
+    if (!$requesterEmail) return;
+
+    // Resolve the requester display name (accounts first, then student table).
+    $requesterName = $data['requesterEmployeeID'] ?? '';
+    $nameStmt = $conn->prepare("SELECT firstname, middlename, lastname FROM accounts WHERE employeeID = ?");
+    if ($nameStmt) {
+        $nameStmt->bind_param("s", $requesterName);
+        $nameStmt->execute();
+        $row = $nameStmt->get_result()->fetch_assoc();
+        $nameStmt->close();
+        if ($row) {
+            $requesterName = trim(($row['firstname'] ?? '') . ' ' . ($row['middlename'] ?? '') . ' ' . ($row['lastname'] ?? ''));
+        }
+    }
+    if ($requesterName === ($data['requesterEmployeeID'] ?? '')) {
+        $nameStmt = $conn->prepare("SELECT firstname, middlename, lastname FROM student WHERE LRN = ?");
+        if ($nameStmt) {
+            $nameStmt->bind_param("s", $data['requesterEmployeeID'] ?? '');
+            $nameStmt->execute();
+            $row = $nameStmt->get_result()->fetch_assoc();
+            $nameStmt->close();
+            if ($row) {
+                $requesterName = trim(($row['firstname'] ?? '') . ' ' . ($row['middlename'] ?? '') . ' ' . ($row['lastname'] ?? ''));
+            }
+        }
+    }
+
+    // Fetch requested materials.
+    $materialsStr = '';
+    $matStmt = $conn->prepare("SELECT quantity, unit, item, description FROM scilab_material_requests WHERE formID = ?");
+    if ($matStmt) {
+        $matStmt->bind_param("i", $requestId);
+        $matStmt->execute();
+        $materials = [];
+        while ($row = $matStmt->get_result()->fetch_assoc()) {
+            $materials[] = "{$row['quantity']} {$row['unit']} of {$row['item']} ({$row['description']})";
+        }
+        $matStmt->close();
+        $materialsStr = implode('; ', $materials);
+    }
+
+    // Fetch participating students.
+    $studentsStr = '';
+    $studStmt = $conn->prepare("SELECT student_name FROM scilab_students_involved WHERE formID = ?");
+    if ($studStmt) {
+        $studStmt->bind_param("i", $requestId);
+        $studStmt->execute();
+        $students = [];
+        while ($row = $studStmt->get_result()->fetch_assoc()) {
+            $students[] = $row['student_name'];
+        }
+        $studStmt->close();
+        $studentsStr = implode(', ', $students);
+    }
+
+    $templatePath = __DIR__ . '/../templates/request_confirmation_email_template.html';
+    if (file_exists($templatePath)) {
+        $bodyTemplate = file_get_contents($templatePath);
+    } else {
+        $bodyTemplate = '<p>Your laboratory request <strong>[Request ID]</strong> has been received and is now pending approval.</p>'
+            . '<p><strong>Facility:</strong> [Facility]<br>'
+            . '<strong>Requested By:</strong> [Requested By]<br>'
+            . '<strong>Date/Time:</strong> [Start Date] [End Date]</p>'
+            . '<p>You can track the progress of this request here: <a href="[TrackLink]">View Request Status</a></p>';
+    }
+
+    $replacements = [
+        '[Request ID]' => 'SLR-' . $requestId,
+        '[Facility]' => $data['scilabName'],
+        '[Grade Level]' => $data['gradeLevel'],
+        '[Section]' => $data['sections'],
+        '[Subject]' => $data['subject'],
+        '[Concurrent Topic]' => $data['subjectTopic'],
+        '[Unit]' => 'N/A',
+        '[Teacher Name]' => $data['teacherInCharge'],
+        '[Requested By]' => $requesterName,
+        '[Start Date]' => $data['inclusiveDate'],
+        '[End Date]' => $data['inclusiveTime'],
+        '[Materials]' => $materialsStr !== '' ? $materialsStr : 'N/A',
+        '[Group Members]' => $studentsStr !== '' ? $studentsStr : 'N/A',
+    ];
+
+    foreach ($replacements as $key => $val) {
+        $bodyTemplate = str_replace($key, htmlspecialchars((string)$val), $bodyTemplate);
+    }
+
+    global $active_server;
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? 'https://' : 'http://';
+    $baseURL = $protocol . ($_SERVER['HTTP_HOST'] ?? '') . '/' . ($active_server ?? '');
+    $trackLink = $baseURL . '/supervisor_approve.php?id=' . $requestId;
+    $bodyTemplate = str_replace('[TrackLink]', htmlspecialchars($trackLink), $bodyTemplate);
+
+    scilab_send_status_email([$requesterEmail], 'SciLab Request SLR-' . $requestId, $bodyTemplate);
 }
 
 function scilab_send_status_email($emails, $subject, $bodyHtml) {

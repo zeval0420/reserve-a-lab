@@ -40,7 +40,7 @@
                 </div>
                 <div class="mb-2 col-12 col-md-6 ">
                     <br />
-                    <p class="mt-2 mb-1 font-weight-bold" style="font-size: 16px; font-weight: bold;">RESEARCH PROJECT
+                    <p class="mt-2 mb-1 font-weight-bold" style="font-size: 16px; font-weight: bold;">FILIPINO PROJECT
                     </p>
                     <p class="mt-2 mb-1 font-weight-bold">Grade 12</p>
                     <br />
