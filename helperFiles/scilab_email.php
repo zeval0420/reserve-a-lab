@@ -17,12 +17,17 @@ require_once __DIR__ . '/../PHPMailer/src/SMTP.php';
 
 function scilab_resolve_requester_email($conn, $requesterID) {
     $requesterID = trim((string)$requesterID);
+
+    error_log("SciLab DEBUG - requesterEmployeeID received: [" . $requesterID . "]");
+
     if ($requesterID === '') {
+        error_log("SciLab DEBUG - requesterEmployeeID is empty.");
         return null;
     }
 
     // If the identifier is itself an email address, use it directly.
     if (filter_var($requesterID, FILTER_VALIDATE_EMAIL)) {
+        error_log("SciLab DEBUG - ID is already an email: [" . $requesterID . "]");
         return $requesterID;
     }
 
@@ -31,30 +36,58 @@ function scilab_resolve_requester_email($conn, $requesterID) {
     if ($stmt) {
         $stmt->bind_param("s", $requesterID);
         $stmt->execute();
-        if ($row = $stmt->get_result()->fetch_assoc()) {
+
+        $result = $stmt->get_result();
+
+        if ($row = $result->fetch_assoc()) {
             $email = trim($row['email'] ?? '');
+
+            error_log("SciLab DEBUG - accounts lookup found email: [" . $email . "]");
+
             if ($email !== '') {
                 $stmt->close();
                 return $email;
             }
+        } else {
+            error_log("SciLab DEBUG - No matching accounts.employeeID.");
         }
+
         $stmt->close();
     }
 
-    // Students: the email lives in student_directory, joined to student by LRN.
-    $stmt = $conn->prepare("SELECT d.studentEmail AS email FROM student_directory d JOIN student s ON d.LRN = s.LRN WHERE s.LRN = ?");
+    // Students.
+    $stmt = $conn->prepare("
+        SELECT d.studentEmail AS email
+        FROM student_directory d
+        JOIN student s ON d.LRN = s.LRN
+        WHERE s.LRN = ?
+    ");
+
     if ($stmt) {
         $stmt->bind_param("s", $requesterID);
         $stmt->execute();
-        if ($row = $stmt->get_result()->fetch_assoc()) {
+
+        $result = $stmt->get_result();
+
+        error_log("SciLab DEBUG - Student lookup returned " . $result->num_rows . " row(s).");
+
+        if ($row = $result->fetch_assoc()) {
             $email = trim($row['email'] ?? '');
+
+            error_log("SciLab DEBUG - Student email found: [" . $email . "]");
+
             if ($email !== '') {
                 $stmt->close();
                 return $email;
             }
+        } else {
+            error_log("SciLab DEBUG - No matching student LRN.");
         }
+
         $stmt->close();
     }
+
+    error_log("SciLab DEBUG - Email resolution FAILED for ID: [" . $requesterID . "]");
 
     return null;
 }
