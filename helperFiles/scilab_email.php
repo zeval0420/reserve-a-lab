@@ -56,6 +56,36 @@ function scilab_resolve_requester_email($conn, $requesterID) {
         $stmt->close();
     }
 
+    // Guests / student registered accounts: scilab_new_accounts stores a name but
+    // no email and its userID may not be the student's LRN. Resolve the name back
+    // into student_directory (via student) to recover the student's email.
+    $stmt = $conn->prepare("SELECT userID, username, firstname, lastname FROM scilab_new_accounts WHERE userID = ? OR username = ? LIMIT 1");
+    if ($stmt) {
+        $stmt->bind_param("ss", $requesterID, $requesterID);
+        $stmt->execute();
+        $guest = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        if ($guest
+            && trim($guest['firstname'] ?? '') !== ''
+            && trim($guest['lastname'] ?? '') !== '') {
+            $fn = $guest['firstname'];
+            $ln = $guest['lastname'];
+            $nameStmt = $conn->prepare("SELECT d.studentEmail AS email FROM student_directory d JOIN student s ON d.LRN = s.LRN WHERE LOWER(TRIM(s.firstname)) = LOWER(TRIM(?)) AND LOWER(TRIM(s.lastname)) = LOWER(TRIM(?)) LIMIT 1");
+            if ($nameStmt) {
+                $nameStmt->bind_param("ss", $fn, $ln);
+                $nameStmt->execute();
+                if ($row = $nameStmt->get_result()->fetch_assoc()) {
+                    $email = trim($row['email'] ?? '');
+                    if ($email !== '') {
+                        $nameStmt->close();
+                        return $email;
+                    }
+                }
+                $nameStmt->close();
+            }
+        }
+    }
+
     return null;
 }
 
@@ -145,6 +175,9 @@ function scilab_send_submission_confirmation($conn, $requestId) {
     if (!$data) return;
 
     $requesterEmail = scilab_resolve_requester_email($conn, $data['requesterEmployeeID'] ?? '');
+    if (!$requesterEmail && !empty($_SESSION['email'])) {
+        $requesterEmail = trim($_SESSION['email']);
+    }
     if (!$requesterEmail) return;
 
     // Resolve the requester display name (accounts first, then student table).
@@ -163,6 +196,18 @@ function scilab_send_submission_confirmation($conn, $requestId) {
         $nameStmt = $conn->prepare("SELECT firstname, middlename, lastname FROM student WHERE LRN = ?");
         if ($nameStmt) {
             $nameStmt->bind_param("s", $data['requesterEmployeeID'] ?? '');
+            $nameStmt->execute();
+            $row = $nameStmt->get_result()->fetch_assoc();
+            $nameStmt->close();
+            if ($row) {
+                $requesterName = trim(($row['firstname'] ?? '') . ' ' . ($row['middlename'] ?? '') . ' ' . ($row['lastname'] ?? ''));
+            }
+        }
+    }
+    if ($requesterName === ($data['requesterEmployeeID'] ?? '')) {
+        $nameStmt = $conn->prepare("SELECT firstname, middlename, lastname, userID, username FROM scilab_new_accounts WHERE userID = ? OR username = ? LIMIT 1");
+        if ($nameStmt) {
+            $nameStmt->bind_param("ss", $data['requesterEmployeeID'] ?? '', $data['requesterEmployeeID'] ?? '');
             $nameStmt->execute();
             $row = $nameStmt->get_result()->fetch_assoc();
             $nameStmt->close();
