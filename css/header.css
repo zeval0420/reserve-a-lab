@@ -113,10 +113,20 @@
     overflow: hidden;
 }
 
-/* ─── 6. NAV LEFT (calendar button) ────────────────────────── */
+/* ─── 6. NAV LEFT (calendar button + current user) ─────────── */
 .nav-left {
     margin-left: 0;
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.nav-user-name {
+    color: #333;
+    font-size: 15px;
+    font-weight: 600;
+    white-space: nowrap;
 }
 
 /* ─── 7. NAV LIST ───────────────────────────────────────────── */

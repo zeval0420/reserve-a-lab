@@ -65,6 +65,7 @@
         <button type="button" class="btn-liquid" id="openCalendarBtn">
             View Calendar
         </button>
+        <span class="nav-user-name"><?php echo htmlspecialchars($_SESSION['username'] ?? ''); ?></span>
     </div>
 
     <?php include('calendar.php'); ?>
