@@ -76,9 +76,8 @@ function scilab_resolve_teacher_in_charge_emails($conn, $teacherInCharge) {
     return array_unique($emails);
 }
 
-function scilab_resolve_auh_emails($conn, $subject, $gradeLevel = null) {
-    $designation = scilab_auh_designation($conn, $subject, $gradeLevel);
-    if ($designation === null) return [];
+function scilab_resolve_auh_emails($conn, $unit, $gradeLevel = null) {
+    $designation = 'AUH-' . $unit;
 
     $syResult = $conn->query("SELECT value FROM current WHERE description = 'School Year' ORDER BY id DESC LIMIT 1");
     $sy = ($syResult && $syResult->num_rows > 0) ? $syResult->fetch_assoc()['value'] : null;
@@ -87,21 +86,27 @@ function scilab_resolve_auh_emails($conn, $subject, $gradeLevel = null) {
     $emails = [];
     $auhStmt = $conn->prepare("SELECT DISTINCT employeeID FROM designation WHERE sy = ? AND designation = ?");
     if (!$auhStmt) return $emails;
+
     $auhStmt->bind_param("ss", $sy, $designation);
     $auhStmt->execute();
     $auhRes = $auhStmt->get_result();
+
     while ($auh = $auhRes->fetch_assoc()) {
         $emp = $conn->prepare("SELECT email FROM accounts WHERE employeeID = ? AND status = 'active'");
         if ($emp) {
             $emp->bind_param("s", $auh['employeeID']);
             $emp->execute();
+
             if ($row = $emp->get_result()->fetch_assoc()) {
                 $emails[] = $row['email'];
             }
+
             $emp->close();
         }
     }
+
     $auhStmt->close();
+
     return array_unique($emails);
 }
 

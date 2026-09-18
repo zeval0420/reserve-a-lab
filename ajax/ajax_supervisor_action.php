@@ -320,7 +320,7 @@ function sendNotificationToSubjectTeacher($conn, $requestID) {
     // Resolve active AUH email(s) for this request's subject (shared resolver).
     $auhEmails = scilab_resolve_auh_emails($conn, $data['unit'] ?? '', $data['gradeLevel'] ?? null);
     if (empty($auhEmails)) {
-        $designation = scilab_auh_designation($conn, $data['unit'] ?? '', $data['gradeLevel'] ?? null);
+        $designation = 'AUH-' . ($data['unit'] ?? '');
         error_log("sendNotificationToSubjectTeacher: no active AUH email for request {$requestID} (subject: " . ($data['unit'] ?? '') . ", designation: " . ($designation ?? 'null') . ')');
         return false;
     }
