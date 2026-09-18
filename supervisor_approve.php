@@ -1527,6 +1527,13 @@ function getStepIcon($class)
         /* ==
            APPROVE HANDLER (SIMULATED)
         ============================================================ */
+        function reloadPage() {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('refresh');
+            url.searchParams.set('refresh', Date.now());
+            window.location.href = url.toString();
+        }
+
         async function executeAction(action, reason = null) {
             try {
                 const response = await fetch('ajax/ajax_supervisor_action.php', {
@@ -1538,7 +1545,9 @@ function getStepIcon($class)
                 if (data.success) {
                     closeModal();
                     showApprovalToast('✓ ' + (data.message || 'Action completed successfully.'), 'success');
-                    setTimeout(() => location.reload(), 1500);
+                    setTimeout(reloadPage, 800);
+                } else {
+                    showApprovalToast('✗ ' + (data.message || 'Action could not be completed.'), 'error');
                 }
             } catch (error) {
                 showApprovalToast('✗ Network error occurred.', 'error');

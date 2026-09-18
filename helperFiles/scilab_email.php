@@ -341,6 +341,7 @@ function scilab_notify_stage_status($conn, $request, $currentStage, $event, $rea
     // Unified subject for all recipients
     $unifiedSubject = 'SciLab Request SLR-' . intval($id);
 
+    
     // --- Student / requester ---
     $requesterEmail = scilab_resolve_requester_email($conn, $request['requesterEmployeeID'] ?? '');
     if ($requesterEmail) {
