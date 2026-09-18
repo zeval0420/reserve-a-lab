@@ -1,6 +1,5 @@
 <?php
 include('../scilab/helperFiles/db_connection.php');
-include('helperFiles/session_handler.php');
 include('helperFiles/variableDeclarations.php');
 
 $email = $_SESSION['email'] ?? null;
