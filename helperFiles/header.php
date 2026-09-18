@@ -94,13 +94,6 @@
                 </a>
             </li>
         <?php endif; ?>
-        <?php if ($role === 'requestor' || $role === 'student'): ?>
-            <li>
-                <a href="forms.php" class="nav-link <?php echo ($currentPage === 'forms.php') ? 'active' : ''; ?>">
-                    Forms
-                </a>
-            </li>
-        <?php endif; ?>
     </ul>
 </nav>
 

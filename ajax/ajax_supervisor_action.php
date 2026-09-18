@@ -574,7 +574,7 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
     $syResult = $conn->query("SELECT value FROM current WHERE description = 'School Year' ORDER BY id DESC LIMIT 1");
     $schoolYear = ($syResult && $syResult->num_rows > 0) ? $syResult->fetch_assoc()['value'] : 'N/A';
 
-    $requesterID = $_SESSION['employeeID'] ?? $_SESSION['student_lrn'] ?? '';
+    $requesterID = $_POST['employee_id'] ?? $_SESSION['employeeID'] ?? $_SESSION['student_lrn'] ?? '';
     $dateRequested = date('Y-m-d H:i:s');
 
     $isFacultyOrSysadmin = false;
