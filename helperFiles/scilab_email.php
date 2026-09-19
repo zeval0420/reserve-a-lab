@@ -178,6 +178,9 @@ function scilab_send_submission_confirmation($conn, $requestId) {
     if (!$data) return;
 
     $requesterEmail = scilab_resolve_requester_email($conn, $data['requesterEmployeeID'] ?? '');
+    if (!$requesterEmail && !empty($_SESSION['email'])) {
+        $requesterEmail = trim($_SESSION['email']);
+    }
     if (!$requesterEmail) return;
 
     // Resolve the requester display name (accounts first, then student table).
@@ -252,7 +255,7 @@ function scilab_send_submission_confirmation($conn, $requestId) {
         '[Section]' => $data['sections'],
         '[Subject]' => $data['subject'],
         '[Concurrent Topic]' => $data['subjectTopic'],
-        '[Unit]' => 'N/A',
+        '[Unit]' => $data['subjectAcademicUnit'] ?? 'N/A',
         '[Teacher Name]' => $data['teacherInCharge'],
         '[Requested By]' => $requesterName,
         '[Start Date]' => $data['inclusiveDate'],
@@ -399,7 +402,7 @@ function scilab_notify_stage_status($conn, $request, $currentStage, $event, $rea
             return scilab_resolve_teacher_in_charge_emails($conn, $request['teacherInCharge'] ?? '');
         },
         'subject_teacher' => function () use ($conn, $request) {
-            return scilab_resolve_auh_emails($conn, $request['subject'] ?? '', $request['gradeLevel'] ?? null);
+            return scilab_resolve_auh_emails($conn, $request['subjectAcademicUnit'] ?? '', $request['gradeLevel'] ?? null);
         },
         'lab_personnel' => function () use ($conn) {
             return scilab_resolve_lab_personnel_emails($conn);

@@ -318,10 +318,10 @@ function sendNotificationToSubjectTeacher($conn, $requestID) {
     if (!$data) return false;
 
     // Resolve active AUH email(s) for this request's subject (shared resolver).
-    $auhEmails = scilab_resolve_auh_emails($conn, $data['unit'] ?? '', $data['gradeLevel'] ?? null);
+    $auhEmails = scilab_resolve_auh_emails($conn, $data['subjectAcademicUnit'] ?? '', $data['gradeLevel'] ?? null);
     if (empty($auhEmails)) {
-        $designation = 'AUH-' . ($data['unit'] ?? '');
-        error_log("sendNotificationToSubjectTeacher: no active AUH email for request {$requestID} (subject: " . ($data['unit'] ?? '') . ", designation: " . ($designation ?? 'null') . ')');
+        $designation = 'AUH-' . ($data['subjectAcademicUnit'] ?? '');
+        error_log("sendNotificationToSubjectTeacher: no active AUH email for request {$requestID} (subject: " . ($data['subjectAcademicUnit'] ?? '') . ", designation: " . ($designation ?? 'null') . ')');
         return false;
     }
 
@@ -609,6 +609,7 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
         gradeLevel,
         sections,
         subject,
+        subjectAcademicUnit,
         subjectTopic,
         inclusiveDate,
         inclusiveTime,
@@ -623,17 +624,18 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
         cid_chief_status,
         supervisor_approved_at,
         supervisor_approved_by
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
     $initialSupervisorApprovedAt = $isFacultyOrSysadmin ? date('Y-m-d H:i:s') : null;
     $initialSupervisorApprovedBy = $isFacultyOrSysadmin ? $requesterNameInitial : null;
 
     $stmt->bind_param(
-        "sissssssssssssssss",
+        "sisssssssssssssssss",
         $scilabName,
         $grade,
         $sections,
         $subject,
+        $unit,
         $topic,
         $startDate,
         $formattedTime,
