@@ -135,7 +135,7 @@ function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails
         "[Section]" => $data['section'],
         "[Subject]" => $data['subject'],
         "[Concurrent Topic]" => $data['topic'],
-        "[Unit]" => $data['subjectAcademicUnit'],
+        "[Unit]" => $data['unit'],
         "[Teacher Name]" => $data['teacher'],
         "[Requested By]" => $data['requester'],
         "[Start Date]" => $data['inclusiveDate'],
