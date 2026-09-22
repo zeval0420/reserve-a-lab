@@ -15,6 +15,26 @@ require_once __DIR__ . '/../PHPMailer/src/Exception.php';
 require_once __DIR__ . '/../PHPMailer/src/PHPMailer.php';
 require_once __DIR__ . '/../PHPMailer/src/SMTP.php';
 
+function scilab_is_faculty_requester($conn, $requesterID) {
+    $requesterID = trim((string)$requesterID);
+    if ($requesterID === '') return false;
+    $stmt = $conn->prepare("SELECT type, position FROM accounts WHERE employeeID = ? OR email = ? LIMIT 1");
+    if (!$stmt) return false;
+    $stmt->bind_param("ss", $requesterID, $requesterID);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $isFaculty = false;
+    if ($row = $res->fetch_assoc()) {
+        $type = strtolower(trim($row['type'] ?? ''));
+        $pos = strtolower(trim($row['position'] ?? ''));
+        if ($type === 'faculty' || $type === 'sysadmin' || $pos === 'teacher' || (!empty($type) && $type !== 'student')) {
+            $isFaculty = true;
+        }
+    }
+    $stmt->close();
+    return $isFaculty;
+}
+
 function scilab_resolve_requester_name($conn, $requesterID) {
     $requesterID = trim((string)$requesterID);
     if ($requesterID === '') return 'Unknown Requester';

@@ -533,27 +533,26 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
     $requesterID = $_POST['employee_id'] ?? $_SESSION['employeeID'] ?? $_SESSION['student_lrn'] ?? $_SESSION['email'] ?? $_SESSION['username'] ?? '';
     $dateRequested = date('Y-m-d H:i:s');
 
-    $isFacultyOrSysadmin = false;
-    $requesterEmail = $_SESSION['email'] ?? '';
-    if (!empty($requesterEmail)) {
-        $typeStmt = $conn->prepare("SELECT type FROM accounts WHERE email = ? LIMIT 1");
-        $typeStmt->bind_param("s", $requesterEmail);
-        $typeStmt->execute();
-        $typeResult = $typeStmt->get_result();
-
-        if ($typeRow = $typeResult->fetch_assoc()) {
-            $accountType = strtolower(trim($typeRow['type'] ?? ''));
-
-            if ($accountType === 'faculty' || $accountType === 'sysadmin') {
-                $isFacultyOrSysadmin = true;
+    $isFacultyOrSysadmin = scilab_is_faculty_requester($conn, $requesterID);
+    if (!$isFacultyOrSysadmin && !empty($_SESSION['email'])) {
+        $typeStmt = $conn->prepare("SELECT type, position FROM accounts WHERE email = ? LIMIT 1");
+        if ($typeStmt) {
+            $typeStmt->bind_param("s", $_SESSION['email']);
+            $typeStmt->execute();
+            if ($typeRow = $typeStmt->get_result()->fetch_assoc()) {
+                $accountType = strtolower(trim($typeRow['type'] ?? ''));
+                $accountPos = strtolower(trim($typeRow['position'] ?? ''));
+                if ($accountType === 'faculty' || $accountType === 'sysadmin' || $accountPos === 'teacher' || (!empty($accountType) && $accountType !== 'student')) {
+                    $isFacultyOrSysadmin = true;
+                }
             }
+            $typeStmt->close();
         }
-        $typeStmt->close();
     }
 
     $statusScilabPersonnel = 'Pending';
     $initialLabPersonnelStatus = 'pending';
-    $initialCidChiefStatus = 'pending';
+    $initialCidChiefStatus = $isFacultyOrSysadmin ? 'approved' : 'pending';
     $initialSubjectTeacherStatus = 'pending';
 
     $initialSupervisorStatus = $isFacultyOrSysadmin ? 'approved' : 'pending';
@@ -579,14 +578,18 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
         lab_personnel_status,
         cid_chief_status,
         supervisor_approved_at,
-        supervisor_approved_by
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        supervisor_approved_by,
+        cid_chief_approved_at,
+        cid_chief_approved_by
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
     $initialSupervisorApprovedAt = $isFacultyOrSysadmin ? date('Y-m-d H:i:s') : null;
     $initialSupervisorApprovedBy = $isFacultyOrSysadmin ? $requesterNameInitial : null;
+    $initialCidChiefApprovedAt = $isFacultyOrSysadmin ? date('Y-m-d H:i:s') : null;
+    $initialCidChiefApprovedBy = $isFacultyOrSysadmin ? 'Auto-approved (Teacher request)' : null;
 
     $stmt->bind_param(
-        "sisssssssssssssssss",
+        "sisssssssssssssssssss",
         $scilabName,
         $grade,
         $sections,
@@ -605,7 +608,9 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
         $initialLabPersonnelStatus,
         $initialCidChiefStatus,
         $initialSupervisorApprovedAt,
-        $initialSupervisorApprovedBy
+        $initialSupervisorApprovedBy,
+        $initialCidChiefApprovedAt,
+        $initialCidChiefApprovedBy
     );
 
     if (!$stmt->execute()) {
@@ -649,7 +654,9 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
         $requesterName = trim(($_SESSION['firstname'] ?? '') . ' ' . ($_SESSION['middlename'] ?? '') . ' ' . ($_SESSION['lastname'] ?? ''));
     }
 
-    if (!empty($teacher)) {
+    // For Student requests: Notify Supervisor / Teacher-in-Charge.
+    // For Teacher requests: Supervisor stage is auto-approved by default, so skip supervisor email.
+    if (!$isFacultyOrSysadmin && !empty($teacher)) {
         $teacherEmails = scilab_resolve_teacher_in_charge_emails($conn, $teacher);
 
         if (!empty($teacherEmails)) {
@@ -673,9 +680,8 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
     // Send a confirmation email to the requester once the request is recorded.
     scilab_send_submission_confirmation($conn, $formID);
 
-    // When a faculty/sysadmin submits, the supervisor stage is auto-approved at
-    // insert time, so the request must be pushed to the AUH exactly like a
-    // manual supervisor approval.
+    // For Teacher requests: Supervisor stage is auto-approved at submit time,
+    // so the submission immediately emails the next action taker (AUH).
     if ($isFacultyOrSysadmin) {
         if (!sendNotificationToSubjectTeacher($conn, $formID)) {
             $autoStmt = $conn->prepare("UPDATE scilab_form_requests SET subject_teacher_status = 'approved', subject_teacher_approved_at = NOW(), subject_teacher_approved_by = 'Auto-approved (no AUH resolved)' WHERE id = ?");
@@ -874,8 +880,21 @@ if ($updateStmt->execute()) {
         scilab_notify_stage_status($conn, $request, 'subject_teacher', 'approve');
         sendNotificationToAdmins($conn, $requestId);
     } elseif ($fieldPrefix === 'lab_personnel' && $action === 'approve') {
-        scilab_notify_stage_status($conn, $request, 'lab_personnel', 'approve');
-        sendNotificationToCIDChief($conn, $requestId);
+        $isTeacherReq = scilab_is_faculty_requester($conn, $request['requesterEmployeeID'] ?? '');
+        if ($isTeacherReq) {
+            // For teachers, Lab Personnel is the second and last approval needed. CID Chief is bypassed.
+            $finalStmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Approved', cid_chief_status = 'approved', cid_chief_approved_at = NOW(), cid_chief_approved_by = 'Auto-approved (Teacher request)' WHERE id = ?");
+            if ($finalStmt) {
+                $finalStmt->bind_param("i", $requestId);
+                $finalStmt->execute();
+                $finalStmt->close();
+            }
+            scilab_deduct_inventory($conn, $requestId);
+            scilab_notify_stage_status($conn, $request, 'lab_personnel', 'approve');
+        } else {
+            scilab_notify_stage_status($conn, $request, 'lab_personnel', 'approve');
+            sendNotificationToCIDChief($conn, $requestId);
+        }
     } elseif ($action === 'reject') {
         scilab_notify_stage_status($conn, $request, $fieldPrefix, 'reject', $reason);
     }

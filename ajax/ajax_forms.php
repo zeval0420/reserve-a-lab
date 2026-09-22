@@ -235,11 +235,19 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
     $requesterID = $_POST['employee_id'] ?? $_SESSION['employeeID'] ?? $_SESSION['student_lrn'] ?? $_SESSION['email'] ?? $_SESSION['username'] ?? '';
     $dateRequested = date('Y-m-d H:i:s');
 
-    $stmt = $conn->prepare("INSERT INTO scilab_form_requests (
-            scilabName, gradeLevel, sections, subject, subjectTopic, inclusiveDate, inclusiveTime, dateRequested, requesterEmployeeID, sy, teacherInCharge, statusScilabPersonnel, supervisor_status, subject_teacher_status, lab_personnel_status, cid_chief_status) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', 'pending', 'pending', 'pending', 'pending')");
+    $isFacultyOrSysadmin = scilab_is_faculty_requester($conn, $requesterID);
+    $initialSupervisorStatus = $isFacultyOrSysadmin ? 'approved' : 'pending';
+    $initialCidChiefStatus = $isFacultyOrSysadmin ? 'approved' : 'pending';
+    $initialSupervisorApprovedAt = $isFacultyOrSysadmin ? date('Y-m-d H:i:s') : null;
+    $initialSupervisorApprovedBy = $isFacultyOrSysadmin ? scilab_resolve_requester_name($conn, $requesterID) : null;
+    $initialCidChiefApprovedAt = $isFacultyOrSysadmin ? date('Y-m-d H:i:s') : null;
+    $initialCidChiefApprovedBy = $isFacultyOrSysadmin ? 'Auto-approved (Teacher request)' : null;
 
-    $stmt->bind_param("sisssssssss", $scilabName, $grade, $sections, $subject, $topic, $startDate, $formattedTime, $dateRequested, $requesterID, $schoolYear, $teacher);
+    $stmt = $conn->prepare("INSERT INTO scilab_form_requests (
+            scilabName, gradeLevel, sections, subject, subjectTopic, inclusiveDate, inclusiveTime, dateRequested, requesterEmployeeID, sy, teacherInCharge, statusScilabPersonnel, supervisor_status, subject_teacher_status, lab_personnel_status, cid_chief_status, supervisor_approved_at, supervisor_approved_by, cid_chief_approved_at, cid_chief_approved_by) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', ?, 'pending', 'pending', ?, ?, ?, ?, ?)");
+
+    $stmt->bind_param("sisssssssssssssssss", $scilabName, $grade, $sections, $subject, $topic, $startDate, $formattedTime, $dateRequested, $requesterID, $schoolYear, $teacher, $initialSupervisorStatus, $initialCidChiefStatus, $initialSupervisorApprovedAt, $initialSupervisorApprovedBy, $initialCidChiefApprovedAt, $initialCidChiefApprovedBy);
 
     if (!$stmt->execute()) {
         echo "error";
@@ -294,7 +302,9 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
         $requesterName = trim(($_SESSION['firstname'] ?? '') . ' ' . ($_SESSION['middlename'] ?? '') . ' ' . ($_SESSION['lastname'] ?? ''));
     }
 
-    if (!empty($teacher)) {
+    // For Student requests: Notify Supervisor / Teacher-in-Charge.
+    // For Teacher requests: Supervisor stage is auto-approved, so skip supervisor email.
+    if (!$isFacultyOrSysadmin && !empty($teacher)) {
         $teacherEmails = scilab_resolve_teacher_in_charge_emails($conn, $teacher);
 
         if (!empty($teacherEmails)) {
@@ -318,20 +328,42 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
     // Send a confirmation email to the requester once the request is recorded.
     scilab_send_submission_confirmation($conn, $formID);
 
-    sendSubmissionNotificationToAdmins($conn, [
-        'scilabName' => $scilabName,
-        'gradeLevel' => $grade,
-        'section' => $sections,
-        'subject' => $subject,
-        'topic' => $topic,
-        'unit' => $unit,
-        'teacher' => $teacher,
-        'inclusiveDate' => $startDate,
-        'inclusiveTime' => $formattedTime,
-        'materials' => implode("; ", $materials),
-        'students' => $studentList,
-        'requester' => $requesterName
-    ], $formID);
+    // For Teacher requests: Supervisor stage is auto-approved at submit time,
+    // so the submission immediately emails the next action taker (AUH).
+    if ($isFacultyOrSysadmin) {
+        if (!sendNotificationToSubjectTeacher($conn, $formID)) {
+            $autoStmt = $conn->prepare("UPDATE scilab_form_requests SET subject_teacher_status = 'approved', subject_teacher_approved_at = NOW(), subject_teacher_approved_by = 'Auto-approved (no AUH resolved)' WHERE id = ?");
+            $autoStmt->bind_param("i", $formID);
+            $autoStmt->execute();
+            $autoStmt->close();
+
+            $reqStmt = $conn->prepare("SELECT * FROM scilab_form_requests WHERE id = ?");
+            $reqStmt->bind_param("i", $formID);
+            $reqStmt->execute();
+            $reqRow = $reqStmt->get_result()->fetch_assoc();
+            $reqStmt->close();
+
+            if ($reqRow) {
+                scilab_notify_stage_status($conn, $reqRow, 'subject_teacher', 'approve');
+                sendNotificationToAdmins($conn, $formID);
+            }
+        }
+    } else {
+        sendSubmissionNotificationToAdmins($conn, [
+            'scilabName' => $scilabName,
+            'gradeLevel' => $grade,
+            'section' => $sections,
+            'subject' => $subject,
+            'topic' => $topic,
+            'unit' => $unit,
+            'teacher' => $teacher,
+            'inclusiveDate' => $startDate,
+            'inclusiveTime' => $formattedTime,
+            'materials' => implode("; ", $materials),
+            'students' => $studentList,
+            'requester' => $requesterName
+        ], $formID);
+    }
 
     echo "success";
     $stmt->close();
