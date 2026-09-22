@@ -232,7 +232,7 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
     $schoolYear = ($syResult && $syResult->num_rows > 0) ? $syResult->fetch_assoc()['value'] : 'N/A';
 
 
-    $requesterID = $_SESSION['employeeID'] ?? '';
+    $requesterID = $_POST['employee_id'] ?? $_SESSION['employeeID'] ?? $_SESSION['student_lrn'] ?? $_SESSION['email'] ?? $_SESSION['username'] ?? '';
     $dateRequested = date('Y-m-d H:i:s');
 
     $stmt = $conn->prepare("INSERT INTO scilab_form_requests (
@@ -289,35 +289,13 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
     $stmt3->close();
 
 
-    $requesterName =
-        ($_SESSION['firstname'] ?? '') . ' ' .
-        ($_SESSION['middlename'] ?? '') . ' ' .
-        ($_SESSION['lastname'] ?? '');
+    $requesterName = scilab_resolve_requester_name($conn, $requesterID);
+    if (empty(trim($requesterName)) || $requesterName === $requesterID) {
+        $requesterName = trim(($_SESSION['firstname'] ?? '') . ' ' . ($_SESSION['middlename'] ?? '') . ' ' . ($_SESSION['lastname'] ?? ''));
+    }
 
-    if (!empty($teachers)) {
-        $teacherEmails = [];
-
-        /* 
-         * Resolve designated teacher accounts structure by matching full names.
-         * Consolidates addresses needed to construct supervisor email notifications.
-         */
-        $placeholders = rtrim(str_repeat('?,', count($teachers)), ',');
-        $email_stmt = $conn->prepare("SELECT email FROM accounts WHERE CONCAT(firstname, ' ', lastname) IN ($placeholders)");
-
-        if ($email_stmt) {
-            $types = str_repeat('s', count($teachers));
-            $bindParams = [$types];
-            for ($i = 0; $i < count($teachers); $i++) {
-                $bindParams[] = &$teachers[$i];
-            }
-            call_user_func_array([$email_stmt, 'bind_param'], $bindParams);
-            $email_stmt->execute();
-            $result = $email_stmt->get_result();
-            while ($row = $result->fetch_assoc()) {
-                $teacherEmails[] = $row['email'];
-            }
-            $email_stmt->close();
-        }
+    if (!empty($teacher)) {
+        $teacherEmails = scilab_resolve_teacher_in_charge_emails($conn, $teacher);
 
         if (!empty($teacherEmails)) {
             sendSubmissionNotificationToSupervisors($conn, [

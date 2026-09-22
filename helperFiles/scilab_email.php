@@ -15,6 +15,55 @@ require_once __DIR__ . '/../PHPMailer/src/Exception.php';
 require_once __DIR__ . '/../PHPMailer/src/PHPMailer.php';
 require_once __DIR__ . '/../PHPMailer/src/SMTP.php';
 
+function scilab_resolve_requester_name($conn, $requesterID) {
+    $requesterID = trim((string)$requesterID);
+    if ($requesterID === '') return 'Unknown Requester';
+
+    // 1. accounts table (teachers / staff)
+    $stmt = $conn->prepare("SELECT firstname, middlename, lastname FROM accounts WHERE employeeID = ? OR email = ?");
+    if ($stmt) {
+        $stmt->bind_param("ss", $requesterID, $requesterID);
+        $stmt->execute();
+        if ($row = $stmt->get_result()->fetch_assoc()) {
+            $name = trim(($row['firstname'] ?? '') . ' ' . ($row['middlename'] ?? '') . ' ' . ($row['lastname'] ?? ''));
+            $stmt->close();
+            if ($name !== '') return $name;
+        } else {
+            $stmt->close();
+        }
+    }
+
+    // 2. student table
+    $stmt = $conn->prepare("SELECT firstname, middlename, lastname FROM student WHERE LRN = ?");
+    if ($stmt) {
+        $stmt->bind_param("s", $requesterID);
+        $stmt->execute();
+        if ($row = $stmt->get_result()->fetch_assoc()) {
+            $name = trim(($row['firstname'] ?? '') . ' ' . ($row['middlename'] ?? '') . ' ' . ($row['lastname'] ?? ''));
+            $stmt->close();
+            if ($name !== '') return $name;
+        } else {
+            $stmt->close();
+        }
+    }
+
+    // 3. scilab_new_accounts table (registered student accounts)
+    $stmt = $conn->prepare("SELECT firstname, middlename, lastname FROM scilab_new_accounts WHERE userID = ? OR username = ? OR id = ?");
+    if ($stmt) {
+        $stmt->bind_param("sss", $requesterID, $requesterID, $requesterID);
+        $stmt->execute();
+        if ($row = $stmt->get_result()->fetch_assoc()) {
+            $name = trim(($row['firstname'] ?? '') . ' ' . ($row['middlename'] ?? '') . ' ' . ($row['lastname'] ?? ''));
+            $stmt->close();
+            if ($name !== '') return $name;
+        } else {
+            $stmt->close();
+        }
+    }
+
+    return $requesterID;
+}
+
 function scilab_resolve_requester_email($conn, $requesterID) {
     $requesterID = trim((string)$requesterID);
 
@@ -31,78 +80,133 @@ function scilab_resolve_requester_email($conn, $requesterID) {
         return $requesterID;
     }
 
-    // Faculty / personnel accounts.
-    $stmt = $conn->prepare("SELECT email FROM accounts WHERE employeeID = ?");
+    // 1. Faculty / personnel accounts table.
+    $stmt = $conn->prepare("SELECT email FROM accounts WHERE employeeID = ? OR email = ?");
     if ($stmt) {
-        $stmt->bind_param("s", $requesterID);
+        $stmt->bind_param("ss", $requesterID, $requesterID);
         $stmt->execute();
 
         $result = $stmt->get_result();
 
         if ($row = $result->fetch_assoc()) {
             $email = trim($row['email'] ?? '');
-
             error_log("SciLab DEBUG - accounts lookup found email: [" . $email . "]");
-
-            if ($email !== '') {
+            if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $stmt->close();
                 return $email;
             }
-        } else {
-            error_log("SciLab DEBUG - No matching accounts.employeeID.");
         }
-
         $stmt->close();
     }
 
-    // Students.
+    // 2. Student directory / student table (by LRN or studentEmail).
     $stmt = $conn->prepare("
         SELECT d.studentEmail AS email
         FROM student_directory d
         JOIN student s ON d.LRN = s.LRN
-        WHERE s.LRN = ?
+        WHERE s.LRN = ? OR d.studentEmail = ?
     ");
 
     if ($stmt) {
-        $stmt->bind_param("s", $requesterID);
+        $stmt->bind_param("ss", $requesterID, $requesterID);
         $stmt->execute();
 
         $result = $stmt->get_result();
 
-        error_log("SciLab DEBUG - Student lookup returned " . $result->num_rows . " row(s).");
-
         if ($row = $result->fetch_assoc()) {
             $email = trim($row['email'] ?? '');
-
-            error_log("SciLab DEBUG - Student email found: [" . $email . "]");
-
-            if ($email !== '') {
+            error_log("SciLab DEBUG - Student lookup found email: [" . $email . "]");
+            if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $stmt->close();
                 return $email;
             }
-        } else {
-            error_log("SciLab DEBUG - No matching student LRN.");
         }
-
         $stmt->close();
     }
 
-    error_log("SciLab DEBUG - Email resolution FAILED for ID: [" . $requesterID . "]");
+    // 3. scilab_new_accounts table (for registered student accounts).
+    $stmt = $conn->prepare("
+        SELECT username, userID 
+        FROM scilab_new_accounts 
+        WHERE userID = ? OR username = ? OR id = ?
+    ");
+    if ($stmt) {
+        $stmt->bind_param("sss", $requesterID, $requesterID, $requesterID);
+        $stmt->execute();
 
+        $result = $stmt->get_result();
+
+        if ($row = $result->fetch_assoc()) {
+            $username = trim($row['username'] ?? '');
+            $userID = trim($row['userID'] ?? '');
+
+            if (filter_var($username, FILTER_VALIDATE_EMAIL)) {
+                error_log("SciLab DEBUG - scilab_new_accounts username is email: [" . $username . "]");
+                $stmt->close();
+                return $username;
+            }
+
+            if ($userID !== '') {
+                $sdStmt = $conn->prepare("SELECT studentEmail FROM student_directory WHERE LRN = ?");
+                if ($sdStmt) {
+                    $sdStmt->bind_param("s", $userID);
+                    $sdStmt->execute();
+                    $sdRes = $sdStmt->get_result();
+                    if ($sdRow = $sdRes->fetch_assoc()) {
+                        $sdEmail = trim($sdRow['studentEmail'] ?? '');
+                        if (filter_var($sdEmail, FILTER_VALIDATE_EMAIL)) {
+                            error_log("SciLab DEBUG - scilab_new_accounts userID mapped to student_directory email: [" . $sdEmail . "]");
+                            $sdStmt->close();
+                            $stmt->close();
+                            return $sdEmail;
+                        }
+                    }
+                    $sdStmt->close();
+                }
+            }
+
+            if ($username !== '') {
+                $constructed = (strpos($username, '@') !== false) ? $username : ($username . '@irc.pshs.edu.ph');
+                if (filter_var($constructed, FILTER_VALIDATE_EMAIL)) {
+                    error_log("SciLab DEBUG - scilab_new_accounts constructed email: [" . $constructed . "]");
+                    $stmt->close();
+                    return $constructed;
+                }
+            }
+        }
+        $stmt->close();
+    }
+
+    // 4. Fallback for username handle
+    if (strpos($requesterID, '@') === false && preg_match('/^[a-zA-Z0-9._-]+$/', $requesterID)) {
+        $constructed = $requesterID . '@irc.pshs.edu.ph';
+        if (filter_var($constructed, FILTER_VALIDATE_EMAIL)) {
+            error_log("SciLab DEBUG - Fallback constructed email from handle: [" . $constructed . "]");
+            return $constructed;
+        }
+    }
+
+    error_log("SciLab DEBUG - Email resolution FAILED for ID: [" . $requesterID . "]");
     return null;
 }
 
 function scilab_resolve_teacher_in_charge_emails($conn, $teacherInCharge) {
     $emails = [];
     if (empty($teacherInCharge)) return $emails;
-    $stmt = $conn->prepare("SELECT email, TRIM(CONCAT(lastname, ', ', firstname, ' ', IFNULL(middlename, ''))) AS fullname FROM accounts WHERE status = 'active'");
+    $stmt = $conn->prepare("SELECT email, TRIM(CONCAT(lastname, ', ', firstname, ' ', IFNULL(middlename, ''))) AS fullname, CONCAT(firstname, ' ', lastname) AS shortname, CONCAT(firstname, ' ', IFNULL(middlename, ''), ' ', lastname) AS longname FROM accounts WHERE status = 'active'");
     if (!$stmt) return $emails;
     $stmt->execute();
     $res = $stmt->get_result();
     while ($row = $res->fetch_assoc()) {
         $fn = trim($row['fullname'] ?? '');
-        if ($fn !== '' && stripos($teacherInCharge, $fn) !== false) {
-            $emails[] = $row['email'];
+        $sn = trim($row['shortname'] ?? '');
+        $ln = trim($row['longname'] ?? '');
+        if (($fn !== '' && stripos($teacherInCharge, $fn) !== false) ||
+            ($sn !== '' && stripos($teacherInCharge, $sn) !== false) ||
+            ($ln !== '' && stripos($teacherInCharge, $ln) !== false)) {
+            if (!empty($row['email'])) {
+                $emails[] = $row['email'];
+            }
         }
     }
     $stmt->close();
@@ -183,31 +287,8 @@ function scilab_send_submission_confirmation($conn, $requestId) {
     }
     if (!$requesterEmail) return;
 
-    // Resolve the requester display name (accounts first, then student table).
-    $requesterName = $data['requesterEmployeeID'] ?? '';
-    $nameStmt = $conn->prepare("SELECT firstname, middlename, lastname FROM accounts WHERE employeeID = ?");
-    if ($nameStmt) {
-        $nameStmt->bind_param("s", $requesterName);
-        $nameStmt->execute();
-        $row = $nameStmt->get_result()->fetch_assoc();
-        $nameStmt->close();
-        if ($row) {
-            $requesterName = trim(($row['firstname'] ?? '') . ' ' . ($row['middlename'] ?? '') . ' ' . ($row['lastname'] ?? ''));
-        }
-    }
-    if ($requesterName === ($data['requesterEmployeeID'] ?? '')) {
-        $nameStmt = $conn->prepare("SELECT firstname, middlename, lastname FROM student WHERE LRN = ?");
-        if ($nameStmt) {
-            $requesterLRN = (string)($data['requesterEmployeeID'] ?? '');
-            $nameStmt->bind_param("s", $requesterLRN);
-            $nameStmt->execute();
-            $row = $nameStmt->get_result()->fetch_assoc();
-            $nameStmt->close();
-            if ($row) {
-                $requesterName = trim(($row['firstname'] ?? '') . ' ' . ($row['middlename'] ?? '') . ' ' . ($row['lastname'] ?? ''));
-            }
-        }
-    }
+    // Resolve the requester display name using the central helper.
+    $requesterName = scilab_resolve_requester_name($conn, $data['requesterEmployeeID'] ?? '');
 
     // Fetch requested materials.
     $materialsStr = '';
@@ -342,28 +423,7 @@ function scilab_notify_stage_status($conn, $request, $currentStage, $event, $rea
     $stageLabel = $stageLabels[$currentStage] ?? ucwords(str_replace('_', ' ', $currentStage));
 
     // Resolve requester display name
-    $requesterName = $request['requesterEmployeeID'] ?? '';
-    $nameStmt = $conn->prepare("SELECT firstname, middlename, lastname FROM accounts WHERE employeeID = ?");
-    if ($nameStmt) {
-        $nameStmt->bind_param("s", $requesterName);
-        $nameStmt->execute();
-        if ($row = $nameStmt->get_result()->fetch_assoc()) {
-            $requesterName = trim(($row['firstname'] ?? '') . ' ' . ($row['middlename'] ?? '') . ' ' . ($row['lastname'] ?? ''));
-        }
-        $nameStmt->close();
-    }
-    if ($requesterName === $request['requesterEmployeeID']) {
-        $nameStmt = $conn->prepare("SELECT firstname, middlename, lastname FROM student WHERE LRN = ?");
-        if ($nameStmt) {
-            $requesterLRN = (string)$request['requesterEmployeeID'];
-            $nameStmt->bind_param("s", $requesterLRN);
-            $nameStmt->execute();
-            if ($row = $nameStmt->get_result()->fetch_assoc()) {
-                $requesterName = trim(($row['firstname'] ?? '') . ' ' . ($row['middlename'] ?? '') . ' ' . ($row['lastname'] ?? ''));
-            }
-            $nameStmt->close();
-        }
-    }
+    $requesterName = scilab_resolve_requester_name($conn, $request['requesterEmployeeID'] ?? '');
 
     $verb = ($event === 'approve') ? 'approved' : 'rejected';
     $reasonHtml = ($event === 'reject' && $reason) ? '<br><br><strong>Reason:</strong> ' . htmlspecialchars($reason) : '';

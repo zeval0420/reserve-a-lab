@@ -137,6 +137,7 @@ if (isset($_POST["action"]) && $_POST["action"] === "loginUser") {
          * Student authentication successful.
          * Establish the session state utilizing the verified student information.
          */
+        $_SESSION[$session_employeeID] = $student['LRN'];
         $_SESSION[$session_email] = $student['studentEmail'];
         $_SESSION[$session_firstname] = $student[$db_col_firstname];
         $_SESSION[$session_middlename] = $student[$db_col_middlename];
@@ -157,8 +158,8 @@ if (isset($_POST["action"]) && $_POST["action"] === "loginUser") {
     /*
      * Tertiary login attempt: Fallback to checking the scilab_new_accounts table.
      */
-    $stmt = $conn->prepare("SELECT * FROM {$db_table_new_accounts} WHERE username = ?");
-    $stmt->bind_param("s", $input_identity);
+    $stmt = $conn->prepare("SELECT * FROM {$db_table_new_accounts} WHERE username = ? OR userID = ?");
+    $stmt->bind_param("ss", $input_identity, $input_identity);
     $stmt->execute();
     $newAccountsResult = $stmt->get_result();
 
@@ -170,13 +171,33 @@ if (isset($_POST["action"]) && $_POST["action"] === "loginUser") {
             echo "invalid_password";
         } else {
             $_SESSION[$session_role] = "guest";
-            $_SESSION[$session_email] = strpos($new_user['username'], '@') !== false ? $new_user['username'] : ''; 
+            
+            $resolvedEmail = '';
+            if (filter_var($new_user['username'], FILTER_VALIDATE_EMAIL)) {
+                $resolvedEmail = $new_user['username'];
+            } elseif (!empty($new_user['userID'])) {
+                $sdStmt = $conn->prepare("SELECT studentEmail FROM student_directory WHERE LRN = ?");
+                if ($sdStmt) {
+                    $sdStmt->bind_param("s", $new_user['userID']);
+                    $sdStmt->execute();
+                    $sdRes = $sdStmt->get_result();
+                    if ($sdRow = $sdRes->fetch_assoc()) {
+                        $resolvedEmail = trim($sdRow['studentEmail'] ?? '');
+                    }
+                    $sdStmt->close();
+                }
+            }
+            if (empty($resolvedEmail) && !empty($new_user['username'])) {
+                $resolvedEmail = (strpos($new_user['username'], '@') !== false) ? $new_user['username'] : ($new_user['username'] . '@irc.pshs.edu.ph');
+            }
+
+            $_SESSION[$session_email] = $resolvedEmail;
             $_SESSION[$session_firstname] = $new_user['firstname'];
             $_SESSION[$session_middlename] = $new_user['middlename'];
             $_SESSION[$session_lastname] = $new_user['lastname'];
             
-            $_SESSION[$session_username] = $new_user['firstname'] . ' ' . $new_user['lastname'] . ' (' . $new_user['institution'] . ')';
-            $_SESSION[$session_employeeID] = !empty($new_user['userID']) ? $new_user['userID'] : 'Guest';
+            $_SESSION[$session_username] = $new_user['firstname'] . ' ' . $new_user['lastname'] . ' (' . ($new_user['institution'] ?? 'PSHS-IRC') . ')';
+            $_SESSION[$session_employeeID] = !empty($new_user['userID']) ? $new_user['userID'] : $new_user['username'];
             
             echo "guest";
         }

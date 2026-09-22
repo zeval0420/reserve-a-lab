@@ -326,29 +326,7 @@ function sendNotificationToSubjectTeacher($conn, $requestID) {
     }
 
     $requesterID = $data['requesterEmployeeID'];
-    $requesterName = $requesterID;
-
-    // Fetch requester name
-    $stmtName = $conn->prepare("SELECT firstname, lastname FROM accounts WHERE employeeID = ?");
-    $stmtName->bind_param("s", $requesterID);
-    $stmtName->execute();
-    $resName = $stmtName->get_result();
-    if ($row = $resName->fetch_assoc()) {
-        $requesterName = $row['firstname'] . ' ' . $row['lastname'];
-        $stmtName->close();
-    } else {
-        $stmtName->close();
-        $stmtName = $conn->prepare("SELECT firstname, lastname FROM student WHERE LRN = ?");
-        if ($stmtName) {
-            $stmtName->bind_param("s", $requesterID);
-            $stmtName->execute();
-            $resName = $stmtName->get_result();
-            if ($row = $resName->fetch_assoc()) {
-                $requesterName = $row['firstname'] . ' ' . $row['lastname'];
-            }
-            $stmtName->close();
-        }
-    }
+    $requesterName = scilab_resolve_requester_name($conn, $requesterID);
 
     // Fetch materials
     $matStmt = $conn->prepare("SELECT quantity, unit, item, description FROM scilab_material_requests WHERE formID = ?");
@@ -454,29 +432,7 @@ function sendNotificationToCIDChief($conn, $requestID) {
     if (!$data) return;
 
     $requesterID = $data['requesterEmployeeID'];
-    $requesterName = $requesterID;
-
-    // Fetch requester name
-    $stmtName = $conn->prepare("SELECT firstname, lastname FROM accounts WHERE employeeID = ?");
-    $stmtName->bind_param("s", $requesterID);
-    $stmtName->execute();
-    $resName = $stmtName->get_result();
-    if ($row = $resName->fetch_assoc()) {
-        $requesterName = $row['firstname'] . ' ' . $row['lastname'];
-        $stmtName->close();
-    } else {
-        $stmtName->close();
-        $stmtName = $conn->prepare("SELECT firstname, lastname FROM student WHERE LRN = ?");
-        if ($stmtName) {
-            $stmtName->bind_param("s", $requesterID);
-            $stmtName->execute();
-            $resName = $stmtName->get_result();
-            if ($row = $resName->fetch_assoc()) {
-                $requesterName = $row['firstname'] . ' ' . $row['lastname'];
-            }
-            $stmtName->close();
-        }
-    }
+    $requesterName = scilab_resolve_requester_name($conn, $requesterID);
 
     $cidChiefs = $conn->query("SELECT email FROM accounts WHERE status = 'active' AND position LIKE '%Chief%'");
     if ($cidChiefs->num_rows === 0) return;
@@ -574,7 +530,7 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
     $syResult = $conn->query("SELECT value FROM current WHERE description = 'School Year' ORDER BY id DESC LIMIT 1");
     $schoolYear = ($syResult && $syResult->num_rows > 0) ? $syResult->fetch_assoc()['value'] : 'N/A';
 
-    $requesterID = $_POST['employee_id'] ?? $_SESSION['employeeID'] ?? $_SESSION['student_lrn'] ?? '';
+    $requesterID = $_POST['employee_id'] ?? $_SESSION['employeeID'] ?? $_SESSION['student_lrn'] ?? $_SESSION['email'] ?? $_SESSION['username'] ?? '';
     $dateRequested = date('Y-m-d H:i:s');
 
     $isFacultyOrSysadmin = false;
@@ -602,7 +558,7 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
 
     $initialSupervisorStatus = $isFacultyOrSysadmin ? 'approved' : 'pending';
 
-    $requesterNameInitial = trim(($_SESSION['firstname'] ?? '') . ' ' . ($_SESSION['middlename'] ?? '') . ' ' . ($_SESSION['lastname'] ?? ''));
+    $requesterNameInitial = scilab_resolve_requester_name($conn, $requesterID);
 
     $stmt = $conn->prepare("INSERT INTO scilab_form_requests (
         scilabName,
@@ -688,26 +644,13 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
     }
     $stmt3->close();
 
-    $requesterName = ($_SESSION['firstname'] ?? '') . ' ' . ($_SESSION['middlename'] ?? '') . ' ' . ($_SESSION['lastname'] ?? '');
+    $requesterName = scilab_resolve_requester_name($conn, $requesterID);
+    if (empty(trim($requesterName)) || $requesterName === $requesterID) {
+        $requesterName = trim(($_SESSION['firstname'] ?? '') . ' ' . ($_SESSION['middlename'] ?? '') . ' ' . ($_SESSION['lastname'] ?? ''));
+    }
 
-    if (!empty($teachers)) {
-        $teacherEmails = [];
-        $placeholders = rtrim(str_repeat('?,', count($teachers)), ',');
-        $email_stmt = $conn->prepare("SELECT email FROM accounts WHERE CONCAT(lastname, ', ', firstname, ' ', IFNULL(middlename, '')) IN ($placeholders)");
-        if ($email_stmt) {
-            $types = str_repeat('s', count($teachers));
-            $bindParams = [$types];
-            for ($i = 0; $i < count($teachers); $i++) {
-                $bindParams[] = &$teachers[$i];
-            }
-            call_user_func_array([$email_stmt, 'bind_param'], $bindParams);
-            $email_stmt->execute();
-            $result = $email_stmt->get_result();
-            while ($row = $result->fetch_assoc()) {
-                $teacherEmails[] = $row['email'];
-            }
-            $email_stmt->close();
-        }
+    if (!empty($teacher)) {
+        $teacherEmails = scilab_resolve_teacher_in_charge_emails($conn, $teacher);
 
         if (!empty($teacherEmails)) {
             sendSubmissionNotificationToSupervisors($conn, [
