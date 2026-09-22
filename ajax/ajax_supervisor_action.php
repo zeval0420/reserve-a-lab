@@ -192,29 +192,7 @@ function sendNotificationToAdmins($conn, $requestID) {
     if (!$data) return;
 
     $requesterID = $data['requesterEmployeeID'];
-    $requesterName = $requesterID;
-
-    // Fetch requester name
-    $stmtName = $conn->prepare("SELECT firstname, lastname FROM accounts WHERE employeeID = ?");
-    $stmtName->bind_param("s", $requesterID);
-    $stmtName->execute();
-    $resName = $stmtName->get_result();
-    if ($row = $resName->fetch_assoc()) {
-        $requesterName = $row['firstname'] . ' ' . $row['lastname'];
-        $stmtName->close();
-    } else {
-        $stmtName->close();
-        $stmtName = $conn->prepare("SELECT firstname, lastname FROM student WHERE LRN = ?");
-        if ($stmtName) {
-            $stmtName->bind_param("s", $requesterID);
-            $stmtName->execute();
-            $resName = $stmtName->get_result();
-            if ($row = $resName->fetch_assoc()) {
-                $requesterName = $row['firstname'] . ' ' . $row['lastname'];
-            }
-            $stmtName->close();
-        }
-    }
+    $requesterName = scilab_resolve_requester_name($conn, $requesterID);
 
     // Fetch materials
     $matStmt = $conn->prepare("SELECT quantity, unit, item, description FROM scilab_material_requests WHERE formID = ?");
