@@ -46,6 +46,11 @@ $events = Event::allOrderedByDate();
             <p>Broadcast questions and live standings to the venue projector — open a display below, no login required.</p>
             <span class="muted-hint">Pick an event below</span>
         </div>
+        <div class="feature-card">
+            <h2>Scorer Interface</h2>
+            <p>Real-time scoreboard view for the official scorer — track points, rounds, and export results.</p>
+            <a class="btn" href="scorer/index.php">Open Scorer</a>
+        </div>
     </div>
 
     <h2 class="section-title">Current Events</h2>
@@ -69,6 +74,7 @@ $events = Event::allOrderedByDate();
                 <div class="event-card-actions">
                     <a class="btn" href="display/event.php?id=<?= (int) $ev['id'] ?>">Display</a>
                     <a class="btn" href="operator/event.php?id=<?= (int) $ev['id'] ?>">Operate</a>
+                    <a class="btn" href="scorer/scores.php?id=<?= (int) $ev['id'] ?>">Scorer</a>
                     <a class="btn" href="admin/event.php?id=<?= (int) $ev['id'] ?>">Configure</a>
                 </div>
             </div>
