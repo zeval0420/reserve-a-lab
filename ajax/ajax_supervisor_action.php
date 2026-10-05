@@ -130,6 +130,7 @@ function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails
     $approvalLink = $baseURL . "/supervisor_approve.php?id=" . $formID;
 
     $replacements = [
+        "[Request ID]" => "SLR-" . $formID,
         "[Facility]" => $data['scilabName'],
         "[Grade Level]" => $data['gradeLevel'],
         "[Section]" => $data['section'],
@@ -219,7 +220,12 @@ function sendNotificationToAdmins($conn, $requestID) {
     $studStmt->close();
 
     $admins = $conn->query("SELECT email FROM accounts WHERE status = 'active' AND (position = 'Sci. Res. Assist.' OR position = 'Sci. Research Specialist I')");
-    if ($admins->num_rows === 0) return;
+    if ($admins->num_rows === 0) {
+        // Nobody can act on this stage - escalate so the request does not stall.
+        scilab_notify_unresolved_stage($conn, $data, 'lab_personnel',
+            'No active account holds the position "Sci. Res. Assist." or "Sci. Research Specialist I".');
+        return;
+    }
 
     $subjectLine = "SciLab Request SLR-" . $requestID;
     $templatePath = __DIR__ . "/../templates/request_email_template.html";
@@ -231,12 +237,13 @@ function sendNotificationToAdmins($conn, $requestID) {
     }
 
     $replacements = [
+        "[Request ID]" => "SLR-" . $requestID,
         "[Facility]" => $data['scilabName'],
         "[Grade Level]" => $data['gradeLevel'],
         "[Section]" => $data['sections'],
         "[Subject]" => $data['subject'],
         "[Concurrent Topic]" => $data['subjectTopic'],
-        "[Unit]" => "N/A",
+        "[Unit]" => ($data['subjectAcademicUnit'] ?? '') !== '' ? $data['subjectAcademicUnit'] : "N/A",
         "[Teacher Name]" => $data['teacherInCharge'],
         "[Requested By]" => $requesterName,
         "[Start Date]" => $data['inclusiveDate'],
@@ -350,7 +357,7 @@ function sendNotificationToSubjectTeacher($conn, $requestID) {
         "[Section]"          => $data['sections'],
         "[Subject]"          => $data['subject'],
         "[Concurrent Topic]" => $data['subjectTopic'],
-        "[Unit]"             => "N/A",
+        "[Unit]"             => ($data['subjectAcademicUnit'] ?? '') !== '' ? $data['subjectAcademicUnit'] : "N/A",
         "[Teacher Name]"     => $data['teacherInCharge'],
         "[Requested By]"     => $requesterName,
         "[Start Date]"       => $data['inclusiveDate'],
@@ -412,18 +419,73 @@ function sendNotificationToCIDChief($conn, $requestID) {
     $requesterID = $data['requesterEmployeeID'];
     $requesterName = scilab_resolve_requester_name($conn, $requesterID);
 
+    // Fetch materials
+    $matStmt = $conn->prepare("SELECT quantity, unit, item, description FROM scilab_material_requests WHERE formID = ?");
+    $matStmt->bind_param("i", $requestID);
+    $matStmt->execute();
+    $materials = [];
+    while ($row = $matStmt->get_result()->fetch_assoc()) {
+        $materials[] = "{$row['quantity']} {$row['unit']} of {$row['item']} ({$row['description']})";
+    }
+    $materialsStr = implode("; ", $materials);
+    $matStmt->close();
+
+    // Fetch students
+    $studStmt = $conn->prepare("SELECT student_name FROM scilab_students_involved WHERE formID = ?");
+    $studStmt->bind_param("i", $requestID);
+    $studStmt->execute();
+    $students = [];
+    while ($row = $studStmt->get_result()->fetch_assoc()) {
+        $students[] = $row['student_name'];
+    }
+    $studentsStr = implode(", ", $students);
+    $studStmt->close();
+
     $cidChiefs = $conn->query("SELECT email FROM accounts WHERE status = 'active' AND position LIKE '%Chief%'");
-    if ($cidChiefs->num_rows === 0) return;
+    if ($cidChiefs->num_rows === 0) {
+        // Nobody can give final approval - escalate so the request does not stall.
+        scilab_notify_unresolved_stage($conn, $data, 'cid_chief',
+            'No active account has a position containing "Chief".');
+        return;
+    }
 
     $subjectLine = "SciLab Request SLR-" . $requestID;
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
     $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/" . $active_server;
     $approvalLink = $baseURL . "/supervisor_approve.php?id=" . $requestID . "&token=" . urlencode(scilab_approval_token($requestID, 'cid_chief'));
-    $bodyTemplate = "A new request has passed Lab Personnel review and requires final CID Chief approval. 
-        <br><br><strong>Facility:</strong> " . htmlspecialchars($data['scilabName']) . "
-        <br><strong>Requested By:</strong> " . htmlspecialchars($requesterName) . "
-        <br><strong>Date/Time:</strong> " . htmlspecialchars($data['inclusiveDate']) . " " . htmlspecialchars($data['inclusiveTime']) . "
-        <br><br>Review and act on this request directly: <a href='" . $approvalLink . "'>Review Request</a>";
+
+    $templatePath = __DIR__ . "/../templates/request_email_template.html";
+    if (file_exists($templatePath)) {
+        $bodyTemplate = file_get_contents($templatePath);
+    } else {
+        $bodyTemplate = "<p>A new request has passed Lab Personnel review and requires final CID Chief approval.</p>"
+            . '<p><strong>Request ID:</strong> SLR-' . htmlspecialchars($requestID) . '</p>'
+            . '<p><strong>Facility:</strong> ' . htmlspecialchars($data['scilabName']) . '<br>'
+            . '<strong>Requested By:</strong> ' . htmlspecialchars($requesterName) . '<br>'
+            . '<strong>Date/Time:</strong> ' . htmlspecialchars($data['inclusiveDate']) . ' ' . htmlspecialchars($data['inclusiveTime']) . '</p>'
+            . '<p><a href="' . htmlspecialchars($approvalLink) . '">Review Request</a></p>';
+    }
+
+    $replacements = [
+        "[Request ID]" => "SLR-" . $requestID,
+        "[Facility]" => $data['scilabName'],
+        "[Grade Level]" => $data['gradeLevel'],
+        "[Section]" => $data['sections'],
+        "[Subject]" => $data['subject'],
+        "[Concurrent Topic]" => $data['subjectTopic'],
+        "[Unit]" => ($data['subjectAcademicUnit'] ?? '') !== '' ? $data['subjectAcademicUnit'] : "N/A",
+        "[Teacher Name]" => $data['teacherInCharge'],
+        "[Requested By]" => $requesterName,
+        "[Start Date]" => $data['inclusiveDate'],
+        "[End Date]" => $data['inclusiveTime'],
+        "[Materials]" => $materialsStr !== '' ? $materialsStr : 'N/A',
+        "[Group Members]" => $studentsStr !== '' ? $studentsStr : 'N/A',
+    ];
+
+    foreach ($replacements as $key => $val) {
+        $bodyTemplate = str_replace($key, htmlspecialchars((string)$val), $bodyTemplate);
+    }
+    $bodyTemplate = str_replace("[ActionLink]", htmlspecialchars($approvalLink), $bodyTemplate);
 
     while ($admin = $cidChiefs->fetch_assoc()) {
         if (filter_var($admin['email'], FILTER_VALIDATE_EMAIL)) {
@@ -632,6 +694,12 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
         $requesterName = trim(($_SESSION['firstname'] ?? '') . ' ' . ($_SESSION['middlename'] ?? '') . ' ' . ($_SESSION['lastname'] ?? ''));
     }
 
+    $reqStmt = $conn->prepare("SELECT * FROM scilab_form_requests WHERE id = ?");
+    $reqStmt->bind_param("i", $formID);
+    $reqStmt->execute();
+    $reqRow = $reqStmt->get_result()->fetch_assoc();
+    $reqStmt->close();
+
     // For Student requests: Notify Supervisor / Teacher-in-Charge.
     // For Teacher requests: Supervisor stage is auto-approved by default, so skip supervisor email.
     if (!$isFacultyOrSysadmin && !empty($teacher)) {
@@ -652,6 +720,11 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
                 'students' => $studentList,
                 'requester' => $requesterName
             ], $teacherEmails, $formID);
+        } elseif ($reqRow) {
+            // No account matched the Teacher-in-Charge name. Leave the stage pending
+            // and escalate rather than letting the request stall unnoticed.
+            scilab_notify_unresolved_stage($conn, $reqRow, 'supervisor',
+                'No active account matched the Teacher-in-Charge "' . $teacher . '".');
         }
     }
 
@@ -660,23 +733,12 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
 
     // For Teacher requests: Supervisor stage is auto-approved at submit time,
     // so the submission immediately emails the next action taker (AUH).
-    if ($isFacultyOrSysadmin) {
-        if (!sendNotificationToSubjectTeacher($conn, $formID)) {
-            $autoStmt = $conn->prepare("UPDATE scilab_form_requests SET subject_teacher_status = 'approved', subject_teacher_approved_at = NOW(), subject_teacher_approved_by = 'Auto-approved (no AUH resolved)' WHERE id = ?");
-            $autoStmt->bind_param("i", $formID);
-            $autoStmt->execute();
-            $autoStmt->close();
-
-            $reqStmt = $conn->prepare("SELECT * FROM scilab_form_requests WHERE id = ?");
-            $reqStmt->bind_param("i", $formID);
-            $reqStmt->execute();
-            $reqRow = $reqStmt->get_result()->fetch_assoc();
-            $reqStmt->close();
-
-            if ($reqRow) {
-                scilab_notify_stage_status($conn, $reqRow, 'subject_teacher', 'approve');
-                sendNotificationToAdmins($conn, $formID);
-            }
+    if ($isFacultyOrSysadmin && $reqRow) {
+        if (!sendNotificationToSubjectTeacher($conn, $formID) && $reqRow) {
+            // No AUH resolvable for this academic unit. Keep the stage pending and
+            // escalate to Lab Personnel instead of silently auto-approving it.
+            scilab_notify_unresolved_stage($conn, $reqRow, 'subject_teacher',
+                'No active account is designated as AUH for academic unit "' . ($unit !== '' ? $unit : 'N/A') . '".');
         }
     }
 
@@ -710,6 +772,18 @@ $request = $result->fetch_assoc();
 
 if (!$request) {
     echo json_encode(['success' => false, 'message' => 'Request not found']);
+    exit;
+}
+
+// A request that already reached a terminal state must not be advanced further.
+// Without this guard a rejected request (whose downstream stage columns are still
+// 'pending') can be approved from a stale approval link or dashboard.
+$overallStatus = strtolower(trim((string)($request['statusScilabPersonnel'] ?? '')));
+if ($action !== 'force_approve_override' && in_array($overallStatus, ['approved', 'rejected'], true)) {
+    echo json_encode([
+        'success' => false,
+        'message' => 'This request is already ' . ucfirst($overallStatus) . ' and cannot be actioned again.'
+    ]);
     exit;
 }
 
@@ -800,6 +874,25 @@ else {
     // If rejected at any stage, mark the whole request as Rejected
     if ($action === 'reject') {
         $sql .= ", statusScilabPersonnel = 'Rejected'";
+        $sql .= ", controlNumber = NULL, control_equipment = NULL, control_reagent = NULL, control_permit = NULL, control_reservation = NULL";
+
+        // Close out every stage at or after the one that rejected. Leaving them
+        // 'pending' would let the request be advanced again from a stale link and
+        // would show a still-actionable step in supervisor_approve.php.
+        $stageOrder = ['supervisor', 'subject_teacher', 'lab_personnel', 'cid_chief'];
+        $rejectIdx = array_search($fieldPrefix, $stageOrder, true);
+        if ($rejectIdx !== false) {
+            foreach (array_slice($stageOrder, (int)$rejectIdx) as $stage) {
+                if ($stage === $fieldPrefix) continue;
+                $sql .= ", {$stage}_status = IF({$stage}_status = 'pending', 'rejected', {$stage}_status)";
+            }
+        }
+
+        // Record who rejected, for the audit trail.
+        $sql .= ", {$fieldPrefix}_approved_at = NOW()";
+        $sql .= ", {$fieldPrefix}_approved_by = ?";
+        $params[] = $approverName . ' (rejected)';
+        $types .= "s";
     } elseif ($action === 'approve' && $fieldPrefix === 'cid_chief') {
         // If final stage approved, mark the whole request as Approved
         $sql .= ", statusScilabPersonnel = 'Approved'";
@@ -846,13 +939,19 @@ if ($updateStmt->execute()) {
     } elseif ($fieldPrefix === 'supervisor' && $action === 'approve') {
         scilab_notify_stage_status($conn, $request, 'supervisor', 'approve');
         if (!sendNotificationToSubjectTeacher($conn, $requestId)) {
-            // No AUH resolvable for this subject — auto-approve this stage and notify Lab Personnel.
-            $autoStmt = $conn->prepare("UPDATE scilab_form_requests SET subject_teacher_status = 'approved', subject_teacher_approved_at = NOW(), subject_teacher_approved_by = 'Auto-approved (no AUH resolved)' WHERE id = ?");
-            $autoStmt->bind_param("i", $requestId);
-            $autoStmt->execute();
-            $autoStmt->close();
-            scilab_notify_stage_status($conn, $request, 'subject_teacher', 'approve');
-            sendNotificationToAdmins($conn, $requestId);
+            // No AUH resolvable for this academic unit — keep the stage pending and
+            // escalate to Lab Personnel rather than silently auto-approving it.
+            $reqStmt = $conn->prepare("SELECT * FROM scilab_form_requests WHERE id = ?");
+            $reqStmt->bind_param("i", $requestId);
+            $reqStmt->execute();
+            $reqRow = $reqStmt->get_result()->fetch_assoc();
+            $reqStmt->close();
+
+            if ($reqRow) {
+                scilab_notify_unresolved_stage($conn, $reqRow, 'subject_teacher',
+                    'No active account is designated as AUH for academic unit "'
+                    . (($request['subjectAcademicUnit'] ?? '') !== '' ? $request['subjectAcademicUnit'] : 'N/A') . '".');
+            }
         }
     } elseif ($fieldPrefix === 'subject_teacher' && $action === 'approve') {
         scilab_notify_stage_status($conn, $request, 'subject_teacher', 'approve');

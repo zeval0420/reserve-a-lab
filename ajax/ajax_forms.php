@@ -302,6 +302,12 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
         $requesterName = trim(($_SESSION['firstname'] ?? '') . ' ' . ($_SESSION['middlename'] ?? '') . ' ' . ($_SESSION['lastname'] ?? ''));
     }
 
+    $reqStmt = $conn->prepare("SELECT * FROM scilab_form_requests WHERE id = ?");
+    $reqStmt->bind_param("i", $formID);
+    $reqStmt->execute();
+    $reqRow = $reqStmt->get_result()->fetch_assoc();
+    $reqStmt->close();
+
     // For Student requests: Notify Supervisor / Teacher-in-Charge.
     // For Teacher requests: Supervisor stage is auto-approved, so skip supervisor email.
     if (!$isFacultyOrSysadmin && !empty($teacher)) {
@@ -322,6 +328,11 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
                 'students' => $studentList,
                 'requester' => $requesterName
             ], $teacherEmails, $formID);
+        } elseif ($reqRow) {
+            // No account matched the Teacher-in-Charge name. Leave the stage pending
+            // and escalate rather than letting the request stall unnoticed.
+            scilab_notify_unresolved_stage($conn, $reqRow, 'supervisor',
+                'No active account matched the Teacher-in-Charge "' . $teacher . '".');
         }
     }
 
@@ -330,23 +341,12 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
 
     // For Teacher requests: Supervisor stage is auto-approved at submit time,
     // so the submission immediately emails the next action taker (AUH).
-    if ($isFacultyOrSysadmin) {
+    if ($isFacultyOrSysadmin && $reqRow) {
         if (!sendNotificationToSubjectTeacher($conn, $formID)) {
-            $autoStmt = $conn->prepare("UPDATE scilab_form_requests SET subject_teacher_status = 'approved', subject_teacher_approved_at = NOW(), subject_teacher_approved_by = 'Auto-approved (no AUH resolved)' WHERE id = ?");
-            $autoStmt->bind_param("i", $formID);
-            $autoStmt->execute();
-            $autoStmt->close();
-
-            $reqStmt = $conn->prepare("SELECT * FROM scilab_form_requests WHERE id = ?");
-            $reqStmt->bind_param("i", $formID);
-            $reqStmt->execute();
-            $reqRow = $reqStmt->get_result()->fetch_assoc();
-            $reqStmt->close();
-
-            if ($reqRow) {
-                scilab_notify_stage_status($conn, $reqRow, 'subject_teacher', 'approve');
-                sendNotificationToAdmins($conn, $formID);
-            }
+            // No AUH resolvable for this academic unit. Keep the stage pending and
+            // escalate to Lab Personnel instead of silently auto-approving it.
+            scilab_notify_unresolved_stage($conn, $reqRow, 'subject_teacher',
+                'No active account is designated as AUH for academic unit "' . ($unit !== '' ? $unit : 'N/A') . '".');
         }
     } else {
         sendSubmissionNotificationToAdmins($conn, [

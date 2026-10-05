@@ -492,6 +492,66 @@ function scilab_send_status_email($emails, $subject, $bodyHtml) {
 }
 
 /**
+ * Escalate a stage that has no resolvable approver.
+ *
+ * When a request reaches a stage but no email address can be resolved for the
+ * person responsible (teacher-in-charge name mismatch, missing AUH designation
+ * row, no active CID Chief), the request would otherwise sit pending forever
+ * with nobody notified. This emails the Lab Personnel group so a human can
+ * assign the stage manually, and leaves the stage pending.
+ *
+ * $stage:  'supervisor' | 'subject_teacher' | 'lab_personnel' | 'cid_chief'
+ * $detail: human-readable description of what failed to resolve
+ */
+function scilab_notify_unresolved_stage($conn, $request, $stage, $detail) {
+    global $active_server;
+
+    $id = intval($request['id'] ?? 0);
+    if ($id <= 0) return;
+
+    $stageLabels = [
+        'supervisor' => 'Supervisor (Teacher-in-Charge)',
+        'subject_teacher' => 'Area Unit Head (AUH)',
+        'lab_personnel' => 'Lab Personnel',
+        'cid_chief' => 'CID Chief',
+    ];
+    $stageLabel = $stageLabels[$stage] ?? ucwords(str_replace('_', ' ', (string)$stage));
+
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
+    $baseURL = $protocol . ($_SERVER['HTTP_HOST'] ?? '') . '/' . ($active_server ?? '');
+    $actionLink = $baseURL . '/supervisor_approve.php?id=' . $id;
+
+    $requesterName = scilab_resolve_requester_name($conn, $request['requesterEmployeeID'] ?? '');
+
+    $body = '<p><strong>Action needed:</strong> laboratory reservation request <strong>SLR-' . $id
+        . '</strong> is waiting on the <strong>' . htmlspecialchars($stageLabel) . '</strong> stage, '
+        . 'but no approver could be matched for that stage.</p>'
+        . '<p>The stage has been left <strong>pending</strong> so it is not skipped. '
+        . 'Please assign the correct approver, or act on the request directly.</p>'
+        . '<p><strong>Why it could not be resolved:</strong> ' . htmlspecialchars((string)$detail) . '</p>'
+        . '<p><strong>Facility:</strong> ' . htmlspecialchars($request['scilabName'] ?? '') . '<br>'
+        . '<strong>Requested By:</strong> ' . htmlspecialchars($requesterName) . '<br>'
+        . '<strong>Teacher In-Charge:</strong> ' . htmlspecialchars($request['teacherInCharge'] ?? '') . '<br>'
+        . '<strong>Academic Unit:</strong> ' . htmlspecialchars($request['subjectAcademicUnit'] ?? '') . '<br>'
+        . '<strong>Date/Time:</strong> ' . htmlspecialchars(trim(($request['inclusiveDate'] ?? '') . ' ' . ($request['inclusiveTime'] ?? ''))) . '</p>'
+        . '<p>Assign or review the request here: <a href="' . htmlspecialchars($actionLink) . '">Open Request SLR-' . $id . '</a></p>';
+
+    $emails = scilab_resolve_lab_personnel_emails($conn);
+    if (empty($emails)) {
+        // Last resort: fall back to anyone with a Chief position so the alert is not lost.
+        $emails = scilab_resolve_cid_chief_emails($conn);
+    }
+    if (empty($emails)) {
+        error_log("SciLab escalation failed - no Lab Personnel or CID Chief email available for request {$id}, stage {$stage}");
+        return;
+    }
+
+    error_log("SciLab escalation - request {$id} stuck at stage {$stage}: {$detail}");
+
+    scilab_send_status_email($emails, 'Action needed: SciLab Request SLR-' . $id, $body);
+}
+
+/**
  * Notify the requester (student) and every prerequisite approver whose stage is
  * already approved about the current stage's action.
  *
@@ -543,12 +603,29 @@ function scilab_notify_stage_status($conn, $request, $currentStage, $event, $rea
     $verb = ($event === 'approve') ? 'approved' : 'rejected';
     $reasonHtml = ($event === 'reject' && $reason) ? '<br><br><strong>Reason:</strong> ' . htmlspecialchars($reason) : '';
 
+    // Spell out the terminal outcome so the final email a requestor receives is
+    // unambiguous about whether the request completed or was denied.
+    $overall = trim((string)($request['statusScilabPersonnel'] ?? ''));
+    $isTerminal = in_array(strtolower($overall), ['approved', 'rejected'], true);
+    $overallHtml = '';
+    if ($isTerminal) {
+        $overallLabel = (strtolower($overall) === 'approved') ? 'APPROVED' : 'REJECTED';
+        if ($event === 'approve' && strtolower($overall) !== 'approved') {
+            $overallHtml = '<p><strong>Status so far:</strong> this request has passed the '
+                . htmlspecialchars($stageLabel) . ' stage and is still ' . $verb
+                . ' by the remaining approver(s).</p>';
+        } elseif ($event === 'reject' || strtolower($overall) === 'approved') {
+            $overallHtml = '<p><strong>Final status of this request: ' . $overallLabel . '.</strong></p>';
+        }
+    }
+
     // Common body used for all recipients
     $body = '<p>This is a status update regarding your laboratory reservation request <strong>SLR-' . intval($id) . '</strong>.</p>'
         . '<p><strong>Facility:</strong> ' . htmlspecialchars($request['scilabName'] ?? '') . '<br>'
         . '<strong>Requested By:</strong> ' . htmlspecialchars($requesterName) . '<br>'
         . '<strong>Date/Time:</strong> ' . htmlspecialchars(($request['inclusiveDate'] ?? '') . ' ' . ($request['inclusiveTime'] ?? '')) . '</p>'
         . '<p><strong>' . htmlspecialchars($stageLabel) . '</strong> has ' . $verb . ' this request.' . $reasonHtml . '</p>'
+        . $overallHtml
         . '<p>You can track the progress of this request here: <a href="' . htmlspecialchars($trackerLink) . '">View Request Status</a></p>';
 
     // Unified subject for all recipients
