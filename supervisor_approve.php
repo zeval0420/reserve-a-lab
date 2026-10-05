@@ -126,13 +126,6 @@ $isSubjectTeacher = (strpos(strtolower($userPosition), 'teacher') !== false);
 $isLabPersonnel = ($userPosition === 'Sci. Res. Assist.' || $userPosition === 'Sci. Research Specialist I');
 $isCIDChief = (strpos(strtolower($userPosition), 'chief') !== false);
 
-// A request that already reached a terminal state has no actionable step, even if
-// some stage columns are still 'pending' from an older record.
-$requestIsTerminal = in_array(strtolower(trim((string)($request['statusScilabPersonnel'] ?? ''))), ['approved', 'rejected'], true);
-if ($requestIsTerminal) {
-    $currentStage = '';
-}
-
 $canApproveCurrentStep = false;
 $currentApproverStep = '';
 
