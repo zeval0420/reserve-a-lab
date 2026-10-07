@@ -1,7 +1,7 @@
 <?php
 session_start();
 $asset_base = '../';
-require('../helperFiles/db_connection.php');
+require('../../../../scilab/helperFiles/db_connection.php');
 require_once('emailHelper.php');
 
 /* PRG: confirmations arrive via ?saved=1 / ?saved=0 */
