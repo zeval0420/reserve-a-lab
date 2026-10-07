@@ -16,6 +16,9 @@ if (!in_array($event['status'], [EventStatus::READY, EventStatus::ACTIVE, EventS
 }
 
 // Server-rendered initial payload -- fast first paint, no loading flash.
+// Everything after this is kept live by JS polling the same composed
+// payload from the API (public/api/runtime.php?action=state), which itself
+// is just CompetitionRuntime::getDashboard() -- no logic is duplicated here.
 $dashboard = CompetitionRuntime::getDashboard($eventId);
 
 // The question list for the "Go to question" control is effectively static
@@ -23,10 +26,6 @@ $dashboard = CompetitionRuntime::getDashboard($eventId);
 // isn't a supported workflow), so it's rendered once server-side rather
 // than re-fetched on every poll.
 $allQuestions = Question::forEvent($eventId, true);
-$promotionalSlides = PromotionalSlide::forEvent($eventId, true);
-$answerSlides = AnswerSlide::forEvent($eventId, true);
-$settings = EventSetting::forEvent($eventId);
-$audioConfig = $settings ? EventSetting::audioConfig($settings) : [];
 
 $pageTitle = $event['name'] . ' — Operator';
 require __DIR__ . '/../admin/includes/header.php';
@@ -93,23 +92,6 @@ require __DIR__ . '/../admin/includes/header.php';
             </div>
 
             <div class="op-panel">
-                <h2>Question Controls</h2>
-                <div class="op-nav-buttons">
-                    <button type="button" class="btn" id="op-btn-hide-question">Hide Question</button>
-                    <button type="button" class="btn" id="op-btn-show-question">Show Question</button>
-                    <button type="button" class="btn" id="op-btn-preview-next">Preview Next</button>
-                </div>
-            </div>
-
-            <div class="op-panel">
-                <h2>Round Control</h2>
-                <div class="op-nav-buttons">
-                    <button type="button" class="btn" id="op-btn-start-round">Start Round</button>
-                    <button type="button" class="btn" id="op-btn-end-round">End Round</button>
-                </div>
-            </div>
-
-            <div class="op-panel">
                 <h2>Ranking control</h2>
                 <div class="op-nav-buttons">
                     <button type="button" class="btn btn-primary" id="op-btn-show-ranking">SHOW RANKING</button>
@@ -118,38 +100,6 @@ require __DIR__ . '/../admin/includes/header.php';
                     <button type="button" class="btn" id="op-btn-return-to-cover">Return to cover</button>
                 </div>
                 <p class="hint" id="op-auto-rank-hint" style="display:none;margin-top:10px;">This event is configured to automatically show the ranking after each score is entered.</p>
-            </div>
-
-            <div class="op-panel">
-                <h2>Promotional Slides</h2>
-                <div class="op-nav-buttons">
-                    <select id="op-promo-select" class="btn">
-                        <option value="">Show promotional slide...</option>
-                        <?php foreach ($promotionalSlides as $slide): ?>
-                            <option value="<?= (int) $slide['id'] ?>"><?= htmlspecialchars($slide['title']) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-            </div>
-
-            <div class="op-panel">
-                <h2>Answer Slides</h2>
-                <div class="op-nav-buttons">
-                    <select id="op-answer-select" class="btn">
-                        <option value="">Show answer slide...</option>
-                        <?php foreach ($answerSlides as $slide): ?>
-                            <option value="<?= (int) $slide['id'] ?>"><?= htmlspecialchars($slide['title'] ?? 'Answer Slide') ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-            </div>
-
-            <div class="op-panel">
-                <h2>Next Up Preview</h2>
-                <div id="op-next-preview">
-                    <img id="op-next-image" class="op-question-preview" style="display:none;" alt="Next question preview">
-                    <p class="muted" id="op-next-none">No next question</p>
-                </div>
             </div>
         </div>
 
@@ -169,10 +119,6 @@ require __DIR__ . '/../admin/includes/header.php';
     </div>
 
     <p class="op-poll-indicator" id="op-poll-indicator">Live — updating every second</p>
-
-    <footer class="op-footer">
-        <p>Operator Interface by <strong>Developer Name</strong> &middot; Powered by Sci-Math Competition System</p>
-    </footer>
 </div>
 
 <script src="../assets/operator.js"></script>

@@ -180,14 +180,3 @@
 .op-event-controls { display: flex; gap: 10px; flex-wrap: wrap; }
 .op-poll-indicator { font-size: 0.75rem; color: var(--text-secondary); }
 .op-poll-indicator.stale { color: var(--error); font-weight: 700; }
-
-/* ---- Footer ---- */
-.op-footer {
-    text-align: center;
-    padding: 20px;
-    color: var(--text-secondary);
-    font-size: 13px;
-    border-top: 1px solid var(--border);
-    margin-top: 40px;
-}
-.op-footer strong { color: var(--text-primary); }

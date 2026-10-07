@@ -24,9 +24,9 @@ class CompetitionSession extends Model
     protected static string $table = 'competition_sessions';
 
     protected static array $fillable = [
-        'event_id', 'current_question_id', 'current_round', 'round_started_at',
-        'display_state', 'timer_duration_seconds', 'timer_started_at',
-        'timer_paused_at', 'timer_remaining_seconds', 'is_active', 'ended_at',
+        'event_id', 'current_question_id', 'display_state', 'timer_duration_seconds',
+        'timer_started_at', 'timer_paused_at', 'timer_remaining_seconds',
+        'is_active', 'ended_at',
     ];
 
     public static function forEvent(int $eventId): ?array

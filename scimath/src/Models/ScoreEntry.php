@@ -225,7 +225,6 @@ class ScoreEntry extends Model
                 c.id            AS contestant_id,
                 c.name          AS name,
                 c.team_code     AS team_code,
-                c.acronym       AS acronym,
                 c.logo_path     AS logo_path,
                 c.starting_score
                     + COALESCE(SUM(se.points_awarded), 0) AS total_score
@@ -234,7 +233,7 @@ class ScoreEntry extends Model
                 ON se.contestant_id = c.id AND se.event_id = c.event_id
             WHERE c.event_id = :event_id
               AND c.is_active = 1
-            GROUP BY c.id, c.name, c.team_code, c.acronym, c.logo_path, c.starting_score
+            GROUP BY c.id, c.name, c.team_code, c.logo_path, c.starting_score
             ORDER BY total_score {$direction}, c.display_order ASC
         SQL;
 

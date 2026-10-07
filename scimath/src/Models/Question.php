@@ -7,14 +7,9 @@ class Question extends Model
     protected static string $table = 'questions';
 
     protected static array $fillable = [
-        'event_id', 'category_id', 'question_number', 'image_path', 'answer_image_path',
+        'event_id', 'category_id', 'question_number', 'image_path',
         'points', 'time_seconds', 'is_active', 'display_order',
     ];
-
-    public static function hasAnswerImage(array $question): bool
-    {
-        return !empty($question['answer_image_path']);
-    }
 
     public static function forEvent(int $eventId, bool $activeOnly = false): array
     {

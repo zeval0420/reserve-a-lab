@@ -9,9 +9,7 @@ class EventSetting extends Model
     protected static array $fillable = [
         'event_id', 'default_points', 'default_time_seconds', 'ranking_order',
         'tie_break_mode', 'auto_show_ranking_after_score', 'timer_warning_seconds',
-        'display_theme', 'extra_settings', 'timer_audio_path', 'banner_audio_path',
-        'game_audio_path', 'banner_audio_volume', 'game_audio_volume',
-        'times_up_image_path',
+        'display_theme', 'extra_settings',
     ];
 
     public static function forEvent(int $eventId): ?array
@@ -19,31 +17,6 @@ class EventSetting extends Model
         $rows = self::where(['event_id' => $eventId]);
 
         return $rows[0] ?? null;
-    }
-
-    /**
-     * Returns audio configuration for an event.
-     *
-     * @return array{timer_audio_path: string|null, banner_audio_path: string|null, game_audio_path: string|null, banner_audio_volume: int, game_audio_volume: int, times_up_image_path: string|null}
-     */
-    public static function audioConfig(array $eventSetting): array
-    {
-        return [
-            'timer_audio_path'    => $eventSetting['timer_audio_path'] ?? null,
-            'banner_audio_path'   => $eventSetting['banner_audio_path'] ?? null,
-            'game_audio_path'     => $eventSetting['game_audio_path'] ?? null,
-            'banner_audio_volume' => (int) ($eventSetting['banner_audio_volume'] ?? 100),
-            'game_audio_volume'   => (int) ($eventSetting['game_audio_volume'] ?? 30),
-            'times_up_image_path' => $eventSetting['times_up_image_path'] ?? null,
-        ];
-    }
-
-    /**
-     * Checks if timer audio is configured.
-     */
-    public static function hasTimerAudio(array $eventSetting): bool
-    {
-        return !empty($eventSetting['timer_audio_path']);
     }
 
     /**
