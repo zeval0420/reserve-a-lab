@@ -1,4 +1,5 @@
 <?php
+session_start();
 $asset_base = '../';
 require('../helperFiles/db_connection.php');
 require_once('emailHelper.php');
@@ -17,11 +18,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_referral'])) {
     $intervention  = trim($_POST['intervention'] ?? '');
     $followup      = ($_POST['followup'] ?? '') === 'Yes' || ($_POST['followup'] ?? '') === 'No' ? $_POST['followup'] : null;
     $otherBehavior = trim($_POST['other'] ?? '');
-    $referrerEmail = trim($_POST['referrer_email'] ?? '');
-    if ($referrerEmail !== '' && !filter_var($referrerEmail, FILTER_VALIDATE_EMAIL)) {
-        $referrerEmail = '';
-    }
-    if ($referrerEmail === '') { $referrerEmail = null; }
 
     /* Concern checkbox columns */
     $concernAcademic = isset($_POST['concern_academic']) ? 1 : 0;
@@ -48,6 +44,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_referral'])) {
         $behaviorValues[] = isset($_POST[$col]) ? 1 : 0;
     }
 
+    /* Validate required fields */
+    $errors = [];
+    if ($campus === '') $errors[] = 'Campus is required.';
+    if ($student === '') $errors[] = 'Student name is required.';
+    if ($gradeSection === '') $errors[] = 'Grade & Section is required.';
+    if ($dateReferred === null || $dateReferred === '') $errors[] = 'Date is required.';
+    if ($description === '') $errors[] = 'Description is required.';
+    if ($intervention === '') $errors[] = 'Intervention is required.';
+    if ($followup !== 'Yes' && $followup !== 'No') $errors[] = 'Follow-up selection is required.';
+    if ($concernAcademic == 0 && $concernBehavior == 0 && $concernPersonal == 0) $errors[] = 'Select at least one concern.';
+    if (!in_array(1, $behaviorValues)) $errors[] = 'Select at least one behavior.';
+
+    if (!empty($errors)) {
+        // Store errors in session and redirect back
+        $_SESSION['referral_errors'] = $errors;
+        header('Location: index.php?error=1');
+        exit();
+    }
+
     $stmt = $conn->prepare("INSERT INTO guidance_referral_form (
         campus, student, grade_section, date_referred,
         concern_academic, concern_behavior, concern_personal,
@@ -56,11 +71,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_referral'])) {
         behavior_suicide, behavior_mood, behavior_emotional,
         behavior_withdrawal, behavior_excessive_activity, behavior_interaction,
         behavior_disruptive, behavior_appearance, behavior_academic_decline,
-        other_behavior, referrer_email
+        other_behavior
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
     if ($stmt) {
-        $types = 'ssssiiissiiiiiiiiiiiiiss';
+        $types = 'ssssssssiiiiiiiiiiiiiii';
         $params = [
             $campus, $student, $gradeSection, $dateReferred,
             $concernAcademic, $concernBehavior, $concernPersonal,
@@ -69,7 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_referral'])) {
             $behaviorValues[3], $behaviorValues[4], $behaviorValues[5],
             $behaviorValues[6], $behaviorValues[7], $behaviorValues[8],
             $behaviorValues[9], $behaviorValues[10], $behaviorValues[11],
-            $otherBehavior, $referrerEmail,
+            $otherBehavior,
         ];
 
         $stmt->bind_param($types, ...$params);
@@ -515,6 +530,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_referral'])) {
                 gap: 3mm;
             }
         }
+
+        .referral-app .error-summary {
+            background: #fff0f0;
+            border: 1px solid #e74c3c;
+            border-radius: 9px;
+            padding: 12px 16px;
+            margin-bottom: 18px;
+            color: #c0392b;
+        }
+
+        .referral-app .error-summary ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .referral-app .referral-sheets {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .referral-app .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 24px;
+            flex-wrap: wrap;
+        }
+
+        @media (min-width: 992px) {
+            .referral-app .referral-sheets {
+                flex-direction: row;
+                align-items: flex-start;
+            }
+            .referral-app .referral-sheets .sheet {
+                flex: 1;
+                min-width: 0;
+            }
+        }
     </style>
 </head>
 
@@ -522,42 +576,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_referral'])) {
     <?php include('../helperFiles/header.php'); ?>
 
     <div class="referral-app">
-        <form id="referralForm" method="post" action="">
+        <form id="referralForm" method="post" action="" onsubmit="return validateForm()">
+            <?php if (!empty($_SESSION['referral_errors'])): ?>
+                <div class="error-summary">
+                    <ul>
+                        <?php foreach ($_SESSION['referral_errors'] as $err): ?>
+                            <li><?= htmlspecialchars($err) ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+                <?php unset($_SESSION['referral_errors']); ?>
+            <?php endif; ?>
             <div class="toolbar">
                 <div class="title">
                     <h1>PSHS Referral Form</h1>
                     <p>Digital, clean, and print-ready version of the prepared referral form.</p>
                 </div>
-                <div class="actions">
-                    <button class="btn-secondary" type="button" onclick="clearForm()">Clear</button>
-                    <button class="btn-primary" type="submit" name="submit_referral" value="1">Save to Records</button>
-                    <button class="btn-secondary" type="button" onclick="window.print()">Print / Save PDF</button>
-                </div>
             </div>
 
+            <div class="referral-sheets">
             <!-- FRONT -->
             <section class="sheet">
                 <div class="sheet-label">Front • Referral information</div>
                 <div class="form-card">
                     <div class="form-card-head">
                         <p class="system">PHILIPPINE SCIENCE HIGH SCHOOL SYSTEM</p>
-                        <p class="campus">Campus: <input type="text" name="campus"></p>
+                        <p class="campus">Campus: <input type="text" name="campus" required></p>
                         <h2 class="form-title">REFERRAL FORM</h2>
                     </div>
 
                     <div class="field full">
                         <label>Name of Student:</label>
-                        <input type="text" name="student">
+                        <input type="text" name="student" required>
                     </div>
 
                     <div class="form-row">
                         <div class="field">
                             <label>Grade &amp; Section:</label>
-                            <input type="text" name="grade">
+                            <input type="text" name="grade" required>
                         </div>
                         <div class="field">
                             <label>Date:</label>
-                            <input type="date" name="date">
+                            <input type="date" name="date" required>
                         </div>
                     </div>
 
@@ -573,26 +633,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_referral'])) {
                     <div class="section">
                         <div class="section-title">Brief Description:</div>
                         <div class="lined-area">
-                            <textarea name="description" rows="4"></textarea>
+                            <textarea name="description" rows="4" required></textarea>
                         </div>
                     </div>
 
                     <div class="section">
                         <div class="section-title">Intervention/s Done:</div>
                         <div class="lined-area">
-                            <textarea name="intervention" rows="4"></textarea>
+                            <textarea name="intervention" rows="4" required></textarea>
                         </div>
                     </div>
 
                     <div class="followup">
                         <span>Requires Follow-up?</span>
-                        <label class="radio"><input type="radio" name="followup" value="Yes"> Yes</label>
-                        <label class="radio"><input type="radio" name="followup" value="No"> No</label>
-                    </div>
-
-                    <div class="field full" style="margin-top: 10px;">
-                        <label>Referrer Email (optional):</label>
-                        <input type="email" name="referrer_email" placeholder="you@pshs.edu.ph">
+                        <label class="radio"><input type="radio" name="followup" value="Yes" required> Yes</label>
+                        <label class="radio"><input type="radio" name="followup" value="No" required> No</label>
                     </div>
 
                     <div class="referred">
@@ -611,7 +666,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_referral'])) {
                 <div class="form-card behavior-card">
                     <h2 class="behavior-title">BEHAVIORS SPOTTED:</h2>
                     <p class="instruction">
-                        Put an ‘x’ mark inside the box/es pertaining to the specific behaviors you have
+                        Put an 'x' mark inside the box/es pertaining to the specific behaviors you have
                         observed from the student you are referring:
                     </p>
 
@@ -639,19 +694,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_referral'])) {
                     <div class="footer-code">PSHS-00-F-GCU-03-Ver02-Rev0-02/01/20</div>
                 </div>
             </section>
-        </form>
-
-        <div class="privacy-note">
-            <strong>Printing:</strong> The layout is single-copy: page 1 contains the referral front
-            and page 2 contains the corresponding behavior section. Use A4, portrait, 100% scale,
-            and double-sided printing with the printer set to flip on the long edge if you want the
-            two pages to align as a back-to-back sheet.
         </div>
+
+            <div class="form-actions">
+                <button class="btn-secondary" type="button" onclick="clearForm()">Clear Form</button>
+                <button class="btn-primary" type="submit" name="submit_referral" value="1">Submit Referral Form</button>
+            </div>
+        </form>
     </div>
 
     <?php include('../helperFiles/footer.php'); ?>
 
     <script>
+        function validateForm() {
+            var concerns = document.querySelectorAll('input[name="concern_academic"], input[name="concern_behavior"], input[name="concern_personal"]');
+            var concernSelected = Array.from(concerns).some(function(cb) { return cb.checked; });
+            if (!concernSelected) {
+                alert('Please select at least one concern.');
+                return false;
+            }
+            var behaviors = document.querySelectorAll('input[name^="behavior_"]');
+            var behaviorSelected = Array.from(behaviors).some(function(cb) { return cb.checked; });
+            if (!behaviorSelected) {
+                alert('Please select at least one behavior.');
+                return false;
+            }
+            return true;
+        }
+
         function clearForm() {
             if (!confirm("Clear all entered information?")) return;
             document.getElementById("referralForm").reset();
