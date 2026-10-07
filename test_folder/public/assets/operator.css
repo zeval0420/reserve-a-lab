@@ -1,0 +1,115 @@
+/* Operator control panel: built for glanceability at a distance and fast,
+   confident taps/clicks -- not for aesthetics. Extends admin.css's base
+   variables/buttons/tables. */
+
+.op-wrap {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 16px;
+}
+@media (max-width: 1000px) {
+    .op-wrap { grid-template-columns: 1fr; }
+}
+
+.op-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+.op-event-name { font-size: 1.3rem; font-weight: 700; margin: 0; }
+.op-progress { color: var(--color-muted); font-size: 0.95rem; }
+
+/* Public display state banner -- the operator's single most important
+   glance-check: "what is the audience seeing right now". */
+.op-display-state {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-radius: var(--radius);
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    border: 2px solid transparent;
+}
+.op-display-state .label { opacity: 0.75; font-weight: 600; text-transform: none; letter-spacing: 0; }
+.op-display-state.state-cover          { background: #eef0f3; color: #4b5563; border-color: #d7dae0; }
+.op-display-state.state-question       { background: #e6f0ff; color: #1a3fd6; border-color: #b9cdff; }
+.op-display-state.state-time_up        { background: #fdecea; color: #b8291f; border-color: #f3b8b3; }
+.op-display-state.state-ranking        { background: #f1eafd; color: #6d28d9; border-color: #ddc8fb; }
+.op-display-state.state-final_results  { background: #e9f8ee; color: #1a7f37; border-color: #b7e4c7; }
+
+.op-panel { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 18px; margin-bottom: 16px; }
+.op-panel h2 { font-size: 1rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--color-muted); margin: 0 0 12px; }
+
+/* Question preview */
+.op-question-meta { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 10px; font-size: 0.95rem; }
+.op-question-meta .stat { display: flex; flex-direction: column; }
+.op-question-meta .stat .value { font-size: 1.3rem; font-weight: 700; }
+.op-question-meta .stat .label { font-size: 0.75rem; color: var(--color-muted); text-transform: uppercase; }
+.op-question-preview { max-width: 100%; max-height: 220px; border-radius: var(--radius); border: 1px solid var(--color-border); display: block; background: #f7f7f8; }
+.op-nav-buttons { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+.op-nav-buttons .btn { min-width: 110px; text-align: center; }
+
+/* Timer */
+.op-timer-display {
+    font-family: "SF Mono", Consolas, Menlo, monospace;
+    font-size: 4rem;
+    font-weight: 700;
+    text-align: center;
+    padding: 10px 0;
+    border-radius: var(--radius);
+    margin-bottom: 14px;
+    line-height: 1;
+    letter-spacing: 0.02em;
+}
+.op-timer-display.timer-idle    { background: #eef0f3; color: #4b5563; }
+.op-timer-display.timer-running { background: #e9f8ee; color: #1a7f37; }
+.op-timer-display.timer-paused  { background: #fff6e0; color: #a15c00; }
+.op-timer-display.timer-expired { background: #fdecea; color: #b8291f; animation: op-pulse 1.4s ease-in-out infinite; }
+@keyframes op-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+
+.op-timer-buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.op-timer-buttons .btn { padding: 14px 8px; font-size: 0.95rem; }
+
+/* Score entry */
+.op-score-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--color-border); }
+.op-score-row:last-child { border-bottom: none; }
+.op-score-name { flex: 1 1 auto; min-width: 0; }
+.op-score-name .name { font-weight: 700; display: block; }
+.op-score-name .total { color: var(--color-muted); font-size: 0.85rem; }
+.op-score-buttons { display: flex; gap: 6px; flex-shrink: 0; }
+.op-score-btn {
+    padding: 8px 12px;
+    border-radius: var(--radius);
+    border: 1px solid var(--color-border);
+    background: #fff;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+.op-score-btn.correct { color: var(--color-success); }
+.op-score-btn.incorrect { color: var(--color-danger); }
+.op-score-btn.no-answer { color: var(--color-muted); }
+.op-score-btn.selected.correct { background: var(--color-success); color: #fff; }
+.op-score-btn.selected.incorrect { background: var(--color-danger); color: #fff; }
+.op-score-btn.selected.no-answer { background: #6b7280; color: #fff; }
+.op-score-btn:disabled { opacity: 0.5; cursor: default; }
+.op-saved-flash { color: var(--color-success); font-size: 0.75rem; margin-left: 6px; opacity: 0; transition: opacity 0.2s; }
+.op-saved-flash.show { opacity: 1; }
+
+/* Rankings */
+.op-rank-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--color-border); font-size: 0.92rem; }
+.op-rank-row:last-child { border-bottom: none; }
+.op-rank-num { font-weight: 700; width: 28px; display: inline-block; }
+
+.op-event-controls { display: flex; gap: 10px; flex-wrap: wrap; }
+.op-poll-indicator { font-size: 0.75rem; color: var(--color-muted); }
+.op-poll-indicator.stale { color: var(--color-danger); font-weight: 700; }
