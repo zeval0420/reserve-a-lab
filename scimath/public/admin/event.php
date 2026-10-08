@@ -65,7 +65,6 @@ require __DIR__ . '/includes/header.php';
     </div>
     <div>
         <a href="index.php" class="btn btn-small">&larr; All events</a>
-        <a href="/admin/scores.php?id=<?= $eventId ?>" class="btn btn-small">View scores</a>
     </div>
 </div>
 
