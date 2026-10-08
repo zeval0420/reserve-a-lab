@@ -48,13 +48,9 @@ final class DisplayState
     public const TIME_UP        = 'time_up';
     public const RANKING        = 'ranking';
     public const FINAL_RESULTS  = 'final_results';
-    public const PROMOTIONAL    = 'promotional';
-    public const ANSWER         = 'answer';
-    public const HIDDEN         = 'hidden';
 
     public const ALL = [
-        self::COVER, self::QUESTION, self::TIME_UP, self::RANKING,
-        self::FINAL_RESULTS, self::PROMOTIONAL, self::ANSWER, self::HIDDEN,
+        self::COVER, self::QUESTION, self::TIME_UP, self::RANKING, self::FINAL_RESULTS,
     ];
 }
 

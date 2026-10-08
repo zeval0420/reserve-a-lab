@@ -155,11 +155,6 @@ logo.src = '../' + eventInfo.logo_path;
         setTimerAnchor(data.timer);
         setActiveSection(data.display_state);
 
-        // Handle audio config changes
-        if (data.audio_config) {
-            updateAudioConfig(data.audio_config);
-        }
-
         if (data.display_state === 'cover') {
             renderCover(data.event);
         } else if (data.display_state === 'question' || data.display_state === 'time_up') {
@@ -168,102 +163,9 @@ logo.src = '../' + eventInfo.logo_path;
             renderRankingRows(document.getElementById('disp-ranking-list'), data.rankings);
         } else if (data.display_state === 'final_results') {
             renderFinal(data.event, data.rankings);
-        } else if (data.display_state === 'promotional') {
-            renderPromotional(data.promotional_slide);
-        } else if (data.display_state === 'answer') {
-            renderAnswer(data.answer_slide);
-        } else if (data.display_state === 'hidden') {
-            renderHiddenOverlay();
         }
 
         renderTimer(data.display_state);
-    }
-
-    // ---- Audio Management ----------------------------------------------
-
-    var audioConfig = {};
-    var bannerAudio = null;
-    var gameAudio = null;
-    var timerAudio = null;
-
-    function updateAudioConfig(config) {
-        audioConfig = config;
-
-        // Banner audio (100% volume by default)
-        if (config.banner_audio_path && (!bannerAudio || bannerAudio.src !== '../' + config.banner_audio_path)) {
-            bannerAudio = new Audio('../' + config.banner_audio_path);
-            bannerAudio.volume = (config.banner_audio_volume || 100) / 100;
-            bannerAudio.loop = true;
-        }
-
-        // Game audio (30% volume by default)
-        if (config.game_audio_path && (!gameAudio || gameAudio.src !== '../' + config.game_audio_path)) {
-            gameAudio = new Audio('../' + config.game_audio_path);
-            gameAudio.volume = (config.game_audio_volume || 30) / 100;
-            gameAudio.loop = true;
-        }
-
-        // Timer audio
-        if (config.timer_audio_path && (!timerAudio || timerAudio.src !== '../' + config.timer_audio_path)) {
-            timerAudio = new Audio('../' + config.timer_audio_path);
-            timerAudio.preload = 'auto';
-        }
-    }
-
-    function playTimerWarning(seconds) {
-        if (seconds <= 5 && seconds > 0 && timerAudio) {
-            timerAudio.currentTime = 0;
-            timerAudio.play().catch(function() {});
-        }
-    }
-
-    function startBackgroundAudio(state) {
-        if (state === 'cover' && bannerAudio) {
-            gameAudio && gameAudio.pause();
-            bannerAudio.play().catch(function() {});
-        } else if ((state === 'question' || state === 'ranking' || state === 'final_results') && gameAudio) {
-            bannerAudio && bannerAudio.pause();
-            gameAudio.play().catch(function() {});
-        } else {
-            bannerAudio && bannerAudio.pause();
-            gameAudio && gameAudio.pause();
-        }
-    }
-
-    // ---- New Render Functions ------------------------------------------
-
-    function renderPromotional(slide) {
-        if (!slide) return;
-        var img = document.getElementById('disp-promo-image');
-        var desc = document.getElementById('disp-promo-desc');
-        if (slide.file_path) {
-            img.src = '../' + slide.file_path;
-            img.style.display = 'block';
-        } else {
-            img.style.display = 'none';
-        }
-        if (slide.description) {
-            desc.textContent = slide.description;
-            desc.style.display = 'block';
-        } else {
-            desc.style.display = 'none';
-        }
-    }
-
-    function renderAnswer(slide) {
-        if (!slide || !slide.image_path) return;
-        var img = document.getElementById('disp-answer-image');
-        img.src = '../' + slide.image_path;
-    }
-
-    function renderHiddenOverlay() {
-        var overlay = document.getElementById('disp-hidden-overlay');
-        overlay.style.display = 'flex';
-    }
-
-    function hideHiddenOverlay() {
-        var overlay = document.getElementById('disp-hidden-overlay');
-        overlay.style.display = 'none';
     }
 
     // ---- Polling ----------------------------------------------------------
@@ -280,23 +182,7 @@ logo.src = '../' + eventInfo.logo_path;
     }
 
     setInterval(poll, POLL_MS);
-    setInterval(function () {
-        renderTimer(current.display_state);
-        // Play timer warning audio
-        if (current.timer && current.timer.remaining_seconds !== null) {
-            playTimerWarning(current.timer.remaining_seconds);
-        }
-        // Manage background audio based on state
-        if (current.display_state) {
-            startBackgroundAudio(current.display_state);
-        }
-        // Show/hide hidden overlay
-        if (current.display_state === 'hidden') {
-            renderHiddenOverlay();
-        } else {
-            hideHiddenOverlay();
-        }
-    }, TICK_MS);
+    setInterval(function () { renderTimer(current.display_state); }, TICK_MS);
 
     // ---- Fullscreen ---------------------------------------------------
 

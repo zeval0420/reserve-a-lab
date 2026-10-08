@@ -7,7 +7,7 @@ class Contestant extends Model
     protected static string $table = 'scimath_contestants';
 
     protected static array $fillable = [
-        'event_id', 'name', 'team_code', 'acronym', 'organization', 'logo_path',
+        'event_id', 'name', 'team_code', 'organization', 'logo_path',
         'starting_score', 'display_order', 'is_active',
     ];
 

@@ -3,8 +3,6 @@
 require_once __DIR__ . '/../Models/Event.php';
 require_once __DIR__ . '/../Models/CompetitionSession.php';
 require_once __DIR__ . '/../Models/ScoreEntry.php';
-require_once __DIR__ . '/../Models/PromotionalSlide.php';
-require_once __DIR__ . '/../Models/AnswerSlide.php';
 require_once __DIR__ . '/../Support/EventValidator.php';
 require_once __DIR__ . '/CompetitionRuntimeException.php';
 require_once __DIR__ . '/../../config/constants.php';
@@ -442,128 +440,6 @@ class CompetitionRuntime
         });
     }
 
-    // ------------------------------------------------------------------
-    // Promotional & Answer Slides
-    // ------------------------------------------------------------------
-
-    public static function showPromotionalSlide(int $eventId, int $slideId): array
-    {
-        return self::mutate($eventId, function (array $session) use ($slideId) {
-            self::requireActive($session);
-
-            $slide = PromotionalSlide::find($slideId);
-            if ($slide === null) {
-                throw new CompetitionRuntimeException('That promotional slide does not exist.');
-            }
-            if ((int) $slide['event_id'] !== $eventId) {
-                throw new CompetitionRuntimeException('That promotional slide does not belong to this event.');
-            }
-            if (!(bool) $slide['is_active']) {
-                throw new CompetitionRuntimeException('That promotional slide is not active.');
-            }
-
-            return ['display_state' => DisplayState::PROMOTIONAL, 'promotional_slide' => $slide];
-        });
-    }
-
-    public static function showAnswerSlide(int $eventId, int $slideId): array
-    {
-        return self::mutate($eventId, function (array $session) use ($slideId) {
-            self::requireActive($session);
-
-            $slide = AnswerSlide::find($slideId);
-            if ($slide === null) {
-                throw new CompetitionRuntimeException('That answer slide does not exist.');
-            }
-            if ((int) $slide['event_id'] !== $eventId) {
-                throw new CompetitionRuntimeException('That answer slide does not belong to this event.');
-            }
-            if (!(bool) $slide['is_active']) {
-                throw new CompetitionRuntimeException('That answer slide is not active.');
-            }
-
-            return ['display_state' => DisplayState::ANSWER, 'answer_slide' => $slide];
-        });
-    }
-
-    public static function hideQuestion(int $eventId): array
-    {
-        return self::mutate($eventId, function (array $session) {
-            self::requireActive($session);
-
-            return ['display_state' => DisplayState::HIDDEN];
-        });
-    }
-
-    public static function showQuestion(int $eventId): array
-    {
-        return self::mutate($eventId, function (array $session) {
-            self::requireActive($session);
-            self::requireCurrentQuestion($session);
-
-            $remaining = CompetitionSession::computeRemainingSeconds($session);
-            $expired = !CompetitionSession::isTimerRunning($session)
-                && !CompetitionSession::isTimerPaused($session)
-                && $remaining <= 0
-                && (int) $session['timer_duration_seconds'] > 0;
-
-            return ['display_state' => $expired ? DisplayState::TIME_UP : DisplayState::QUESTION];
-        });
-    }
-
-    public static function previewNextQuestion(int $eventId): ?array
-    {
-        $session = CompetitionSession::forEvent($eventId);
-        if ($session === null || !(bool) $session['is_active']) {
-            return null;
-        }
-
-        $currentId = $session['current_question_id'];
-        $questions = Question::forEvent($eventId, true);
-
-        if ($currentId === null) {
-            return $questions[0] ?? null;
-        }
-
-        foreach ($questions as $i => $q) {
-            if ((int) $q['id'] === (int) $currentId && $i < count($questions) - 1) {
-                return $questions[$i + 1] ?? null;
-            }
-        }
-
-        return null;
-    }
-
-    // ------------------------------------------------------------------
-    // Round Control
-    // ------------------------------------------------------------------
-
-    public static function startRound(int $eventId, ?int $roundNumber = null): array
-    {
-        return self::mutate($eventId, function (array $session) use ($roundNumber) {
-            self::requireActive($session);
-
-            $nextRound = $roundNumber ?? ((int) ($session['current_round'] ?? 0) + 1);
-
-            return [
-                'current_round'   => $nextRound,
-                'round_started_at' => date('Y-m-d H:i:s'),
-                'display_state'   => DisplayState::COVER,
-            ];
-        });
-    }
-
-    public static function endRound(int $eventId): array
-    {
-        return self::mutate($eventId, function (array $session) {
-            self::requireActive($session);
-
-            return [
-                'display_state' => DisplayState::RANKING,
-            ];
-        });
-    }
-
     /**
      * Single composed payload for the operator dashboard: full state, plus
      * the current question's scores and the live rankings -- everything one
@@ -580,14 +456,10 @@ class CompetitionRuntime
             $currentQuestionScores = self::getScores($eventId, $state['current_question']['id']);
         }
 
-        // Also fetch all scores for round breakdown view
-        $allScores = self::getScores($eventId);
-
         return [
-            'state'                   => $state,
+            'state'                  => $state,
             'current_question_scores' => $currentQuestionScores,
-            'rankings'                => self::getRankings($eventId),
-            'all_scores'              => $allScores,
+            'rankings'               => self::getRankings($eventId),
         ];
     }
 
@@ -605,27 +477,22 @@ class CompetitionRuntime
     {
         $event = self::requireEvent($eventId);
         $state = self::getState($eventId);
-        $settings = EventSetting::forEvent($eventId);
-        $audioConfig = $settings ? EventSetting::audioConfig($settings) : [];
 
         $needsRanking = in_array($state['display_state'], [DisplayState::RANKING, DisplayState::FINAL_RESULTS], true);
 
         return [
-            'event'          => [
+            'event' => [
                 'name'             => $event['name'],
                 'subtitle'         => $event['subtitle'],
                 'logo_path'        => $event['logo_path'],
                 'cover_image_path' => $event['cover_image_path'],
             ],
-            'display_state'  => $state['display_state'],
-            'current_question' => $state['current_question'],
-            'question_progress' => $state['question_progress'],
-            'timer'          => $state['timer'],
-            'presentation'   => $state['presentation'],
-            'audio_config'   => $audioConfig,
-            'rankings'       => $needsRanking ? self::getRankings($eventId) : [],
-            'promotional_slide' => $state['display_state'] === DisplayState::PROMOTIONAL ? ($state['promotional_slide'] ?? null) : null,
-            'answer_slide'   => $state['display_state'] === DisplayState::ANSWER ? ($state['answer_slide'] ?? null) : null,
+            'display_state'      => $state['display_state'],
+            'current_question'   => $state['current_question'],
+            'question_progress'  => $state['question_progress'],
+            'timer'              => $state['timer'],
+            'presentation'       => $state['presentation'],
+            'rankings'           => $needsRanking ? self::getRankings($eventId) : [],
         ];
     }
 

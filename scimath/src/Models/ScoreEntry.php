@@ -220,7 +220,6 @@ $stmt = $db->prepare(
             ? 'ASC'
             : 'DESC';
 
-<<<<<<< HEAD
 $sql = <<<SQL
              SELECT
                  c.id            AS contestant_id,
@@ -237,25 +236,6 @@ $sql = <<<SQL
              GROUP BY c.id, c.name, c.team_code, c.logo_path, c.starting_score
              ORDER BY total_score {$direction}, c.display_order ASC
          SQL;
-=======
-        $sql = <<<SQL
-            SELECT
-                c.id            AS contestant_id,
-                c.name          AS name,
-                c.team_code     AS team_code,
-                c.acronym       AS acronym,
-                c.logo_path     AS logo_path,
-                c.starting_score
-                    + COALESCE(SUM(se.points_awarded), 0) AS total_score
-            FROM contestants c
-            LEFT JOIN score_entries se
-                ON se.contestant_id = c.id AND se.event_id = c.event_id
-            WHERE c.event_id = :event_id
-              AND c.is_active = 1
-            GROUP BY c.id, c.name, c.team_code, c.acronym, c.logo_path, c.starting_score
-            ORDER BY total_score {$direction}, c.display_order ASC
-        SQL;
->>>>>>> parent of 0d19233 (Revert "scimath")
 
         $stmt = self::db()->prepare($sql);
         $stmt->execute(['event_id' => $eventId]);
