@@ -17,6 +17,7 @@ if ($event === null) {
 // Server-rendered initial payload for a fast, correct first paint (no flash
 // of empty/wrong content while the first poll is still in flight).
 $publicState = CompetitionRuntime::getPublicState($eventId);
+$audioConfig = EventSetting::audioConfig($settings ?? []);
 ?><!DOCTYPE html>
 <html lang="en">
 <head>
@@ -29,7 +30,8 @@ $publicState = CompetitionRuntime::getPublicState($eventId);
 
 <div id="disp-root"
      data-event-id="<?= $eventId ?>"
-     data-initial='<?= htmlspecialchars(json_encode($publicState), ENT_QUOTES) ?>'>
+     data-initial='<?= htmlspecialchars(json_encode($publicState), ENT_QUOTES) ?>'
+     data-audio-config='<?= htmlspecialchars(json_encode($audioConfig), ENT_QUOTES) ?>'>
 
     <!-- COVER -->
     <section class="disp-state disp-cover" data-state-section="cover">
@@ -53,7 +55,11 @@ $publicState = CompetitionRuntime::getPublicState($eventId);
             <img id="disp-q-image" class="disp-question-image" alt="Question">
         </div>
         <div class="disp-timeup-overlay" id="disp-timeup-overlay">
-            <div class="disp-timeup-banner">TIME'S UP</div>
+            <?php if (!empty($audioConfig['times_up_image_path'])): ?>
+                <img src="../<?= htmlspecialchars($audioConfig['times_up_image_path']) ?>" alt="Time's Up" class="disp-timeup-image">
+            <?php else: ?>
+                <div class="disp-timeup-banner">TIME'S UP</div>
+            <?php endif; ?>
         </div>
     </section>
 
@@ -73,6 +79,26 @@ $publicState = CompetitionRuntime::getPublicState($eventId);
         <div class="disp-champion" id="disp-champion"></div>
         <div class="disp-ranking-list disp-final-list" id="disp-final-ranking-list"></div>
     </section>
+
+    <!-- PROMOTIONAL -->
+    <section class="disp-state disp-promo" data-state-section="promotional">
+        <div class="disp-promo-content">
+            <img id="disp-promo-image" class="disp-promo-image" style="display:none;" alt="">
+            <div id="disp-promo-desc" class="disp-promo-description" style="display:none;"></div>
+        </div>
+    </section>
+
+    <!-- ANSWER -->
+    <section class="disp-state disp-answer" data-state-section="answer">
+        <div class="disp-answer-content">
+            <img id="disp-answer-image" class="disp-answer-image" alt="Answer">
+        </div>
+    </section>
+
+    <!-- HIDDEN OVERLAY -->
+    <div class="disp-hidden-overlay" id="disp-hidden-overlay" style="display:none;">
+        <div class="disp-hidden-text">Please Wait</div>
+    </div>
 
     <button type="button" id="disp-fullscreen-btn" class="disp-fullscreen-btn" title="Toggle fullscreen (F)">&#x26F6;</button>
 </div>

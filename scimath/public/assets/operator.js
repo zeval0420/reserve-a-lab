@@ -173,11 +173,49 @@
         document.getElementById('op-btn-return-to-cover').disabled = !state.is_active;
         document.getElementById('op-auto-rank-hint').style.display = state.auto_show_ranking_after_score ? '' : 'none';
 
+        // Question controls
+        document.getElementById('op-btn-hide-question').disabled = !state.is_active || q === null;
+        document.getElementById('op-btn-show-question').disabled = !state.is_active;
+        document.getElementById('op-btn-preview-next').disabled = !state.is_active;
+
+        // Round controls
+        document.getElementById('op-btn-start-round').disabled = !state.is_active;
+        document.getElementById('op-btn-end-round').disabled = !state.is_active;
+
+        // Next preview
+        renderNextPreview(state, allQuestions);
+
         // Score entry
         renderScores(q, state.is_active);
 
         // Rankings
         renderRankings();
+    }
+
+    function renderNextPreview(state, questions) {
+        var nextQ = null;
+        if (state.current_question) {
+            var currentId = state.current_question.id;
+            for (var i = 0; i < questions.length; i++) {
+                if (questions[i].id === currentId && i < questions.length - 1) {
+                    nextQ = questions[i + 1];
+                    break;
+                }
+            }
+        } else if (questions.length > 0) {
+            nextQ = questions[0];
+        }
+
+        var img = document.getElementById('op-next-image');
+        var none = document.getElementById('op-next-none');
+        if (nextQ) {
+            img.src = '../' + nextQ.image_path;
+            img.style.display = '';
+            none.style.display = 'none';
+        } else {
+            img.style.display = 'none';
+            none.style.display = '';
+        }
     }
 
     function renderScores(q, isActive) {
@@ -335,6 +373,41 @@
     });
     document.getElementById('op-btn-return-to-cover').addEventListener('click', function (e) {
         confirmAndAct('return_to_cover', 'Return the public display to the cover screen? (This only changes what is shown -- no scores or progress are affected.)', e.currentTarget);
+    });
+
+    // Question controls
+    document.getElementById('op-btn-hide-question').addEventListener('click', function (e) {
+        doAction('hide_question', {}, e.currentTarget);
+    });
+    document.getElementById('op-btn-show-question').addEventListener('click', function (e) {
+        doAction('show_question', {}, e.currentTarget);
+    });
+    document.getElementById('op-btn-preview-next').addEventListener('click', function (e) {
+        doAction('preview_next', {}, e.currentTarget).then(function() {
+            // Preview is handled in renderNextPreview via state update
+        });
+    });
+
+    // Round controls
+    document.getElementById('op-btn-start-round').addEventListener('click', function (e) {
+        doAction('start_round', {}, e.currentTarget);
+    });
+    document.getElementById('op-btn-end-round').addEventListener('click', function (e) {
+        doAction('end_round', {}, e.currentTarget);
+    });
+
+    // Promotional slide
+    document.getElementById('op-promo-select').addEventListener('change', function (e) {
+        var id = e.currentTarget.value;
+        e.currentTarget.value = '';
+        if (id) doAction('show_promotional', { slide_id: id }, null);
+    });
+
+    // Answer slide
+    document.getElementById('op-answer-select').addEventListener('change', function (e) {
+        var id = e.currentTarget.value;
+        e.currentTarget.value = '';
+        if (id) doAction('show_answer', { slide_id: id }, null);
     });
 
     // ---- Polling ----------------------------------------------------------
