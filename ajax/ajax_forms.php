@@ -268,17 +268,37 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
 
         if (is_array($mergedMaterials)) {
             foreach ($mergedMaterials as $mat) {
-                $item = trim($mat['item'] ?? '');
-                $unit = trim($mat['unit'] ?? 'N/A');
-                $desc = trim($mat['desc'] ?? 'N/A');
-                $qty = isset($mat['qty']) ? (int) $mat['qty'] : 1;
-
-                if ($item !== '') {
-                    $stmt2->bind_param("isiss", $formID, $item, $qty, $unit, $desc);
-                    $stmt2->execute();
-                    $materials[] = "{$qty} {$unit} of {$item} ({$desc})";
+                if (!is_array($mat)) {
+                    continue;
                 }
+
+                // Ensure every material field is a scalar string or number.
+                $itemValue = $mat['item'] ?? '';
+                $unitValue = $mat['unit'] ?? 'N/A';
+                $descValue = $mat['desc'] ?? 'N/A';
+                $qtyValue = $mat['qty'] ?? 1;
+
+                $item = is_scalar($itemValue) ? trim((string) $itemValue) : '';
+                $materialUnit = is_scalar($unitValue) ? trim((string) $unitValue) : 'N/A';
+                $desc = is_scalar($descValue) ? trim((string) $descValue) : 'N/A';
+                $qty = is_scalar($qtyValue) && is_numeric($qtyValue)
+                    ? (int) $qtyValue
+                    : 1;
+
+                if ($item === '') {
+                    continue;
+                }
+
+                $stmt2->bind_param("isiss", $formID, $item, $qty, $materialUnit, $desc);
+
+                if (!$stmt2->execute()) {
+                    throw new Exception("Failed to save material: " . $stmt2->error);
+                }
+
+                $materials[] = "{$qty} {$materialUnit} of {$item} ({$desc})";
             }
+        } else {
+            throw new Exception("Invalid materials JSON: " . json_last_error_msg());
         }
     }
 
