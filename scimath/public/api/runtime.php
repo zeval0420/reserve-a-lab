@@ -68,6 +68,13 @@ try {
             api_ok(['rankings' => CompetitionRuntime::getRankings($eventId)]);
             break;
 
+        case 'report':
+            // Full quiz-bee table (contestants x questions + totals/ranks) for
+            // the scorer interface, built from the same source as the export.
+            require_once __DIR__ . '/../../src/Support/ScoreReport.php';
+            api_ok(['report' => ScoreReport::build($eventId)]);
+            break;
+
         // ---- Event lifecycle -----------------------------------------
         case 'start_event':
             require_write();
@@ -130,6 +137,12 @@ try {
             api_ok(['state' => CompetitionRuntime::showRanking($eventId)]);
             break;
 
+        case 'show_round_ranking':
+            require_write();
+            $round = (string) ($input['round'] ?? '');
+            api_ok(['state' => CompetitionRuntime::showRoundRanking($eventId, $round)]);
+            break;
+
         case 'return_to_question':
             require_write();
             api_ok(['state' => CompetitionRuntime::returnToQuestion($eventId)]);
@@ -145,6 +158,46 @@ try {
             api_ok(['state' => CompetitionRuntime::returnToCover($eventId)]);
             break;
 
+        // ---- Promotional & Answer Slides ------------------------------
+        case 'show_promotional':
+            require_write();
+            $slideId = (int) ($input['slide_id'] ?? 0);
+            api_ok(['state' => CompetitionRuntime::showPromotionalSlide($eventId, $slideId)]);
+            break;
+
+        case 'show_answer':
+            require_write();
+            $slideId = (int) ($input['slide_id'] ?? 0);
+            api_ok(['state' => CompetitionRuntime::showAnswerSlide($eventId, $slideId)]);
+            break;
+
+        case 'hide_question':
+            require_write();
+            api_ok(['state' => CompetitionRuntime::hideQuestion($eventId)]);
+            break;
+
+        case 'show_question':
+            require_write();
+            api_ok(['state' => CompetitionRuntime::showQuestion($eventId)]);
+            break;
+
+        case 'preview_next':
+            require_write();
+            $next = CompetitionRuntime::previewNextQuestion($eventId);
+            api_ok(['next_question' => $next]);
+            break;
+
+        case 'start_round':
+            require_write();
+            $round = (string) ($input['round'] ?? '');
+            api_ok(['state' => CompetitionRuntime::startRound($eventId, $round)]);
+            break;
+
+        case 'end_round':
+            require_write();
+            api_ok(['state' => CompetitionRuntime::endRound($eventId)]);
+            break;
+
         // ---- Scoring ----------------------------------------------------
         case 'score':
             require_write();
@@ -158,7 +211,121 @@ try {
             $entry = CompetitionRuntime::scoreContestant(
                 $eventId, $questionId, $contestantId, $result, $adjustmentPoints, Auth::username(), $reason
             );
-            api_ok(['entry' => $entry] + CompetitionRuntime::getDashboard($eventId));
+            api_ok([
+                'entry'    => $entry,
+                'scores'   => CompetitionRuntime::getScores($eventId, $questionId),
+                'rankings' => CompetitionRuntime::getRankings($eventId),
+            ]);
+            break;
+
+        // ---- Export -----------------------------------------------------
+        // Reports are streamed by public/api/export_scores.php (GET), since a
+        // JSON endpoint is the wrong shape for a file download.
+
+        // ---- Promotional Slides CRUD ----------------------------------
+        case 'promotional_slides':
+            api_ok(['slides' => PromotionalSlide::forEvent($eventId)]);
+            break;
+
+        case 'promotional_save':
+            require_write();
+            require_once __DIR__ . '/../../src/Support/Uploader.php';
+            $title = (string) ($input['title'] ?? '');
+            $description = $input['description'] ?? null;
+            $file = $_FILES['file'] ?? null;
+
+            if (empty($title)) {
+                api_fail(400, 'Title is required.');
+            }
+
+            $filePath = null;
+            if ($file && $file['error'] === UPLOAD_ERR_OK) {
+                $filePath = Uploader::handleImage($file, 'promotional', $eventId);
+            } elseif (!isset($input['remove_file']) && !empty($input['existing_file'])) {
+                $filePath = $input['existing_file'];
+            }
+
+            if ($filePath === null && empty($input['slide_id'])) {
+                api_fail(400, 'A file is required for new slides.');
+            }
+
+            $slideId = isset($input['slide_id']) && $input['slide_id'] !== '' ? (int) $input['slide_id'] : null;
+            $data = [
+                'event_id'    => $eventId,
+                'title'       => $title,
+                'description' => $description,
+                'file_path'   => $filePath ?? '',
+                'file_type'   => $filePath ? 'image' : 'document',
+            ];
+
+            if ($slideId) {
+                PromotionalSlide::update($slideId, $data);
+            } else {
+                PromotionalSlide::create($data);
+            }
+
+            api_ok(['slides' => PromotionalSlide::forEvent($eventId)]);
+            break;
+
+        case 'promotional_delete':
+            require_write();
+            $slideId = (int) ($input['slide_id'] ?? 0);
+            PromotionalSlide::deleteWithFile($slideId);
+            api_ok(['slides' => PromotionalSlide::forEvent($eventId)]);
+            break;
+
+        case 'promotional_reorder':
+            require_write();
+            $ids = json_decode((string) ($input['ids'] ?? '[]'), true);
+            if (is_array($ids) && $ids !== []) {
+                PromotionalSlide::reorder($ids);
+            }
+            api_ok(['slides' => PromotionalSlide::forEvent($eventId)]);
+            break;
+
+        // ---- Answer Slides CRUD ---------------------------------------
+        case 'answer_slides':
+            api_ok(['slides' => AnswerSlide::forEvent($eventId)]);
+            break;
+
+        case 'answer_save':
+            require_write();
+            require_once __DIR__ . '/../../src/Support/Uploader.php';
+            $questionId = isset($input['question_id']) && $input['question_id'] !== '' ? (int) $input['question_id'] : null;
+            $file = $_FILES['file'] ?? null;
+
+            $filePath = null;
+            if ($file && $file['error'] === UPLOAD_ERR_OK) {
+                $filePath = Uploader::handleImage($file, 'answer', $eventId);
+            } elseif (!isset($input['remove_file']) && !empty($input['existing_file'])) {
+                $filePath = $input['existing_file'];
+            }
+
+            if ($filePath === null && empty($input['slide_id'])) {
+                api_fail(400, 'A file is required for new answer slides.');
+            }
+
+            $slideId = isset($input['slide_id']) && $input['slide_id'] !== '' ? (int) $input['slide_id'] : null;
+            $data = [
+                'event_id'    => $eventId,
+                'question_id' => $questionId,
+                'image_path'  => $filePath ?? '',
+            ];
+
+            if ($slideId) {
+                AnswerSlide::update($slideId, $data);
+            } else {
+                AnswerSlide::create($data);
+            }
+
+            api_ok(['slides' => AnswerSlide::forEvent($eventId)]);
+            break;
+
+        case 'answer_delete':
+            require_write();
+            $slideId = (int) ($input['slide_id'] ?? 0);
+            AnswerSlide::deleteWithFile($slideId);
+            api_ok(['slides' => AnswerSlide::forEvent($eventId)]);
             break;
 
         default:

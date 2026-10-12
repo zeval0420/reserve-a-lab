@@ -47,10 +47,16 @@ final class DisplayState
     public const QUESTION       = 'question';
     public const TIME_UP        = 'time_up';
     public const RANKING        = 'ranking';
+    public const ROUND_RANKING  = 'round_ranking';
     public const FINAL_RESULTS  = 'final_results';
+    public const PROMOTIONAL    = 'promotional';
+    public const ANSWER         = 'answer';
+    public const HIDDEN         = 'hidden';
 
     public const ALL = [
-        self::COVER, self::QUESTION, self::TIME_UP, self::RANKING, self::FINAL_RESULTS,
+        self::COVER, self::QUESTION, self::TIME_UP, self::RANKING,
+        self::ROUND_RANKING, self::FINAL_RESULTS, self::PROMOTIONAL,
+        self::ANSWER, self::HIDDEN,
     ];
 }
 
@@ -60,4 +66,40 @@ final class RankingOrder
     public const SCORE_ASC  = 'score_asc';
 
     public const ALL = [self::SCORE_DESC, self::SCORE_ASC];
+}
+
+/**
+ * The contest's rounds, ordered from the easiest to the final tie-break.
+ *
+ * The first three are difficulty rounds that every team plays. CLINCHER is
+ * the final round, and only the teams the operator manually selects
+ * (scimath_contestants.is_clincher = 1) take part in it.
+ */
+final class Round
+{
+    public const EASY     = 'easy';
+    public const MEDIUM   = 'medium';
+    public const HARD     = 'hard';
+    public const CLINCHER = 'clincher';
+
+    public const ALL = [self::EASY, self::MEDIUM, self::HARD, self::CLINCHER];
+
+    /** Rounds every team plays (clincher excluded). */
+    public const DIFFICULTY = [self::EASY, self::MEDIUM, self::HARD];
+
+    public static function label(string $round): string
+    {
+        return match ($round) {
+            self::EASY     => 'Easy',
+            self::MEDIUM   => 'Medium',
+            self::HARD     => 'Hard',
+            self::CLINCHER => 'Clincher',
+            default        => ucfirst($round),
+        };
+    }
+
+    public static function isClincher(?string $round): bool
+    {
+        return $round === self::CLINCHER;
+    }
 }

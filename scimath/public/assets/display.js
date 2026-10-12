@@ -85,6 +85,14 @@ logo.src = '../' + eventInfo.logo_path;
         numEl.textContent = 'Question ' + q.question_number;
         numEl.style.visibility = presentation.show_question_number ? 'visible' : 'hidden';
 
+        var roundEl = document.getElementById('disp-q-round');
+        if (roundEl) {
+            var rl = roundLabel(q.round);
+            roundEl.textContent = rl ? rl + ' Round' : '';
+            roundEl.className = 'disp-question-round round-' + (q.round || '');
+            roundEl.style.visibility = rl ? 'visible' : 'hidden';
+        }
+
         document.getElementById('disp-timer').parentElement.style.visibility = presentation.show_timer ? 'visible' : 'hidden';
 
         var img = document.getElementById('disp-q-image');
@@ -116,6 +124,69 @@ logo.src = '../' + eventInfo.logo_path;
                 '<span class="disp-rank-score">' + r.total_score + '</span>' +
                 '</div>';
         }).join('');
+    }
+
+    /**
+     * Renders the score-breakdown matrix: contestants (rows) x questions
+     * (columns) grouped by round, with each team's total. Used by both the
+     * final (all rounds) and round (single round) ranking views. Row order,
+     * cell values, and totals are authoritative from the server -- the
+     * client only lays them out.
+     */
+    function renderBreakdown(container, breakdown, titleEl, titleText) {
+        if (titleEl) titleEl.textContent = titleText;
+        if (!container) return;
+
+        if (!breakdown || !breakdown.questions || breakdown.questions.length === 0) {
+            container.innerHTML = '<p class="disp-breakdown-empty">No questions to show.</p>';
+            return;
+        }
+
+        var questions = breakdown.questions;
+        var contestants = breakdown.contestants || [];
+        var cells = breakdown.cells || {};
+
+        // Group the questions by round, preserving their given order.
+        var groups = [];
+        var groupAt = {};
+        questions.forEach(function (q) {
+            var r = q.round || 'easy';
+            if (groupAt[r] === undefined) {
+                groupAt[r] = groups.length;
+                groups.push({ round: r, questions: [] });
+            }
+            groups[groupAt[r]].questions.push(q);
+        });
+
+        var html = '<table class="disp-breakdown-table"><thead><tr>';
+        html += '<th class="disp-bd-name" rowspan="2">Team</th>';
+        groups.forEach(function (g) {
+            html += '<th class="disp-bd-group" colspan="' + g.questions.length + '">' + escapeHtml(roundLabel(g.round)) + '</th>';
+        });
+        html += '<th class="disp-bd-total" rowspan="2">Total</th>';
+        html += '</tr><tr>';
+        groups.forEach(function (g) {
+            g.questions.forEach(function (q) {
+                html += '<th class="disp-bd-q">Q' + q.number + '</th>';
+            });
+        });
+        html += '</tr></thead><tbody>';
+
+        contestants.forEach(function (c) {
+            var rowClass = c.rank <= 3 ? ' class="rank-' + c.rank + '"' : '';
+            html += '<tr' + rowClass + '>';
+            html += '<th class="disp-bd-name" scope="row"><span class="disp-bd-rank">' + c.rank + '</span>' + escapeHtml(c.name) + '</th>';
+            questions.forEach(function (q) {
+                var row = cells[c.id];
+                var value = (row && row[q.id] !== undefined) ? row[q.id] : 0;
+                html += '<td class="disp-bd-cell">' + value + '</td>';
+            });
+            html += '<td class="disp-bd-total">' + c.total + '</td>';
+            html += '</tr>';
+        });
+
+        html += '</tbody></table>';
+        container.innerHTML = html;
     }
 
     function renderFinal(eventInfo, rankings) {
@@ -150,22 +221,141 @@ logo.src = '../' + eventInfo.logo_path;
         return d.innerHTML;
     }
 
+    var ROUND_LABELS = { easy: 'Easy', medium: 'Medium', hard: 'Hard', clincher: 'Clincher' };
+    function roundLabel(r) {
+        if (!r) return '';
+        return ROUND_LABELS[r] || (r.charAt(0).toUpperCase() + r.slice(1));
+    }
+
     function applyState(data) {
         current = data;
         setTimerAnchor(data.timer);
         setActiveSection(data.display_state);
+
+        // Handle audio config changes
+        if (data.audio_config) {
+            updateAudioConfig(data.audio_config);
+        }
 
         if (data.display_state === 'cover') {
             renderCover(data.event);
         } else if (data.display_state === 'question' || data.display_state === 'time_up') {
             renderQuestion(data.current_question, data.presentation);
         } else if (data.display_state === 'ranking') {
-            renderRankingRows(document.getElementById('disp-ranking-list'), data.rankings);
+            renderBreakdown(
+                document.getElementById('disp-ranking-breakdown'),
+                data.breakdown,
+                document.getElementById('disp-ranking-title'),
+                'Final Rankings'
+            );
+        } else if (data.display_state === 'round_ranking') {
+            var roundTitle = (data.breakdown && data.breakdown.round_label)
+                ? data.breakdown.round_label + ' Round Rankings'
+                : 'Round Rankings';
+            renderBreakdown(
+                document.getElementById('disp-round-ranking-breakdown'),
+                data.breakdown,
+                document.getElementById('disp-round-ranking-title'),
+                roundTitle
+            );
         } else if (data.display_state === 'final_results') {
             renderFinal(data.event, data.rankings);
+        } else if (data.display_state === 'promotional') {
+            renderPromotional(data.promotional_slide);
+        } else if (data.display_state === 'answer') {
+            renderAnswer(data.answer_slide);
+        } else if (data.display_state === 'hidden') {
+            renderHiddenOverlay();
         }
 
         renderTimer(data.display_state);
+    }
+
+    // ---- Audio Management ----------------------------------------------
+
+    var audioConfig = {};
+    var bannerAudio = null;
+    var gameAudio = null;
+    var timerAudio = null;
+
+    function updateAudioConfig(config) {
+        audioConfig = config;
+
+        // Banner audio (100% volume by default)
+        if (config.banner_audio_path && (!bannerAudio || bannerAudio.src !== '../' + config.banner_audio_path)) {
+            bannerAudio = new Audio('../' + config.banner_audio_path);
+            bannerAudio.volume = (config.banner_audio_volume || 100) / 100;
+            bannerAudio.loop = true;
+        }
+
+        // Game audio (30% volume by default)
+        if (config.game_audio_path && (!gameAudio || gameAudio.src !== '../' + config.game_audio_path)) {
+            gameAudio = new Audio('../' + config.game_audio_path);
+            gameAudio.volume = (config.game_audio_volume || 30) / 100;
+            gameAudio.loop = true;
+        }
+
+        // Timer audio
+        if (config.timer_audio_path && (!timerAudio || timerAudio.src !== '../' + config.timer_audio_path)) {
+            timerAudio = new Audio('../' + config.timer_audio_path);
+            timerAudio.preload = 'auto';
+        }
+    }
+
+    function playTimerWarning(seconds) {
+        if (seconds <= 5 && seconds > 0 && timerAudio) {
+            timerAudio.currentTime = 0;
+            timerAudio.play().catch(function() {});
+        }
+    }
+
+    function startBackgroundAudio(state) {
+        if (state === 'cover' && bannerAudio) {
+            gameAudio && gameAudio.pause();
+            bannerAudio.play().catch(function() {});
+        } else if ((state === 'question' || state === 'ranking' || state === 'round_ranking' || state === 'final_results') && gameAudio) {
+            bannerAudio && bannerAudio.pause();
+            gameAudio.play().catch(function() {});
+        } else {
+            bannerAudio && bannerAudio.pause();
+            gameAudio && gameAudio.pause();
+        }
+    }
+
+    // ---- New Render Functions ------------------------------------------
+
+    function renderPromotional(slide) {
+        if (!slide) return;
+        var img = document.getElementById('disp-promo-image');
+        var desc = document.getElementById('disp-promo-desc');
+        if (slide.file_path) {
+            img.src = '../' + slide.file_path;
+            img.style.display = 'block';
+        } else {
+            img.style.display = 'none';
+        }
+        if (slide.description) {
+            desc.textContent = slide.description;
+            desc.style.display = 'block';
+        } else {
+            desc.style.display = 'none';
+        }
+    }
+
+    function renderAnswer(slide) {
+        if (!slide || !slide.image_path) return;
+        var img = document.getElementById('disp-answer-image');
+        img.src = '../' + slide.image_path;
+    }
+
+    function renderHiddenOverlay() {
+        var overlay = document.getElementById('disp-hidden-overlay');
+        overlay.style.display = 'flex';
+    }
+
+    function hideHiddenOverlay() {
+        var overlay = document.getElementById('disp-hidden-overlay');
+        overlay.style.display = 'none';
     }
 
     // ---- Polling ----------------------------------------------------------
@@ -182,7 +372,23 @@ logo.src = '../' + eventInfo.logo_path;
     }
 
     setInterval(poll, POLL_MS);
-    setInterval(function () { renderTimer(current.display_state); }, TICK_MS);
+    setInterval(function () {
+        renderTimer(current.display_state);
+        // Play timer warning audio
+        if (current.timer && current.timer.remaining_seconds !== null) {
+            playTimerWarning(current.timer.remaining_seconds);
+        }
+        // Manage background audio based on state
+        if (current.display_state) {
+            startBackgroundAudio(current.display_state);
+        }
+        // Show/hide hidden overlay
+        if (current.display_state === 'hidden') {
+            renderHiddenOverlay();
+        } else {
+            hideHiddenOverlay();
+        }
+    }, TICK_MS);
 
     // ---- Fullscreen ---------------------------------------------------
 

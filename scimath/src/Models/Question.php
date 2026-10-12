@@ -1,24 +1,60 @@
 <?php
 
 require_once __DIR__ . '/Model.php';
+require_once __DIR__ . '/../../config/constants.php';
 
 class Question extends Model
 {
     protected static string $table = 'scimath_questions';
 
     protected static array $fillable = [
-        'event_id', 'category_id', 'question_number', 'image_path',
+        'event_id', 'category_id', 'round', 'question_number', 'image_path', 'answer_image_path',
         'points', 'time_seconds', 'is_active', 'display_order',
     ];
 
-    public static function forEvent(int $eventId, bool $activeOnly = false): array
+    public static function hasAnswerImage(array $question): bool
+    {
+        return !empty($question['answer_image_path']);
+    }
+
+    /**
+     * @param bool        $activeOnly Only active questions.
+     * @param string|null $round      Restrict to a single round (Round constants).
+     */
+    public static function forEvent(int $eventId, bool $activeOnly = false, ?string $round = null): array
     {
         $where = ['event_id' => $eventId];
         if ($activeOnly) {
             $where['is_active'] = 1;
         }
+        if ($round !== null) {
+            $where['round'] = $round;
+        }
 
         return self::where($where, 'display_order ASC, question_number ASC');
+    }
+
+    /** First active question belonging to the given round, or null. */
+    public static function firstInRound(int $eventId, string $round): ?array
+    {
+        $rows = self::forEvent($eventId, true, $round);
+
+        return $rows[0] ?? null;
+    }
+
+    /**
+     * The rounds this event actually has active questions for, in canonical
+     * order (easy -> medium -> hard -> clincher). Rounds with no questions
+     * are omitted.
+     *
+     * @return string[]
+     */
+    public static function activeRounds(int $eventId): array
+    {
+        $present = array_column(self::forEvent($eventId, true), 'round');
+        $present = array_unique($present);
+
+        return array_values(array_filter(Round::ALL, fn ($r) => in_array($r, $present, true)));
     }
 
     /**
@@ -43,10 +79,10 @@ class Question extends Model
 
     public static function nextQuestionNumber(int $eventId): int
     {
-        $stmt = self::db()->prepare(
-            'SELECT COALESCE(MAX(question_number), 0) + 1 AS next_number
-             FROM scimath_questions WHERE event_id = :event_id'
-        );
+$stmt = self::db()->prepare(
+             'SELECT COALESCE(MAX(question_number), 0) + 1 AS next_number
+              FROM scimath_questions WHERE event_id = :event_id'
+         );
         $stmt->execute(['event_id' => $eventId]);
 
         return (int) $stmt->fetch()['next_number'];

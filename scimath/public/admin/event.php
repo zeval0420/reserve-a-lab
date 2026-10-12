@@ -2,6 +2,9 @@
 require_once __DIR__ . '/../../src/bootstrap.php';
 Auth::requireAdmin();
 
+require_once __DIR__ . '/../../src/Models/PromotionalSlide.php';
+require_once __DIR__ . '/../../src/Models/AnswerSlide.php';
+
 function acs_findOwned(array $rows, int $id): ?array
 {
     foreach ($rows as $row) {
@@ -44,6 +47,9 @@ $event = Event::withRelations($eventId);
 $settings = $event['settings'];
 $toggles = EventSetting::presentationToggles($settings);
 $readinessProblems = EventValidator::readinessProblems($eventId);
+$promotionalSlides = PromotionalSlide::forEvent($eventId);
+$answerSlides = AnswerSlide::forEvent($eventId);
+$audioConfig = EventSetting::audioConfig($settings);
 
 $editingCategory = isset($_GET['edit_category']) ? acs_findOwned($event['categories'], (int) $_GET['edit_category']) : null;
 $editingContestant = isset($_GET['edit_contestant']) ? acs_findOwned($event['contestants'], (int) $_GET['edit_contestant']) : null;
@@ -65,6 +71,7 @@ require __DIR__ . '/includes/header.php';
     </div>
     <div>
         <a href="index.php" class="btn btn-small">&larr; All events</a>
+        <a href="/admin/scores.php?id=<?= $eventId ?>" class="btn btn-small">View scores</a>
     </div>
 </div>
 
@@ -82,6 +89,8 @@ require __DIR__ . '/includes/header.php';
     <a class="tab-link" data-tab-link="categories">Categories (<?= count($event['categories']) ?>)</a>
     <a class="tab-link" data-tab-link="contestants">Contestants (<?= count($event['contestants']) ?>)</a>
     <a class="tab-link" data-tab-link="questions">Questions (<?= count($event['questions']) ?>)</a>
+    <a class="tab-link" data-tab-link="promotional">Promotional Slides</a>
+    <a class="tab-link" data-tab-link="audio">Audio &amp; Media</a>
     <a class="tab-link" data-tab-link="settings">Scoring, Timing &amp; Presentation</a>
 </div>
 
@@ -262,7 +271,7 @@ require __DIR__ . '/includes/header.php';
                 <p class="muted">No contestants yet. Add as many as this event needs — there's no fixed limit.</p>
             <?php else: ?>
                 <table>
-                    <thead><tr><th></th><th>Logo</th><th>Name</th><th>Code</th><th>Organization</th><th>Start</th><th>Active</th><th></th></tr></thead>
+                    <thead><tr><th></th><th>Logo</th><th>Name</th><th>Code</th><th>Organization</th><th>Start</th><th>Active</th><th>Clincher</th><th></th></tr></thead>
                     <tbody>
                     <?php foreach ($event['contestants'] as $i => $c): ?>
                         <tr>
@@ -290,6 +299,7 @@ require __DIR__ . '/includes/header.php';
                             <td class="muted"><?= htmlspecialchars($c['organization'] ?? '') ?></td>
                             <td><?= (int) $c['starting_score'] ?></td>
                             <td><?= ((int) $c['is_active']) ? 'Yes' : '<span class="muted">No</span>' ?></td>
+                            <td><?= ((int) ($c['is_clincher'] ?? 0)) ? 'Yes' : '<span class="muted">No</span>' ?></td>
                             <td class="row-actions">
                                 <a class="btn btn-small" href="?id=<?= $eventId ?>&edit_contestant=<?= (int) $c['id'] ?>#contestants">Edit</a>
                                 <form method="post" action="actions/contestant_delete.php" data-confirm="Remove &quot;<?= htmlspecialchars($c['name'], ENT_QUOTES) ?>&quot;? If it has recorded scores it will be deactivated instead of deleted, to preserve history.">
@@ -343,12 +353,42 @@ require __DIR__ . '/includes/header.php';
                     <label class="checkbox"><input type="checkbox" name="is_active" value="1" <?= ((int) $editingContestant['is_active']) ? 'checked' : '' ?>> Active</label>
                 </div>
                 <?php endif; ?>
+                <div class="field">
+                    <label class="checkbox"><input type="checkbox" name="is_clincher" value="1" <?= ((int) ($editingContestant['is_clincher'] ?? 0)) ? 'checked' : '' ?>> Selected for the clincher round</label>
+                    <div class="hint">Only selected teams can be scored on clincher-round questions.</div>
+                </div>
                 <div class="btn-row">
                     <button type="submit" class="btn btn-primary"><?= $editingContestant ? 'Save changes' : 'Add contestant' ?></button>
                     <?php if ($editingContestant): ?><a class="btn" href="?id=<?= $eventId ?>#contestants">Cancel</a><?php endif; ?>
                 </div>
             </form>
         </div>
+    </div>
+
+    <div class="card" style="margin-top:24px;">
+        <h2>Clincher Round Teams</h2>
+        <p class="muted">Manually select which teams advance to the clincher round. Only the teams checked here can be scored on clincher-round questions.</p>
+        <?php if ($event['contestants'] === []): ?>
+            <p class="muted">Add contestants first, then return here to select the clincher teams.</p>
+        <?php else: ?>
+            <form method="post" action="actions/clincher_save.php">
+                <?= Csrf::field() ?>
+                <input type="hidden" name="event_id" value="<?= $eventId ?>">
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin:12px 0 16px;">
+                    <?php foreach ($event['contestants'] as $c): ?>
+                        <label class="checkbox" style="display:flex;align-items:center;gap:8px;">
+                            <input type="checkbox" name="clincher_ids[]" value="<?= (int) $c['id'] ?>" <?= ((int) ($c['is_clincher'] ?? 0)) ? 'checked' : '' ?>>
+                            <span>
+                                <?= htmlspecialchars($c['name']) ?>
+                                <?php if (!empty($c['team_code'])): ?><span class="muted">(<?= htmlspecialchars($c['team_code']) ?>)</span><?php endif; ?>
+                                <?php if (!((int) $c['is_active'])): ?><span class="muted">&mdash; inactive</span><?php endif; ?>
+                            </span>
+                        </label>
+                    <?php endforeach; ?>
+                </div>
+                <button type="submit" class="btn btn-primary">Save clincher team selection</button>
+            </form>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -361,7 +401,7 @@ require __DIR__ . '/includes/header.php';
                 <p class="muted">No questions yet. Upload the first question slide using the form on the right.</p>
             <?php else: ?>
                 <table>
-                    <thead><tr><th></th><th>Preview</th><th>#</th><th>Category</th><th>Points</th><th>Time</th><th>Active</th><th></th></tr></thead>
+                    <thead><tr><th></th><th>Preview</th><th>#</th><th>Category</th><th>Round</th><th>Points</th><th>Time</th><th>Active</th><th></th></tr></thead>
                     <tbody>
                     <?php foreach ($event['questions'] as $i => $q): ?>
                         <?php
@@ -394,6 +434,7 @@ require __DIR__ . '/includes/header.php';
                             <td><img class="thumb" src="../<?= htmlspecialchars($q['image_path']) ?>" alt="Question <?= (int) $q['question_number'] ?>"></td>
                             <td>Q<?= (int) $q['question_number'] ?></td>
                             <td class="muted"><?= htmlspecialchars($catName) ?></td>
+                            <td><?= htmlspecialchars(Round::label($q['round'] ?? Round::EASY)) ?></td>
                             <td><?= $pts ?><?= $q['points'] === null ? ' <span class="muted">(default)</span>' : '' ?></td>
                             <td><?= $time ?>s<?= $q['time_seconds'] === null ? ' <span class="muted">(default)</span>' : '' ?></td>
                             <td><?= ((int) $q['is_active']) ? 'Yes' : '<span class="muted">No</span>' ?></td>
@@ -436,6 +477,18 @@ require __DIR__ . '/includes/header.php';
                             </option>
                         <?php endforeach; ?>
                     </select>
+                </div>
+
+                <div class="field">
+                    <label for="q_round">Round *</label>
+                    <select id="q_round" name="round">
+                        <?php foreach (Round::ALL as $r): ?>
+                            <option value="<?= $r ?>" <?= (($editingQuestion['round'] ?? Round::EASY) === $r) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars(Round::label($r)) ?><?= $r === Round::CLINCHER ? ' (selected teams only)' : '' ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <div class="hint">Easy, Medium and Hard are played by every team. Clincher questions can only be scored for the teams you select for the clincher round.</div>
                 </div>
 
                 <div class="form-grid">
@@ -531,6 +584,143 @@ require __DIR__ . '/includes/header.php';
             </div>
 
             <button type="submit" class="btn btn-primary">Save settings</button>
+        </form>
+    </div>
+</div>
+
+<!-- ===================== PROMOTIONAL SLIDES ===================== -->
+<div class="tab-panel" data-tab-panel="promotional">
+    <div class="two-col">
+        <div class="card">
+            <h2>Promotional Slides</h2>
+            <?php if ($promotionalSlides === []): ?>
+                <p class="muted">No promotional slides yet. Add slides for intermissions, ads, or announcements.</p>
+            <?php else: ?>
+                <table>
+                    <thead><tr><th></th><th>Preview</th><th>Title</th><th>Description</th><th></th></tr></thead>
+                    <tbody>
+                    <?php foreach ($promotionalSlides as $i => $slide): ?>
+                        <tr>
+                            <td class="row-actions">
+                                <?php if ($i > 0): ?>
+                                <form method="post" action="actions/promotional_reorder.php">
+                                    <?= Csrf::field() ?><input type="hidden" name="event_id" value="<?= $eventId ?>">
+                                    <input type="hidden" name="slide_id" value="<?= (int) $slide['id'] ?>">
+                                    <input type="hidden" name="direction" value="up">
+                                    <button type="submit" class="btn btn-small" title="Move up">&uarr;</button>
+                                </form>
+                                <?php endif; ?>
+                                <?php if ($i < count($promotionalSlides) - 1): ?>
+                                <form method="post" action="actions/promotional_reorder.php">
+                                    <?= Csrf::field() ?><input type="hidden" name="event_id" value="<?= $eventId ?>">
+                                    <input type="hidden" name="slide_id" value="<?= (int) $slide['id'] ?>">
+                                    <input type="hidden" name="direction" value="down">
+                                    <button type="submit" class="btn btn-small" title="Move down">&darr;</button>
+                                </form>
+                                <?php endif; ?>
+                            </td>
+                            <td><?php if (!empty($slide['file_path'])): ?><img class="thumb" src="../<?= htmlspecialchars($slide['file_path']) ?>" alt=""><?php endif; ?></td>
+                            <td><?= htmlspecialchars($slide['title']) ?></td>
+                            <td class="muted"><?= htmlspecialchars($slide['description'] ?? '—') ?></td>
+                            <td class="row-actions">
+                                <form method="post" action="actions/promotional_delete.php" data-confirm="Delete promotional slide &quot;<?= htmlspecialchars($slide['title'], ENT_QUOTES) ?>&quot;?">
+                                    <?= Csrf::field() ?><input type="hidden" name="event_id" value="<?= $eventId ?>">
+                                    <input type="hidden" name="slide_id" value="<?= (int) $slide['id'] ?>">
+                                    <button type="submit" class="btn btn-small btn-danger">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php endif; ?>
+        </div>
+
+        <div class="card">
+            <h2>Add Promotional Slide</h2>
+            <form method="post" action="actions/promotional_save.php" enctype="multipart/form-data">
+                <?= Csrf::field() ?>
+                <input type="hidden" name="event_id" value="<?= $eventId ?>">
+                <div class="field">
+                    <label for="promo_title">Title *</label>
+                    <input type="text" id="promo_title" name="title" required maxlength="255">
+                </div>
+                <div class="field">
+                    <label for="promo_desc">Description</label>
+                    <input type="text" id="promo_desc" name="description" maxlength="500">
+                    <div class="hint">Optional text shown below the slide.</div>
+                </div>
+                <div class="field">
+                    <label for="promo_file">Slide File *</label>
+                    <input type="file" id="promo_file" name="file" accept=".png,.jpg,.jpeg,.webp">
+                    <div class="hint">PNG, JPG, or WebP. Max 5 MB.</div>
+                </div>
+                <div class="btn-row">
+                    <button type="submit" class="btn btn-primary">Add Slide</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ===================== AUDIO & MEDIA ===================== -->
+<div class="tab-panel" data-tab-panel="audio">
+    <div class="card" style="max-width:640px;">
+        <h2>Audio &amp; Media Settings</h2>
+        <form method="post" action="actions/settings_save.php" enctype="multipart/form-data">
+            <?= Csrf::field() ?>
+            <input type="hidden" name="event_id" value="<?= $eventId ?>">
+            <input type="hidden" name="settings_id" value="<?= (int) $settings['id'] ?>">
+
+            <h3>Timer Audio</h3>
+            <div class="field">
+                <label for="timer_audio">5-second countdown audio</label>
+                <input type="file" id="timer_audio" name="timer_audio" accept=".mp3,.wav,.ogg">
+                <?php if (!empty($audioConfig['timer_audio_path'])): ?>
+                    <div class="hint">Current: <a href="../<?= htmlspecialchars($audioConfig['timer_audio_path']) ?>" target="_blank">View audio</a></div>
+                <?php endif; ?>
+                <div class="hint">Plays when timer reaches 5 seconds remaining.</div>
+            </div>
+
+            <h3>Background Audio</h3>
+            <div class="form-grid">
+                <div class="field">
+                    <label for="banner_audio">Banner/Cover audio</label>
+                    <input type="file" id="banner_audio" name="banner_audio" accept=".mp3,.wav,.ogg">
+                    <div class="hint">Plays at 100% volume during cover screen.</div>
+                </div>
+                <div class="field">
+                    <label for="game_audio">Game background audio</label>
+                    <input type="file" id="game_audio" name="game_audio" accept=".mp3,.wav,.ogg">
+                    <div class="hint">Plays at 30% volume during questions and rankings.</div>
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="field">
+                    <label for="banner_volume">Banner volume (%)</label>
+                    <input type="number" id="banner_volume" name="banner_audio_volume" min="0" max="100" value="<?= (int) ($audioConfig['banner_audio_volume'] ?? 100) ?>">
+                </div>
+                <div class="field">
+                    <label for="game_volume">Game volume (%)</label>
+                    <input type="number" id="game_volume" name="game_audio_volume" min="0" max="100" value="<?= (int) ($audioConfig['game_audio_volume'] ?? 30) ?>">
+                </div>
+            </div>
+
+            <h3>Times Up Image</h3>
+            <div class="field">
+                <label for="times_up_image">Times up / Raise board image</label>
+                <?php if (!empty($audioConfig['times_up_image_path'])): ?>
+                    <img class="thumb-lg" id="timesup-preview" src="../<?= htmlspecialchars($audioConfig['times_up_image_path']) ?>" alt="Current times up image">
+                    <label class="checkbox"><input type="checkbox" name="remove_timesup" value="1"> Remove current image</label>
+                <?php else: ?>
+                    <img class="thumb-lg" id="timesup-preview" style="display:none;" alt="Times up preview">
+                <?php endif; ?>
+                <input type="file" id="times_up_image" name="times_up_image" accept=".png,.jpg,.jpeg,.webp" data-preview-target="timesup-preview">
+                <div class="hint">Shown instead of "TIME'S UP" text when timer expires.</div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Save audio settings</button>
         </form>
     </div>
 </div>
