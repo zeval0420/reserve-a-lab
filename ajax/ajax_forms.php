@@ -303,17 +303,32 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
     }
 
     $students = $_POST['students'] ?? [];
-    $studentList = implode(", ", array_filter($students));
+
+    if (!is_array($students)) {
+        $students = [];
+    }
+
+    // Keep only string entries and remove surrounding whitespace.
+    $students = array_filter($students, 'is_string');
+    $students = array_map('trim', $students);
+
+    // Remove empty entries.
+    $students = array_filter($students, function ($student) {
+        return $student !== '';
+    });
+
+    $studentList = implode(", ", $students);
 
     /* Insert the verified participating group members into the student involvement registry. */
-    $stmt3 = $conn->prepare("INSERT INTO scilab_students_involved (formID, student_name) VALUES (?, ?)");
+    $stmt3 = $conn->prepare(
+        "INSERT INTO scilab_students_involved (formID, student_name) VALUES (?, ?)"
+    );
+
     foreach ($students as $student) {
-        $student = trim($student);
-        if ($student !== '') {
-            $stmt3->bind_param("is", $formID, $student);
-            $stmt3->execute();
-        }
+        $stmt3->bind_param("is", $formID, $student);
+        $stmt3->execute();
     }
+
     $stmt3->close();
 
 

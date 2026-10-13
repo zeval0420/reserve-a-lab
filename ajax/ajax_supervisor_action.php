@@ -523,13 +523,31 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
 
     $scilabName = $_POST['venue'] ?? '';
     $grade = intval($_POST['grade_level'] ?? 0);
-    $sections = isset($_POST['sections']) && is_array($_POST['sections']) ? implode(', ', $_POST['sections']) : ($_POST['sections'] ?? '');
+    
+    $sectionsInput = $_POST['sections'] ?? '';
+    if (is_array($sectionsInput)) {
+        $sections = implode(', ', array_filter($sectionsInput, 'is_string'));
+    } else {
+        $sections = is_string($sectionsInput) ? $sectionsInput : '';
+    }
+
     $subject = $_POST['subject'] ?? '';
     $topic = $_POST['topic'] ?? '';
     $unit = $_POST['unit'] ?? '';
-    $teacher_input = $_POST['teacher[]'] ?? $_POST['teacher'] ?? [];
-    $teachers = is_array($teacher_input) ? $teacher_input : array_filter([$teacher_input]);
+    
+    $teacherInput = $_POST['teacher'] ?? [];
+    $teachers = is_array($teacherInput)
+        ? $teacherInput
+        : [$teacherInput];
+
+    $teachers = array_filter($teachers, 'is_string');
+    $teachers = array_map('trim', $teachers);
+    $teachers = array_filter($teachers, function ($teacherName) {
+        return $teacherName !== '';
+    });
+
     $teacher = implode(', ', $teachers);
+
     $startDate = $_POST['inclusive_date'] ?? '';
     $startTime = $_POST['start_time'] ?? '';
     $endTime = $_POST['end_time'] ?? '';
