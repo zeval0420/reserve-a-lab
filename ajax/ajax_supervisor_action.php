@@ -424,7 +424,8 @@ function sendNotificationToCIDChief($conn, $requestID) {
     $matStmt->bind_param("i", $requestID);
     $matStmt->execute();
     $materials = [];
-    while ($row = $matStmt->get_result()->fetch_assoc()) {
+    $matResult = $matStmt->get_result();
+    while ($row = $matResult->fetch_assoc()) {
         $materials[] = "{$row['quantity']} {$row['unit']} of {$row['item']} ({$row['description']})";
     }
     $materialsStr = implode("; ", $materials);
@@ -435,7 +436,8 @@ function sendNotificationToCIDChief($conn, $requestID) {
     $studStmt->bind_param("i", $requestID);
     $studStmt->execute();
     $students = [];
-    while ($row = $studStmt->get_result()->fetch_assoc()) {
+    $studResult = $studStmt->get_result();
+    while ($row = $studResult->fetch_assoc()) {
         $students[] = $row['student_name'];
     }
     $studentsStr = implode(", ", $students);

@@ -397,7 +397,8 @@ function scilab_send_submission_confirmation($conn, $requestId) {
         $matStmt->bind_param("i", $requestId);
         $matStmt->execute();
         $materials = [];
-        while ($row = $matStmt->get_result()->fetch_assoc()) {
+        $matResult = $matStmt->get_result();
+        while ($row = $matResult->fetch_assoc()) {
             $materials[] = "{$row['quantity']} {$row['unit']} of {$row['item']} ({$row['description']})";
         }
         $matStmt->close();
@@ -411,7 +412,8 @@ function scilab_send_submission_confirmation($conn, $requestId) {
         $studStmt->bind_param("i", $requestId);
         $studStmt->execute();
         $students = [];
-        while ($row = $studStmt->get_result()->fetch_assoc()) {
+        $studResult = $studStmt->get_result();
+        while ($row = $studResult->fetch_assoc()) {
             $students[] = $row['student_name'];
         }
         $studStmt->close();
