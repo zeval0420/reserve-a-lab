@@ -533,8 +533,8 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
 
     $subject = $_POST['subject'] ?? '';
     $topic = $_POST['topic'] ?? '';
-    $unit = $_POST['unit'] ?? '';
-    
+    $unit = is_string($_POST['unit'] ?? '') ? ($_POST['unit'] ?? '') : '';
+
     $teacherInput = $_POST['teacher'] ?? [];
     $teachers = is_array($teacherInput)
         ? $teacherInput
@@ -683,14 +683,14 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
 
     if (is_array($mergedMaterials)) {
         foreach ($mergedMaterials as $mat) {
-            $item = trim($mat['item'] ?? '');
-            $unit = trim($mat['unit'] ?? 'N/A');
-            $desc = trim($mat['desc'] ?? 'N/A');
+            $item = trim((string)($mat['item'] ?? ''));
+            $matUnit = trim((string)($mat['unit'] ?? 'N/A'));
+            $desc = trim((string)($mat['desc'] ?? 'N/A'));
             $qty = isset($mat['qty']) ? (int)$mat['qty'] : 1;
             if ($item !== '') {
-                $stmt2->bind_param("isiss", $formID, $item, $qty, $unit, $desc);
+                $stmt2->bind_param("isiss", $formID, $item, $qty, $matUnit, $desc);
                 $stmt2->execute();
-                $materials[] = "{$qty} {$unit} of {$item} ({$desc})";
+                $materials[] = "{$qty} {$matUnit} of {$item} ({$desc})";
             }
         }
     }

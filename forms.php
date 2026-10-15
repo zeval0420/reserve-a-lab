@@ -1176,6 +1176,11 @@
                 formData.append('action', 'request_submission');
                 formData.append('mergedMaterials', JSON.stringify(Object.values(itemsMap)));
 
+                /* Material rows are already merged into mergedMaterials. Drop the raw row arrays: the
+                 * "unit[]" material field collides with the academic "unit" field in PHP's $_POST,
+                 * turning $_POST['unit'] into an array. */
+                ['item[]', 'quantity[]', 'unit[]', 'description[]'].forEach(n => formData.delete(n));
+
                 // Ensure all fields are passed (even if disabled)
                 formData.set('venue', $('#venue_select').val());
                 formData.set('grade_level', $('#grade_select').val());
