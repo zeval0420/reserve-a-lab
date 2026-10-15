@@ -87,19 +87,11 @@ if ($token) {
     }
 }
 
-if (!isset($_SESSION['role']) && $tokenValidStage === '') {
-    $target = 'redirect=' . urlencode('supervisor_approve.php?id=' . $requestId);
-    header('Location: index.php?' . $target);
-    exit();
-}
-
-if (!isset($_SESSION['role'])) {
-    $_SESSION['role'] = 'guest';
-    $_SESSION['username'] = 'Approval Link User';
-    $_SESSION['email'] = '';
-}
-
-$currentRole = $_SESSION['role'] ?? 'supervisor';
+// Anyone with the link (e.g. the requester) may view the progress tracker. Taking action
+// still requires either an approver's login or a valid stage token. Visitors are
+// deliberately NOT given a session identity here: ajax_supervisor_action.php treats any
+// session with a username as authorized to act.
+$currentRole = $_SESSION['role'] ?? 'guest';
 
 // Check if current user is the Teacher in Charge
 $isTeacherInCharge = false;
