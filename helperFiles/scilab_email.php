@@ -359,13 +359,23 @@ function scilab_resolve_lab_personnel_emails($conn) {
 }
 
 function scilab_resolve_cid_chief_emails($conn) {
+    // The CID Chief is identified by the "CID Chief" designation for the current school year.
+    // Matching position LIKE '%Chief%' would also pick up the SSD and FAD Chiefs.
     $emails = [];
-    $res = $conn->query("SELECT email FROM accounts WHERE status = 'active' AND position LIKE '%Chief%'");
-    if ($res) {
-        while ($row = $res->fetch_assoc()) {
-            if (!empty($row['email'])) $emails[] = $row['email'];
-        }
+
+    $syResult = $conn->query("SELECT value FROM current WHERE description = 'School Year' ORDER BY id DESC LIMIT 1");
+    $sy = ($syResult && $syResult->num_rows > 0) ? $syResult->fetch_assoc()['value'] : null;
+    if (!$sy) return $emails;
+
+    $stmt = $conn->prepare("SELECT DISTINCT a.email FROM designation d JOIN accounts a ON a.employeeID = d.employeeID WHERE d.sy = ? AND d.designation = 'CID Chief' AND a.status = 'active'");
+    if (!$stmt) return $emails;
+    $stmt->bind_param("s", $sy);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    while ($row = $res->fetch_assoc()) {
+        if (!empty($row['email'])) $emails[] = $row['email'];
     }
+    $stmt->close();
     return array_unique($emails);
 }
 

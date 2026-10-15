@@ -180,7 +180,7 @@ function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails
 }
 
 function sendNotificationToAdmins($conn, $requestID) {
-    global $email_smtp_host, $email_smtp_user, $email_smtp_password, $email_smtp_secure, $email_smtp_port, $email_sender;
+    global $email_smtp_host, $email_smtp_user, $email_smtp_password, $email_smtp_secure, $email_smtp_port, $email_sender, $active_server;
 
     // Fetch request details
     $stmt = $conn->prepare("SELECT * FROM scilab_form_requests WHERE id = ?");
@@ -443,11 +443,11 @@ function sendNotificationToCIDChief($conn, $requestID) {
     $studentsStr = implode(", ", $students);
     $studStmt->close();
 
-    $cidChiefs = $conn->query("SELECT email FROM accounts WHERE status = 'active' AND position LIKE '%Chief%'");
-    if ($cidChiefs->num_rows === 0) {
+    $cidChiefEmails = scilab_resolve_cid_chief_emails($conn);
+    if (empty($cidChiefEmails)) {
         // Nobody can give final approval - escalate so the request does not stall.
         scilab_notify_unresolved_stage($conn, $data, 'cid_chief',
-            'No active account has a position containing "Chief".');
+            'No active account holds the "CID Chief" designation for the current school year.');
         return;
     }
 
@@ -489,7 +489,8 @@ function sendNotificationToCIDChief($conn, $requestID) {
     }
     $bodyTemplate = str_replace("[ActionLink]", htmlspecialchars($approvalLink), $bodyTemplate);
 
-    while ($admin = $cidChiefs->fetch_assoc()) {
+    foreach ($cidChiefEmails as $chiefEmail) {
+        $admin = ['email' => $chiefEmail];
         if (filter_var($admin['email'], FILTER_VALIDATE_EMAIL)) {
             $mail = new PHPMailer(true);
             try {
