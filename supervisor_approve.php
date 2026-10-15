@@ -1329,6 +1329,9 @@ function getStepIcon($class)
         </div><!-- /modal -->
     </div>
 
+    <!-- Shared footer: also carries the header's notification sidebar and profile popover scripts -->
+    <?php include('helperFiles/footer.php'); ?>
+
     <!-- ============================================================
        TOAST NOTIFICATION
   ============================================================ -->

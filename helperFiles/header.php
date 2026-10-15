@@ -32,7 +32,7 @@
         $popoverContent .= '</div>';
         ?>
         <button type="button" class="btn-liquid-white" data-toggle="popover"
-            title="<?php echo $_SESSION['username']; ?>" data-html="true" data-content='<?php echo $popoverContent; ?>'>
+            title="<?php echo htmlspecialchars($_SESSION['username'] ?? 'Guest'); ?>" data-html="true" data-content='<?php echo $popoverContent; ?>'>
             <i class="bi bi-person-fill"></i>
         </button>
     </div>
