@@ -504,6 +504,53 @@ function scilab_send_status_email($emails, $subject, $bodyHtml) {
 }
 
 /**
+ * Render an email in the same boxed "glass card" layout as the submission
+ * confirmation. The CSS is read from request_confirmation_email_template.html so
+ * every notification shares one source of styling.
+ *
+ * $details values are escaped here; $introHtml and $noteHtml are trusted HTML
+ * (callers must escape any user data they put in them).
+ *
+ * @param array $details  label => plain-text value, shown in the boxed section
+ */
+function scilab_render_email_card($heading, $introHtml, array $details, $buttonLabel = '', $buttonUrl = '', $noteHtml = '') {
+    $css = '';
+    $templatePath = __DIR__ . '/../templates/request_confirmation_email_template.html';
+    if (file_exists($templatePath)) {
+        $tpl = file_get_contents($templatePath);
+        if (preg_match('/<style>(.*?)<\/style>/s', $tpl, $m)) {
+            $css = $m[1];
+        }
+    }
+
+    $rows = '';
+    foreach ($details as $label => $value) {
+        $rows .= '<p><strong>' . htmlspecialchars((string)$label) . ':</strong> ' . htmlspecialchars((string)$value) . '</p>';
+    }
+
+    $button = '';
+    if ($buttonLabel !== '' && $buttonUrl !== '') {
+        $button = '<div class="button-wrapper"><a href="' . htmlspecialchars($buttonUrl) . '">' . htmlspecialchars($buttonLabel) . '</a></div>';
+    }
+
+    return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">'
+        . '<title>' . htmlspecialchars($heading) . '</title>'
+        . '<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">'
+        . '<style>' . $css . '</style></head><body>'
+        . '<div class="container">'
+        . '<div class="header"><h1>Science Lab Request System</h1></div>'
+        . '<div class="content">'
+        . '<h2>' . htmlspecialchars($heading) . '</h2>'
+        . $introHtml
+        . ($rows !== '' ? '<div class="details">' . $rows . '</div>' : '')
+        . $noteHtml
+        . $button
+        . '</div>'
+        . '<div class="footer">This is an auto-generated email. Please do not reply to this message.</div>'
+        . '</div></body></html>';
+}
+
+/**
  * Escalate a stage that has no resolvable approver.
  *
  * When a request reaches a stage but no email address can be resolved for the
@@ -535,18 +582,23 @@ function scilab_notify_unresolved_stage($conn, $request, $stage, $detail) {
 
     $requesterName = scilab_resolve_requester_name($conn, $request['requesterEmployeeID'] ?? '');
 
-    $body = '<p><strong>Action needed:</strong> laboratory reservation request <strong>SLR-' . $id
-        . '</strong> is waiting on the <strong>' . htmlspecialchars($stageLabel) . '</strong> stage, '
-        . 'but no approver could be matched for that stage.</p>'
-        . '<p>The stage has been left <strong>pending</strong> so it is not skipped. '
-        . 'Please assign the correct approver, or act on the request directly.</p>'
-        . '<p><strong>Why it could not be resolved:</strong> ' . htmlspecialchars((string)$detail) . '</p>'
-        . '<p><strong>Facility:</strong> ' . htmlspecialchars($request['scilabName'] ?? '') . '<br>'
-        . '<strong>Requested By:</strong> ' . htmlspecialchars($requesterName) . '<br>'
-        . '<strong>Teacher In-Charge:</strong> ' . htmlspecialchars($request['teacherInCharge'] ?? '') . '<br>'
-        . '<strong>Academic Unit:</strong> ' . htmlspecialchars($request['subjectAcademicUnit'] ?? '') . '<br>'
-        . '<strong>Date/Time:</strong> ' . htmlspecialchars(trim(($request['inclusiveDate'] ?? '') . ' ' . ($request['inclusiveTime'] ?? ''))) . '</p>'
-        . '<p>Assign or review the request here: <a href="' . htmlspecialchars($actionLink) . '">Open Request SLR-' . $id . '</a></p>';
+    $body = scilab_render_email_card(
+        'Action Needed — Approver Not Found',
+        '<p>Request <strong>SLR-' . $id . '</strong> is waiting on the <strong>' . htmlspecialchars($stageLabel)
+            . '</strong> stage, but no approver could be matched for it. The stage has been left <strong>pending</strong> '
+            . 'so it is not skipped. Please assign the correct approver, or act on the request directly.</p>',
+        [
+            'Request ID' => 'SLR-' . $id,
+            'Why it could not be resolved' => (string)$detail,
+            'Facility' => $request['scilabName'] ?? '',
+            'Requested By' => $requesterName,
+            'Teacher In-Charge' => $request['teacherInCharge'] ?? '',
+            'Academic Unit' => $request['subjectAcademicUnit'] ?? '',
+            'Date/Time' => trim(($request['inclusiveDate'] ?? '') . ' ' . ($request['inclusiveTime'] ?? '')),
+        ],
+        'Open Request',
+        $actionLink
+    );
 
     $emails = scilab_resolve_lab_personnel_emails($conn);
     if (empty($emails)) {
@@ -631,14 +683,27 @@ function scilab_notify_stage_status($conn, $request, $currentStage, $event, $rea
         }
     }
 
-    // Common body used for all recipients
-    $body = '<p>This is a status update regarding your laboratory reservation request <strong>SLR-' . intval($id) . '</strong>.</p>'
-        . '<p><strong>Facility:</strong> ' . htmlspecialchars($request['scilabName'] ?? '') . '<br>'
-        . '<strong>Requested By:</strong> ' . htmlspecialchars($requesterName) . '<br>'
-        . '<strong>Date/Time:</strong> ' . htmlspecialchars(($request['inclusiveDate'] ?? '') . ' ' . ($request['inclusiveTime'] ?? '')) . '</p>'
-        . '<p><strong>' . htmlspecialchars($stageLabel) . '</strong> has ' . $verb . ' this request.' . $reasonHtml . '</p>'
-        . $overallHtml
-        . '<p>You can track the progress of this request here: <a href="' . htmlspecialchars($trackerLink) . '">View Request Status</a></p>';
+    // Common body used for all recipients, in the same boxed layout as the submission confirmation.
+    $heading = ($event === 'approve') ? 'Request Approved' : 'Request Rejected';
+    $details = [
+        'Request ID' => 'SLR-' . intval($id),
+        'Requested By' => $requesterName,
+        'Facility' => $request['scilabName'] ?? '',
+        'Date of use' => $request['inclusiveDate'] ?? '',
+        'Time of use' => $request['inclusiveTime'] ?? '',
+        'Decision' => $stageLabel . ' ' . $verb . ' this request',
+    ];
+    if ($event === 'reject' && $reason) {
+        $details['Reason'] = (string)$reason;
+    }
+    $body = scilab_render_email_card(
+        $heading,
+        '<p>This is a status update regarding laboratory reservation request <strong>SLR-' . intval($id) . '</strong>.</p>',
+        $details,
+        'View Request Status',
+        $trackerLink,
+        $overallHtml
+    );
 
     // Unified subject for all recipients
     $unifiedSubject = 'SciLab Request SLR-' . intval($id);
