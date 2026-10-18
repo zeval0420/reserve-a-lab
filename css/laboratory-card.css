@@ -651,6 +651,50 @@
         min-width: 0;
     }
 
+    /* ── Requester list card: slim single-row layout ──
+       Keeps only name, availability/pending badges and the Request button. */
+    .lab-card--list .lab-card__content:has(.btn-lab-request) {
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+    }
+    .lab-card--list .lab-card__content:has(.btn-lab-request) .lab-card__body {
+        padding: 0;
+        gap: 4px;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .lab-card--list .lab-card__content:has(.btn-lab-request) .lab-card__location,
+    .lab-card--list .lab-card__content:has(.btn-lab-request) .empty-slot-hint,
+    .lab-card--list .lab-card__content:has(.btn-lab-request) .schedule-block:not(:has(.slot-pill)) {
+        display: none;
+    }
+    .lab-card--list .lab-card__content:has(.btn-lab-request) .lab-card__name {
+        margin: 0;
+        white-space: normal;
+        font-size: 14px;
+    }
+    .lab-card--list .lab-card__content:has(.btn-lab-request) .lab-card__badges {
+        gap: 4px;
+        align-self: flex-start;
+    }
+    .lab-card--list .lab-card__content:has(.btn-lab-request) .schedule-block {
+        margin-top: 2px !important;
+    }
+    .lab-card--list .lab-card__footer:has(> .btn-lab-request) {
+        flex: 0 0 auto;
+        padding: 0;
+        background: none;
+        border-top: none;
+        border-radius: 0;
+    }
+    .lab-card--list .lab-card__footer > .btn-lab-request {
+        width: auto;
+        padding: 7px 12px;
+        font-size: 12px;
+    }
+
     .lab-card--list .lab-card__name {
         max-width: 100%;
     }
@@ -669,8 +713,8 @@
     }
 
     .lab-card--list .lab-card__image-wrap {
-        width: 88px;
-        min-height: 96px;
+        width: 72px;
+        min-height: 72px;
     }
 
     .lab-card--list .lab-card__body {
