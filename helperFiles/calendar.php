@@ -98,6 +98,41 @@
             font-weight: 600;
         }
 
+        .calendar-controls { display: flex; align-items: center; gap: 15px; }
+        #calendarModal { min-height: 0; }
+        #ec { min-height: 0; }
+
+        /* Tablet and phone: near full-screen sheet, wrapped header and toolbar */
+        @media (max-width: 768px) {
+            #calendarModal {
+                width: 100%;
+                height: 96vh;
+                height: 96dvh;
+                max-height: none;
+                top: auto;
+                bottom: 0;
+                left: 0;
+                transform: none;
+                border-radius: 20px 20px 0 0;
+            }
+            #calendarHeader { flex-wrap: wrap; gap: 8px; padding: 10px 12px; }
+            #calendarHeader h2 { order: 1; margin: 0; flex: 1 1 auto; font-size: 20px; text-align: left; }
+            #closeCalendarBtn { order: 2; font-size: 32px; line-height: 1; padding: 0 4px; }
+            .calendar-controls { order: 3; width: 100%; flex-wrap: wrap; gap: 8px; }
+            .calendar-controls #calendarLabFilter { flex: 1 1 100%; min-width: 0; }
+            .calendar-controls #calendarDatePicker { flex: 1 1 auto; min-width: 0; }
+            #ec { padding: 8px; }
+
+            /* event-calendar toolbar: title on top, then buttons wrap */
+            #ec .ec-toolbar { flex-wrap: wrap; justify-content: center; gap: 6px; }
+            #ec .ec-toolbar > :nth-child(2) { order: -1; flex: 1 1 100%; text-align: center; }
+            #ec .ec-title { font-size: 1.15rem; }
+            #ec .ec-button { padding: 5px 12px !important; margin: 0 2px; }
+        }
+        @media (max-width: 430px) {
+            .ec-event-title { font-size: 12px !important; }
+        }
+
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .spin { animation: spin 1s linear infinite; display: inline-block; }
 
@@ -146,14 +181,14 @@
 <div id="calendarModal">
     <div id="calendarHeader">
         <h2>ACTIVITY CALENDAR</h2>
-        <div style="display: flex; align-items: center; gap: 15px;">
+        <div class="calendar-controls">
             <button id="calendarTodayBtn" class="btn-liquid" style="padding: 6px 12px;">Today</button>
             <input type="date" id="calendarDatePicker" class="liquid-input" style="padding: 5px 10px; font-size: 13px; cursor: pointer;">
             <select id="calendarLabFilter" class="liquid-input" style="padding: 6px 30px 6px 12px; font-size: 13px; cursor: pointer; min-width: 150px;">
                 <option value="all">All Laboratories</option>
             </select>
-            <button id="closeCalendarBtn">&times;</button>
         </div>
+        <button id="closeCalendarBtn" aria-label="Close calendar">&times;</button>
     </div>
 
     <div id="ec"></div>
@@ -257,9 +292,10 @@
         setTimeout(() => {
             ec = EventCalendar.create(document.getElementById('ec'), {
                 initialDate: new Date(),  // <-- start at today
-                initialView: 'timeGridWeek',
+                // a seven-column week grid is unreadable on a phone, so start on the day view there
+                initialView: window.innerWidth <= 430 ? 'timeGridDay' : 'timeGridWeek',
                 scrollTime: '06:00:00',
-                view: 'timeGridWeek',
+                view: window.innerWidth <= 430 ? 'timeGridDay' : 'timeGridWeek',
                 headerToolbar: {
                     start: 'dayGridMonth,timeGridWeek,timeGridDay',
                     center: 'title',
@@ -271,7 +307,7 @@
                     timeGridWeek: 'Week',
                     timeGridDay: 'Day'
                 },
-                events: events_array,
+                events: events,
                 nowIndicator: true,
                 eventStartEditable: false,   // cannot drag/move events
                 eventDurationEditable: false, // cannot resize events
