@@ -530,6 +530,28 @@
                     flex-wrap: wrap;
                 }
             }
+            /* Details column: only on tablet/phone widths, where DataTables collapses the other columns */
+            .details-col { display: none; text-align: center; }
+            @media (max-width: 768px) {
+                .details-col { display: table-cell; }
+                .details-col .view-details-btn { padding: 6px 14px; white-space: nowrap; }
+            }
+
+            /* Details modal: actions pinned to the bottom */
+            #detailsModal .custom-modal { display: flex; flex-direction: column; }
+            #detailsModal .custom-modal-body { overflow-y: auto; flex: 1 1 auto; }
+            #detailsModal .custom-modal-footer { position: sticky; bottom: 0; background: var(--card-bg); flex: 0 0 auto; }
+            #detailsModal .custom-modal-footer > a,
+            #detailsModal .custom-modal-footer > button { text-align: center; margin: 0; }
+            @media (max-width: 430px) {
+                #detailsModal { padding: 10px; }
+                #detailsModal .custom-modal-body { padding: 16px; }
+                #detailsModal .detail-grid { grid-template-columns: 1fr; gap: 12px; }
+                #detailsModal .custom-modal-footer { padding: 12px 16px; gap: 8px; }
+                #detailsModal .custom-modal-footer > a,
+                #detailsModal .custom-modal-footer > button { flex: 1 1 calc(50% - 8px); }
+            }
+
             /* ============================================================
                 DESIGN TOKENS
                 ============================================================ */
@@ -995,6 +1017,7 @@
                                 <?php if ($statusFilter === 'Approved'): ?><th>Remarks</th><?php endif; ?>
                                 <?php if ($statusFilter === 'Rejected'): ?><th>Feedback</th><?php endif; ?>
                                 <?php if ($statusFilter !== 'Rejected'): ?><th>Action</th><?php endif; ?>
+                                <th class="details-col">Details</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1020,6 +1043,8 @@
                                         $teacherInCharge = !empty($row['teacherInCharge']) ? htmlspecialchars($row['teacherInCharge']) : '—';
                                         $flagged = (!empty($row['dateRequested']) && !empty($row['inclusiveDate']) && (strtotime($row['inclusiveDate']) - strtotime($row['dateRequested'])) < 3 * 86400);
                                         $daysBeforeUse = $flagged ? max(0, (int)floor((strtotime($row['inclusiveDate']) - strtotime($row['dateRequested'])) / 86400)) : 0;
+                                        $row['flagged'] = $flagged;
+                                        $row['daysBeforeUse'] = $daysBeforeUse;
                                 ?>
                                     <tr id="row-<?= $row['id'] ?>" class="<?= $flagged ? 'request-flagged-row' : '' ?>">
                                         <td><span style="display:none;"><?= $row['id'] ?></span><?= $i++ ?></td>
@@ -1060,6 +1085,9 @@
                                                 <?php endif; ?>
                                             </td>
                                         <?php endif; ?>
+                                        <td class="details-col">
+                                            <button type="button" class="btn-liquid view-details-btn" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>View</button>
+                                        </td>
                                     </tr>
                                 <?php endforeach; ?>
                             <?php else: ?>
@@ -1072,6 +1100,27 @@
             <!-- ============================================================
                 MODAL — FORCE APPROVE
             ============================================================ -->
+            <!-- Request details (phone / tablet) -->
+            <div class="custom-modal-overlay" id="detailsModal" role="dialog" aria-modal="true" aria-labelledby="detailsModalTitle">
+                <div class="custom-modal">
+                    <div class="custom-modal-header">
+                        <div class="custom-modal-header-left">
+                            <h2 id="detailsModalTitle">REQUEST DETAILS</h2>
+                            <p>Request ID: <strong id="detailsRequestId">REQ-0000</strong></p>
+                        </div>
+                        <button type="button" class="custom-modal-close" id="detailsModalCloseTop" aria-label="Close modal">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                                stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="custom-modal-body" id="detailsBody"></div>
+                    <div class="custom-modal-footer" id="detailsFooter"></div>
+                </div>
+            </div>
+
             <div class="custom-modal-overlay" id="approveModal" role="dialog" aria-modal="true" aria-labelledby="approveModalTitle">
                 <div class="custom-modal" id="custom-approve-modal">
 
@@ -1392,6 +1441,11 @@
                     emptyTable: "No requests found."
                 },
                 responsive: true,
+                // Keep the Details button and requester visible when columns collapse
+                columnDefs: [
+                    { targets: 'details-col', orderable: false, responsivePriority: 1 },
+                    { targets: 1, responsivePriority: 2 }
+                ],
                 pageLength: 10,
                 lengthChange: true,
                 searching: true,
@@ -1407,9 +1461,76 @@
             }
 
             // ============================================================
+            // REQUEST DETAILS (phone / tablet) with actions in the footer
+            // ============================================================
+            const REQUEST_STATUS = <?= json_encode($statusFilter) ?>;
+
+            function escHtml(v) {
+                return $('<div>').text(v == null ? '' : String(v)).html();
+            }
+
+            function detailField(label, value, full) {
+                const text = (value === '' || value == null) ? '—' : escHtml(value);
+                return '<div class="detail-field' + (full ? ' full-width' : '') + '">' +
+                    '<div class="detail-label">' + label + '</div>' +
+                    '<div class="detail-value">' + text + '</div></div>';
+            }
+
+            function closeDetails() {
+                $('#detailsModal').removeClass('open');
+                $('body').removeClass('modal-open');
+            }
+
+            $(document).on('click', '.view-details-btn', function () {
+                const d = $(this).data('request');
+                const ctrl = d.control_equipment || d.control_reagent || d.control_permit ||
+                             d.control_reservation || d.controlNumber || '';
+
+                $('#detailsRequestId').text('REQ-' + String(d.id).padStart(4, '0'));
+
+                const html = '<p class="custom-modal-section-title">Request</p><div class="detail-grid">' +
+                    detailField('Requester', d.requesterName || d.requesterEmployeeID) +
+                    detailField('Laboratory', d.scilabName) +
+                    detailField('Grade - Section/s', 'Grade ' + d.gradeLevel + ' - ' + d.sections) +
+                    detailField('Subject', d.subject) +
+                    detailField('Topic', d.subjectTopic) +
+                    detailField('Date of Use', d.inclusiveDate) +
+                    detailField('Time', d.inclusiveTime) +
+                    detailField('Teacher-in-Charge', d.teacherInCharge) +
+                    detailField('Flag', d.flagged ? 'Flagged: ' + d.daysBeforeUse + ' day(s) before use' : 'None') +
+                    (REQUEST_STATUS === 'Approved' ? detailField('Control #', ctrl) : '') +
+                    (REQUEST_STATUS === 'Approved' ? detailField('Remarks', d.feedback, true) : '') +
+                    (REQUEST_STATUS === 'Rejected' ? detailField('Feedback', d.feedback || 'No reason provided', true) : '') +
+                    '</div>' +
+                    '<p class="custom-modal-section-title">Requested Materials</p>' +
+                    '<div class="detail-grid"><div class="detail-field full-width"><div class="detail-value">' +
+                    (d.materialsDetailed || '—') + '</div></div></div>';
+                $('#detailsBody').html(html);
+
+                const $footer = $('#detailsFooter').empty();
+                if (REQUEST_STATUS === 'Pending') {
+                    $footer.append($('<a class="btn-liquid">Review</a>').attr('href', 'supervisor_approve.php?id=' + d.id));
+                    $footer.append($('<button type="button" class="btn-liquid-success approve-btn">Force Approve</button>').data('request', d));
+                    $footer.append($('<button type="button" class="btn-liquid-danger reject-btn">Reject</button>').data('request', d));
+                } else if (REQUEST_STATUS === 'Approved') {
+                    $footer.append($('<a class="btn-liquid" target="_blank">Print</a>').attr('href', 'templates/print_template.php?id=' + d.id));
+                    $footer.append($('<button type="button" class="btn-liquid edit-control-btn">Edit Control #s</button>').data('request', d));
+                }
+                $footer.append('<button type="button" class="btn-liquid-secondary details-close-btn">Close</button>');
+
+                $('#detailsModal').addClass('open');
+                $('body').addClass('modal-open');
+            });
+
+            // Hand off to the existing action modals
+            $(document).on('click', '#detailsFooter .approve-btn, #detailsFooter .reject-btn, #detailsFooter .edit-control-btn', closeDetails);
+            $(document).on('click', '#detailsModalCloseTop, .details-close-btn', closeDetails);
+            $('#detailsModal').on('click', function (e) { if (e.target === this) closeDetails(); });
+
+            // ============================================================
             // FORCE APPROVE BUTTON
             // ============================================================
-            $('.approve-btn').click(function () {
+            $(document).on('click', '.approve-btn', function () {
                 const data = $(this).data('request');
 
                 // Request ID
@@ -1607,7 +1728,7 @@
             });
 
             // EDIT CONTROL NUMBERS (approved requests)
-            $('.edit-control-btn').click(function () {
+            $(document).on('click', '.edit-control-btn', function () {
                 const data = $(this).data('request');
                 $('#ec_request_id').val(data.id);
                 $('#ec_control_equipment').val(data.control_equipment || '');
@@ -1642,7 +1763,7 @@
             });
 
             // REJECT BUTTON
-            $('.reject-btn').click(function () {
+            $(document).on('click', '.reject-btn', function () {
                 const data = $(this).data('request');
                 $('#rejectSummaryContent').html(`
                     <p><strong>Requester:</strong> ${data.requesterName || data.requesterEmployeeID}</p>

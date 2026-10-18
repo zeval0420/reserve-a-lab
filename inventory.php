@@ -149,14 +149,22 @@
             @media (max-width: 768px) {
                 .form-container { padding: 10px; margin: 10px auto; }
                 .inventory-header { flex-direction: column; align-items: flex-start; gap: 10px; }
-                .inventory-header > div { width: 100%; display: flex; flex-wrap: wrap; gap: 5px; }
-                .btn-scan, .btn-add { flex: 1; text-align: center; }
+                .inventory-header > .inv-toolbar { width: 100%; justify-content: flex-start; }
             }
 
-            /* Phones: equal-width two-column button grid instead of ragged wrapping */
+            /* Grouped admin actions */
+            .inventory-header { align-items: flex-start; gap: 16px; }
+            .inv-toolbar { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; }
+            .inv-group { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px 10px; border: 1px solid #dbe3f5; border-radius: 16px; background: #f7f9ff; }
+            .inv-group-label { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #5a6a99; padding-left: 4px; }
+            .inv-group-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+
+            /* Phones: each group is a full-width block with an equal-width button grid */
             @media (max-width: 430px) {
-                .inventory-header > div { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-                .inventory-header > div > button { width: 100%; margin: 0; white-space: normal; }
+                .inv-toolbar { flex-direction: column; width: 100%; gap: 8px; }
+                .inv-group { width: 100%; }
+                .inv-group-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+                .inv-group-buttons > button { width: 100%; margin: 0; white-space: normal; }
                 .inventory-header h2 { font-size: 24px; margin: 0; }
                 .form-container { width: 100%; border-radius: 0; }
                 .dataTables_wrapper .dataTables_length,
@@ -175,14 +183,29 @@
             <div class="form-container">
                 <div class="inventory-header">
                     <h2>Inventory Management</h2>
-                    <div>
-                        <button id="scanBarcodeBtn" class="btn-liquid">Scan Barcode</button>
-                        <button id="stockInBtn" class="btn-liquid-info">Stock In</button>
-                        <button id="bulkImportBtn" class="btn-liquid-info">Bulk Import</button>
-                        <button id="thresholdAlertsBtn" class="btn-liquid-warning">Alert Thresholds</button>
-                        <button id="editModeBtn" class="btn-liquid-warning">Edit Mode</button>
-                        <button id="cancelEditBtn" class="btn-liquid-danger" style="display:none;">Cancel</button>
-                        <button id="addItemBtn" class="btn-liquid-success">Add Product</button>
+                    <div class="inv-toolbar" role="toolbar" aria-label="Inventory actions">
+                        <div class="inv-group" role="group" aria-labelledby="invGroupAdd">
+                            <span class="inv-group-label" id="invGroupAdd">Add stock</span>
+                            <div class="inv-group-buttons">
+                                <button id="addItemBtn" class="btn-liquid-success">Add Product</button>
+                                <button id="stockInBtn" class="btn-liquid-info">Stock In</button>
+                                <button id="bulkImportBtn" class="btn-liquid-info">Bulk Import</button>
+                            </div>
+                        </div>
+                        <div class="inv-group" role="group" aria-labelledby="invGroupTools">
+                            <span class="inv-group-label" id="invGroupTools">Tools</span>
+                            <div class="inv-group-buttons">
+                                <button id="scanBarcodeBtn" class="btn-liquid">Scan Barcode</button>
+                                <button id="thresholdAlertsBtn" class="btn-liquid-warning">Alert Thresholds</button>
+                            </div>
+                        </div>
+                        <div class="inv-group" role="group" aria-labelledby="invGroupEdit">
+                            <span class="inv-group-label" id="invGroupEdit">Edit items</span>
+                            <div class="inv-group-buttons">
+                                <button id="editModeBtn" class="btn-liquid-warning">Edit Mode</button>
+                                <button id="cancelEditBtn" class="btn-liquid-danger" style="display:none;">Cancel</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="tabs" id="tabsContainer"></div>
