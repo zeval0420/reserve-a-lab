@@ -1,3 +1,9 @@
 # Database connection config
 helperFiles/db_connection.php
 
+
+# HyperFrames skills (installed via npx skills)
+.agents/
+.claude/skills/
+skills-lock.json
+videos/
