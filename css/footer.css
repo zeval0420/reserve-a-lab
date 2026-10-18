@@ -79,6 +79,12 @@
         height: 56px;
     }
 
+    /* space the logo apart from the text blocks stacked above and below it */
+    .footer-logo-col {
+        padding-top: 16px !important;
+        padding-bottom: 16px;
+    }
+
     /* inline padding-left on the school column pushes content off-center */
     .site-footer .col-md-5 {
         padding-left: 15px !important;

@@ -327,6 +327,42 @@
                 .form-title h4 { font-size: 1.8rem; }
                 .form-container { padding: 15px; margin: 10px 0 30px; }
                 .container { padding-left: 10px; padding-right: 10px; }
+
+                /* Material tables: each row becomes a stacked card so the
+                   quantity, item and description fields keep a usable width. */
+                .material-table thead {
+                    position: absolute; width: 1px; height: 1px;
+                    overflow: hidden; clip: rect(0 0 0 0);
+                }
+                .material-table, .material-table tbody,
+                .material-table tr, .material-table td { display: block; width: 100%; }
+                .material-table tr {
+                    position: relative;
+                    border: 1px solid #dbe3f5;
+                    border-radius: 12px;
+                    padding: 10px 52px 6px 10px;
+                    margin-bottom: 10px;
+                    background: #fff;
+                }
+                .material-table td {
+                    border: none !important;
+                    padding: 0 0 8px !important;
+                    text-align: left !important;
+                }
+                .material-table td[data-label]::before {
+                    content: attr(data-label);
+                    display: block;
+                    font-size: 12px;
+                    font-weight: 700;
+                    color: #2B55C4;
+                    margin-bottom: 2px;
+                }
+                .material-table td.row-action {
+                    position: absolute; top: 8px; right: 8px;
+                    width: auto; padding: 0 !important;
+                }
+                .material-table .quantity-input { width: 40% !important; min-width: 72px; }
+                .material-table .unit-input { width: 35% !important; }
             }
 
             .required::after {
@@ -734,20 +770,20 @@
 
             return `
                 <tr>
-                    <td>
+                    <td data-label="Quantity">
                         <div style="display: flex; align-items: center;">
                             <input type="number" class="form-control quantity-input liquid-input" name="quantity[]" min="1" value="1" style="width: 45%;" disabled>
                             <span class="quantity-available" style="margin-left: 4px; min-width: 38px; color: #666; white-space: nowrap; font-weight: normal;"></span>
                             <input type="text" class="form-control unit-input liquid-input" name="unit[]" style="width: 30%; margin-left: 4px;" placeholder="Unit" disabled>
                         </div>
                     </td>
-                    <td>
+                    <td data-label="Item">
                         ${itemSelect}
                     </td>
-                    <td>
+                    <td data-label="Description">
                         ${descriptionField}
                     </td>
-                    <td style="text-align:center;">
+                    <td class="row-action" style="text-align:center;">
                         <button type="button" class="btn btn-danger remove-row-btn">
                             <span class="glyphicon glyphicon-minus"></span>
                         </button>
