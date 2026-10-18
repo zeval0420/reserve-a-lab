@@ -171,7 +171,8 @@
             table td { max-width: 200px; }
             .action-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
             .dataTables_wrapper { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-            table.dataTable { width: 100% !important; table-layout: auto !important; white-space: nowrap; }
+            table.dataTable { width: 100% !important; min-width: 1250px; table-layout: auto !important; white-space: nowrap; }
+            .dataTables_scrollBody { -webkit-overflow-scrolling: touch; }
             .btn-scan { background-color: #0078D7; color: #fff; border: none; padding: 8px 12px; border-radius: 6px; margin-right: 8px; }
             .btn-scan:hover { background-color: #005fa3; }
 
@@ -532,7 +533,7 @@
             }
             /* Details column: only on tablet/phone widths, where DataTables collapses the other columns */
             .details-col { display: none; text-align: center; }
-            @media (max-width: 768px) {
+            @media (max-width: 430px) {
                 .details-col { display: table-cell; }
                 .details-col .view-details-btn { padding: 6px 14px; white-space: nowrap; }
             }
@@ -1004,6 +1005,7 @@
                         <thead>
                             <tr>
                                 <th>#</th>
+                                <th class="details-col">Details</th>
                                 <th>Requester Name</th>
                                 <?php if ($statusFilter === 'Approved'): ?><th>Control #</th><?php endif; ?>
                                 <th>Lab Name</th>
@@ -1017,7 +1019,6 @@
                                 <?php if ($statusFilter === 'Approved'): ?><th>Remarks</th><?php endif; ?>
                                 <?php if ($statusFilter === 'Rejected'): ?><th>Feedback</th><?php endif; ?>
                                 <?php if ($statusFilter !== 'Rejected'): ?><th>Action</th><?php endif; ?>
-                                <th class="details-col">Details</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1048,6 +1049,9 @@
                                 ?>
                                     <tr id="row-<?= $row['id'] ?>" class="<?= $flagged ? 'request-flagged-row' : '' ?>">
                                         <td><span style="display:none;"><?= $row['id'] ?></span><?= $i++ ?></td>
+                                        <td class="details-col">
+                                            <button type="button" class="btn-liquid view-details-btn" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>View</button>
+                                        </td>
                                         <td><?= htmlspecialchars($fullName) ?></td>
                                         <?php if ($statusFilter === 'Approved'):
                                             $ctrlPrimary = ($row['control_equipment'] ?? '') ?: (($row['control_reagent'] ?? '') ?: (($row['control_permit'] ?? '') ?: (($row['control_reservation'] ?? '') ?: ($row['controlNumber'] ?? ''))));
@@ -1085,9 +1089,6 @@
                                                 <?php endif; ?>
                                             </td>
                                         <?php endif; ?>
-                                        <td class="details-col">
-                                            <button type="button" class="btn-liquid view-details-btn" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>View</button>
-                                        </td>
                                     </tr>
                                 <?php endforeach; ?>
                             <?php else: ?>
@@ -1440,11 +1441,11 @@
                 language: {
                     emptyTable: "No requests found."
                 },
-                responsive: true,
-                // Keep the Details button and requester visible when columns collapse
+                // No column collapsing: every column stays visible and the table scrolls sideways
+                responsive: false,
+                scrollX: true,
                 columnDefs: [
-                    { targets: 'details-col', orderable: false, responsivePriority: 1 },
-                    { targets: 1, responsivePriority: 2 }
+                    { targets: 'details-col', orderable: false }
                 ],
                 pageLength: 10,
                 lengthChange: true,
