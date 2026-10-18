@@ -2,9 +2,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <!-- Local Header and Footer CSS -->
-<link rel="stylesheet" href="css/universal.css">
-<link rel="stylesheet" href="css/header.css">
-<link rel="stylesheet" href="css/footer.css">
+<link rel="stylesheet" href="css/universal.css?v=<?= filemtime(__DIR__ . '/../css/universal.css') ?>">
+<link rel="stylesheet" href="css/header.css?v=<?= filemtime(__DIR__ . '/../css/header.css') ?>">
+<link rel="stylesheet" href="css/footer.css?v=<?= filemtime(__DIR__ . '/../css/footer.css') ?>">
 
 <!-- Favicon -->
 <link rel="icon" type="image/x-icon" href="img/logo.png">

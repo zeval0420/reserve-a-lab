@@ -49,7 +49,7 @@
     <head>
         <title>Admin Home</title>
         <?php include('helperFiles/headData.php'); ?>
-        <link rel="stylesheet" href="css/laboratory-card.css">
+        <link rel="stylesheet" href="css/laboratory-card.css?v=<?= filemtime(__DIR__ . '/css/laboratory-card.css') ?>">
         <link rel="stylesheet" href="css/home-heading.css">
         <style>
             .main-wrapper {
