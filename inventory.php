@@ -153,6 +153,17 @@
                 .btn-scan, .btn-add { flex: 1; text-align: center; }
             }
 
+            /* Phones: equal-width two-column button grid instead of ragged wrapping */
+            @media (max-width: 430px) {
+                .inventory-header > div { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+                .inventory-header > div > button { width: 100%; margin: 0; white-space: normal; }
+                .inventory-header h2 { font-size: 24px; margin: 0; }
+                .form-container { width: 100%; border-radius: 0; }
+                .dataTables_wrapper .dataTables_length,
+                .dataTables_wrapper .dataTables_filter { text-align: left; }
+                .dataTables_wrapper .dataTables_filter input { width: 60%; }
+            }
+
             .modified-row { background-color: #fff8e1 !important; }
         </style>
     </head>
@@ -551,6 +562,14 @@
                         emptyTable: "No " + type.toLowerCase() + (type !== "Equipment" ? "s" : "") + " in inventory."
                     },
                     responsive: true,
+                    // On small screens keep the name, actions, quantity and status visible;
+                    // ID, description and unit collapse into the row's expand control.
+                    columnDefs: [
+                        { responsivePriority: 1, targets: 0 },
+                        { responsivePriority: 2, targets: -1 },
+                        { responsivePriority: 3, targets: 3 },
+                        { responsivePriority: 4, targets: 5 }
+                    ],
                     pageLength: 10,
                     lengthChange: true,
                     searching: true,

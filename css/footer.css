@@ -29,6 +29,12 @@
     object-fit: contain;
 }
 
+/* Bootstrap 3 has no d-flex / justify-content-center utilities */
+.footer-logo-col {
+    display: flex;
+    justify-content: center;
+}
+
 /* ─── 4. FOOTER LINKS (social icons) ───────────────────────── */
 .site-footer a {
     color: #ffffff;
@@ -71,5 +77,16 @@
     .footer-logo {
         width: 56px;
         height: 56px;
+    }
+
+    /* inline padding-left on the school column pushes content off-center */
+    .site-footer .col-md-5 {
+        padding-left: 15px !important;
+        text-align: center !important;
+    }
+    .site-footer .col-md-5 > .col-md-8,
+    .site-footer .col-md-5 > .col-md-4 {
+        width: 100%;
+        float: none;
     }
 }

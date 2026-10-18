@@ -22,7 +22,7 @@
             </div>
 
             <!-- Column 3: Center logo -->
-            <div class="col-12 col-md-2 mb-2 mb-md-0 d-flex justify-content-center" style="padding-top: 15px;">
+            <div class="col-12 col-md-2 mb-2 mb-md-0 footer-logo-col" style="padding-top: 15px;">
                 <img src="img/logo.png" alt="PSHS Logo" class="footer-logo">
             </div>
 
