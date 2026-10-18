@@ -633,15 +633,22 @@
         width: calc(50% - 8px);
     }
 
-    /* List card: stack on mobile */
-    .lab-card--list .lab-card__inner {
-        flex-direction: column;
+    /* List cards stay horizontal (thumbnail left, details right) and sit
+       two per row on tablets so more laboratories fit on screen. */
+    .lab-gallery--list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
     }
 
     .lab-card--list .lab-card__image-wrap {
-        width: 100%;
-        min-height: 120px;
-        border-radius: 12px 12px 0 0;
+        width: 110px;
+        min-height: 110px;
+        border-radius: 12px 0 0 12px;
+    }
+
+    .lab-card--list .lab-card__info {
+        min-width: 0;
     }
 
     .lab-card--list .lab-card__name {
@@ -655,8 +662,25 @@
         max-width: 100%;
     }
 
+    /* Phones: one column of compact horizontal cards */
+    .lab-gallery--list {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .lab-card--list .lab-card__image-wrap {
+        width: 88px;
+        min-height: 96px;
+    }
+
     .lab-card--list .lab-card__body {
         flex-direction: column;
+        gap: 6px;
+        padding: 10px 12px 6px;
+    }
+
+    .lab-card--list .lab-card__footer {
+        padding: 6px 10px;
         gap: 6px;
     }
 
