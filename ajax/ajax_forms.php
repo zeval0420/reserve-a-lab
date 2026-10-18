@@ -42,23 +42,6 @@ function formatTime($time)
     return date("g:i A", strtotime($time));
 }
 
-function createMailer()
-{
-    global $email_smtp_host, $email_smtp_user, $email_smtp_password, $email_smtp_secure, $email_smtp_port, $email_sender;
-
-    $mail = new PHPMailer(true);
-    $mail->isSMTP();
-    $mail->Host = $email_smtp_host;
-    $mail->SMTPAuth = true;
-    $mail->Username = $email_smtp_user;
-    $mail->Password = $email_smtp_password;
-    $mail->SMTPSecure = $email_smtp_secure;
-    $mail->Port = $email_smtp_port;
-    $mail->setFrom($email_sender, 'PSHS-IRC SciLab');
-    $mail->isHTML(true);
-    return $mail;
-}
-
 function sendSubmissionNotificationToAdmins($conn, $data, $formID)
 {
     global $active_server;
@@ -112,62 +95,6 @@ function sendSubmissionNotificationToAdmins($conn, $data, $formID)
                 $mail->send();
             } catch (Exception $e) {
                 error_log("Admin email failed to {$admin['email']}: " . $e->getMessage());
-            }
-        }
-    }
-}
-
-function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails, $formID)
-{
-    global $active_server;
-    if (empty($supervisorEmails))
-        return;
-
-    $subjectLine = "SciLab Request SLR-" . $formID;
-    $templatePath = __DIR__ . "/../templates/supervisor_request_email_template.html";
-
-    if (file_exists($templatePath)) {
-        $bodyTemplate = file_get_contents($templatePath);
-    } else {
-        $bodyTemplate = "A new request requires your approval. To view and approve the request, please click the button below.<br><br><a href='[ApprovalLink]' style='background-color: #4CAF50; color: white; padding: 14px 25px; text-align: center; text-decoration: none; display: inline-block;'>View Request Details</a><br><br><strong>Request Details:</strong><br>Facility: [Facility]<br>Requested By: [Requested By]<br>Date: [Start Date]<br>Time: [End Date]";
-    }
-
-    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
-    $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/" . $active_server;
-
-    $replacements = [
-        "[Facility]" => $data['scilabName'],
-        "[Grade Level]" => $data['gradeLevel'],
-        "[Section]" => $data['section'],
-        "[Subject]" => $data['subject'],
-        "[Concurrent Topic]" => $data['topic'],
-        "[Unit]" => $data['unit'],
-        "[Teacher Name]" => $data['teacher'],
-        "[Requested By]" => $data['requester'],
-        "[Start Date]" => $data['inclusiveDate'],
-        "[End Date]" => $data['inclusiveTime'],
-        "[Materials]" => $data['materials'],
-        "[Group Members]" => $data['students'],
-    ];
-
-    foreach ($replacements as $key => $val) {
-        $bodyTemplate = str_replace($key, htmlspecialchars($val), $bodyTemplate);
-    }
-
-    foreach ($supervisorEmails as $email) {
-        if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            try {
-                $mail = createMailer();
-                $mail->addAddress($email);
-                $mail->Subject = $subjectLine;
-
-                $approvalLink = $baseURL . "/supervisor_approve.php?id=" . $formID . "&token=" . urlencode(scilab_approval_token($formID, 'supervisor'));
-                $personalizedBody = str_replace("[ApprovalLink]", $approvalLink, $bodyTemplate);
-
-                $mail->Body = $personalizedBody;
-                $mail->send();
-            } catch (Exception $e) {
-                error_log("Supervisor email failed to {$email}: " . $e->getMessage());
             }
         }
     }

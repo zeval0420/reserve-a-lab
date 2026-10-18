@@ -111,74 +111,6 @@ function scilab_available_quantity($conn, $item, $desc)
     return [$total, $classification];
 }
 
-function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails, $formID) {
-    global $email_smtp_host, $email_smtp_user, $email_smtp_password, $email_smtp_secure, $email_smtp_port, $email_sender, $active_server;
-
-    if (empty($supervisorEmails)) return; 
-
-    $subjectLine = "SciLab Request SLR-" . $formID;
-    $templatePath = __DIR__ . "/../templates/supervisor_request_email_template.html";
-
-    if (file_exists($templatePath)) {
-        $bodyTemplate = file_get_contents($templatePath);
-    } else {
-        $bodyTemplate = "A new request requires your approval. To view and approve the request, please click the button below.<br><br><a href='[ApprovalLink]' style='background-color: #4CAF50; color: white; padding: 14px 25px; text-align: center; text-decoration: none; display: inline-block;'>View Request Details</a><br><br><strong>Request Details:</strong><br>Facility: [Facility]<br>Requested By: [Requested By]<br>Date: [Start Date]<br>Time: [End Date]";
-    }
-
-    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
-    $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/" . $active_server;
-    $approvalLink = $baseURL . "/supervisor_approve.php?id=" . $formID;
-
-    $replacements = [
-        "[Request ID]" => "SLR-" . $formID,
-        "[Facility]" => $data['scilabName'],
-        "[Grade Level]" => $data['gradeLevel'],
-        "[Section]" => $data['section'],
-        "[Subject]" => $data['subject'],
-        "[Concurrent Topic]" => $data['topic'],
-        "[Unit]" => $data['unit'],
-        "[Teacher Name]" => $data['teacher'],
-        "[Requested By]" => $data['requester'],
-        "[Start Date]" => $data['inclusiveDate'],
-        "[End Date]" => $data['inclusiveTime'],
-        "[Materials]" => $data['materials'],
-        "[Group Members]" => $data['students'],
-    ];
-
-    foreach ($replacements as $key => $val) {
-        $bodyTemplate = str_replace($key, htmlspecialchars($val), $bodyTemplate);
-    }
-
-    foreach ($supervisorEmails as $email) {
-        if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $mail = new PHPMailer(true);
-            try {
-                $mail->isSMTP();
-                $mail->Host = $email_smtp_host;
-                $mail->SMTPAuth = true;
-                $mail->Username = $email_smtp_user;
-                $mail->Password = $email_smtp_password;
-                $mail->SMTPSecure = $email_smtp_secure;
-                $mail->Port = $email_smtp_port;
-
-                $mail->setFrom($email_sender, 'PSHS-IRC SciLab');
-                $mail->addAddress($email);
-
-                $mail->isHTML(true);
-                $mail->Subject = $subjectLine;
-
-                $approvalLink = $baseURL . "/supervisor_approve.php?id=" . $formID . "&token=" . urlencode(scilab_approval_token($formID, 'supervisor'));
-                $personalizedBody = str_replace("[ApprovalLink]", $approvalLink, $bodyTemplate);
-                $mail->Body = $personalizedBody;
-
-                $mail->send();
-            } catch (Exception $e) {
-                error_log("Supervisor email failed to {$email}: {$mail->ErrorInfo}");
-            }
-        }
-    }
-}
-
 function sendNotificationToAdmins($conn, $requestID) {
     global $email_smtp_host, $email_smtp_user, $email_smtp_password, $email_smtp_secure, $email_smtp_port, $email_sender, $active_server;
 
@@ -831,7 +763,7 @@ if ($action === 'force_approve_override') {
 $authorized = false;
 if ($username !== null) {
     $authorized = true;
-} elseif (isset($input['token']) && $fieldPrefix !== 'force_approve' && hash_equals(scilab_approval_token($requestId, $fieldPrefix), $input['token'])) {
+} elseif (isset($input['token']) && $fieldPrefix !== 'force_approve' && scilab_approval_token_valid($requestId, $fieldPrefix, $input['token'])) {
     $authorized = true;
 }
 if (!$authorized) {

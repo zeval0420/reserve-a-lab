@@ -110,6 +110,12 @@ $school_abbrev = "PSHS-IRC";
 $system_name = "SciLab Reservation Management System";
 $organization = "Department of Science and Technology (DOST)";
 
+// PRIVATE CREDENTIALS (kept out of version control)
+$scilab_secrets = is_file(__DIR__ . '/secrets.php') ? (require __DIR__ . '/secrets.php') : [];
+if (empty($scilab_secrets['approval_secret']) || empty($scilab_secrets['smtp_password'])) {
+    error_log('helperFiles/secrets.php is missing or incomplete; see secrets.example.php');
+}
+
 // EMAIL SETTINGS
 $email_sender = "pshsircscilab@gmail.com"; //edit to official
 $email_sender_name = "PSHS-IRC SciLab";
@@ -117,7 +123,7 @@ $email_display_name = "PSHS-IRC SciLab";
 $email_smtp_host = "smtp.gmail.com";
 $email_smtp_port = 587;
 $email_smtp_user = "pshsircscilab@gmail.com"; //edit to official
-$email_smtp_password = "wxzmkkrffptfchcc"; //edit to official
+$email_smtp_password = $scilab_secrets['smtp_password'] ?? ""; // set in helperFiles/secrets.php
 $email_smtp_secure = "tls";
 
 // FRONTEND / SYSTEM PATHS
@@ -143,7 +149,31 @@ if (!function_exists('scilab_approval_token')) {
      */
     function scilab_approval_token($requestId, $stage)
     {
-        return hash_hmac('sha256', intval($requestId) . '|' . $stage, 'SciLabApprovalLink2026');
+        global $scilab_secrets;
+        $secret = $scilab_secrets['approval_secret'] ?? '';
+        if ($secret === '') {
+            throw new RuntimeException('approval_secret is not configured in helperFiles/secrets.php');
+        }
+        return hash_hmac('sha256', intval($requestId) . '|' . $stage, $secret);
+    }
+}
+
+if (!function_exists('scilab_approval_token_valid')) {
+    /**
+     * Check a link token against the current secret, then the legacy secret so
+     * links emailed before the secret moved to secrets.php keep working.
+     */
+    function scilab_approval_token_valid($requestId, $stage, $token)
+    {
+        global $scilab_secrets;
+        if (!is_string($token) || $token === '') {
+            return false;
+        }
+        if (hash_equals(scilab_approval_token($requestId, $stage), $token)) {
+            return true;
+        }
+        $legacy = $scilab_secrets['legacy_approval_secret'] ?? '';
+        return $legacy !== '' && hash_equals(hash_hmac('sha256', intval($requestId) . '|' . $stage, $legacy), $token);
     }
 }
 

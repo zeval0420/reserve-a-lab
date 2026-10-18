@@ -80,7 +80,7 @@ if ($supervisor_status === 'pending') {
 $tokenValidStage = '';
 if ($token) {
     foreach (['supervisor', 'subject_teacher', 'lab_personnel', 'cid_chief'] as $stageName) {
-        if (hash_equals(scilab_approval_token($requestId, $stageName), $token)) {
+        if (scilab_approval_token_valid($requestId, $stageName, $token)) {
             $tokenValidStage = $stageName;
             break;
         }
