@@ -8,6 +8,7 @@
              Same URL as the CSS url('img/about photos/bg.jpeg'), so the download is reused. -->
         <link rel="preload" as="image" href="img/about%20photos/bg.jpeg" fetchpriority="high">
         <?php $pageAssets = []; ?>
+        <?php require_once __DIR__ . '/helperFiles/image_optimizer.php'; // WebP srcset for the photos ?>
         <?php include('helperFiles/headData.php'); ?>
 
         <link rel="stylesheet" href="css/game-section.css?v=<?= filemtime(__DIR__ . '/css/game-section.css') ?>">
@@ -1175,7 +1176,7 @@
                 <div class="team-leader-section">
                     <div class="leader-card">
                         <div class="leader-image-wrapper">
-                            <img src="img/about photos/gab.jpeg" alt="Gabriel James Valdez" width="1536" height="2048" loading="lazy" decoding="async">
+                            <?= ral_img_picture('img/about photos/gab.jpeg', 'Gabriel James Valdez', '240px') ?>
                         </div>
                         <h3>Gabriel James Valdez</h3>
                         <p class="leader-role">Head of Development & UI/UX Lead</p>
@@ -1191,7 +1192,7 @@
                 <div class="team-grid">
                     <div class="team-member">
                         <div class="member-image-wrapper">
-                            <img src="img/about photos/zyx.jpeg" alt="Zyx Leiabe A. Barangan" width="1126" height="2000" loading="lazy" decoding="async">
+                            <?= ral_img_picture('img/about photos/zyx.jpeg', 'Zyx Leiabe A. Barangan', '200px') ?>
                         </div>
                         <h3>Zyx Leiabe A. Barangan</h3>
                         <p class="role">Lead Developer & Architect</p>
@@ -1203,7 +1204,7 @@
 
                     <div class="team-member">
                         <div class="member-image-wrapper">
-                            <img src="img/about photos/rojan.jpeg" alt="Rojan Joefel C. Dumlao" width="1536" height="2048" loading="lazy" decoding="async">
+                            <?= ral_img_picture('img/about photos/rojan.jpeg', 'Rojan Joefel C. Dumlao', '200px') ?>
                         </div>
                         <h3>Rojan Joefel C. Dumlao</h3>
                         <p class="role">Backend Engineer & Systems Specialist</p>
@@ -1259,7 +1260,7 @@
                 <div class="team-leader-section">
                     <div class="leader-card">
                         <div class="leader-image-wrapper">
-                            <img src="img/about photos/gab.jpeg" alt="Gabriel James Valdez" width="1536" height="2048" loading="lazy" decoding="async">
+                            <?= ral_img_picture('img/about photos/gab.jpeg', 'Gabriel James Valdez', '240px') ?>
                         </div>
                         <h3>Gabriel James Valdez</h3>
                         <p class="leader-role">Original Team Lead & UI/UX Designer</p>
@@ -1275,7 +1276,7 @@
                 <div class="team-grid">
                     <div class="team-member">
                         <div class="member-image-wrapper">
-                            <img src="img/about photos/zyx.jpeg" alt="Zyx Leiabe A. Barangan" width="1126" height="2000" loading="lazy" decoding="async">
+                            <?= ral_img_picture('img/about photos/zyx.jpeg', 'Zyx Leiabe A. Barangan', '200px') ?>
                         </div>
                         <h3>Zyx Leiabe A. Barangan</h3>
                         <p class="role">Founder & Lead Developer</p>
@@ -1288,7 +1289,7 @@
 
                     <div class="team-member">
                         <div class="member-image-wrapper">
-                            <img src="img/about photos/ben.jpeg" alt="Christian Benedict U. Soy" width="1536" height="2048" loading="lazy" decoding="async">
+                            <?= ral_img_picture('img/about photos/ben.jpeg', 'Christian Benedict U. Soy', '200px') ?>
                         </div>
                         <h3>Christian Benedict U. Soy</h3>
                         <p class="role">Content Strategist & Documentation Lead</p>
@@ -1300,7 +1301,7 @@
 
                     <div class="team-member">
                         <div class="member-image-wrapper">
-                            <img src="img/about photos/rojan.jpeg" alt="Rojan Joefel C. Dumlao" width="1536" height="2048" loading="lazy" decoding="async">
+                            <?= ral_img_picture('img/about photos/rojan.jpeg', 'Rojan Joefel C. Dumlao', '200px') ?>
                         </div>
                         <h3>Rojan Joefel C. Dumlao</h3>
                         <p class="role">Backend Engineer & Database Architect</p>
@@ -1312,7 +1313,7 @@
 
                     <div class="team-member">
                         <div class="member-image-wrapper">
-                            <img src="img/about photos/veca.jpg" alt="Riveca T. Pamerol" width="783" height="428" loading="lazy" decoding="async">
+                            <?= ral_img_picture('img/about photos/veca.jpg', 'Riveca T. Pamerol', '200px') ?>
                         </div>
                         <h3>Riveca T. Pamerol</h3>
                         <p class="role">Design Contributor & UX Researcher</p>
@@ -1436,14 +1437,14 @@
                             </p>
                         </div>
                         <div class="timeline-image">
-                            <img src="img/about photos/1.jpg" alt="Team Formation" width="1984" height="1488" loading="lazy" decoding="async">
+                            <?= ral_img_picture('img/about photos/1.jpg', 'Team Formation', '(max-width: 768px) 92vw, 400px') ?>
                         </div>
                     </div>
 
                     <div class="timeline-item">
                         <div class="timeline-marker"></div>
                         <div class="timeline-image">
-                            <img src="img/about photos/2.jpg" alt="Coding Camp" width="1984" height="1488" loading="lazy" decoding="async">
+                            <?= ral_img_picture('img/about photos/2.jpg', 'Coding Camp', '(max-width: 768px) 92vw, 400px') ?>
                         </div>
                         <div class="timeline-content">
                             <h4>Intensive Learning</h4>
@@ -1468,14 +1469,14 @@
                             </p>
                         </div>
                         <div class="timeline-image">
-                            <img src="img/about photos/4.jpg" alt="Development Phase" width="1632" height="1224" loading="lazy" decoding="async">
+                            <?= ral_img_picture('img/about photos/4.jpg', 'Development Phase', '(max-width: 768px) 92vw, 400px') ?>
                         </div>
                     </div>
 
                     <div class="timeline-item">
                         <div class="timeline-marker"></div>
                         <div class="timeline-image">
-                            <img src="img/about photos/5.jpg" alt="Testing Phase" width="1984" height="1488" loading="lazy" decoding="async">
+                            <?= ral_img_picture('img/about photos/5.jpg', 'Testing Phase', '(max-width: 768px) 92vw, 400px') ?>
                         </div>
                         <div class="timeline-content">
                             <h4>Testing & Iteration</h4>
@@ -1498,14 +1499,14 @@
                             </p>
                         </div>
                         <div class="timeline-image">
-                            <img src="img/about photos/3.jpg" alt="Project Launch" width="1984" height="1488" loading="lazy" decoding="async">
+                            <?= ral_img_picture('img/about photos/3.jpg', 'Project Launch', '(max-width: 768px) 92vw, 400px') ?>
                         </div>
                     </div>
 
                     <div class="timeline-item">
                         <div class="timeline-marker"></div>
                         <div class="timeline-image">
-                            <img src="img/about photos/10.jpg" alt="Evolution" width="2000" height="1126" loading="lazy" decoding="async">
+                            <?= ral_img_picture('img/about photos/10.jpg', 'Evolution', '(max-width: 768px) 92vw, 400px') ?>
                         </div>
                         <div class="timeline-content">
                             <h4>Evolution Begins</h4>
@@ -1530,7 +1531,7 @@
                             </p>
                         </div>
                         <div class="timeline-image">
-                            <img src="img/about photos/12.jpg" alt="Continuous Development" width="1126" height="2000" loading="lazy" decoding="async">
+                            <?= ral_img_picture('img/about photos/12.jpg', 'Continuous Development', '(max-width: 768px) 92vw, 400px') ?>
                         </div>
                     </div>
                 </div>
@@ -1552,70 +1553,70 @@
 
                 <div class="gallery-masonry">
                     <div class="gallery-item" data-img-src="img/about photos/4.jpg">
-                        <img src="img/about photos/4.jpg" alt="Team Working" width="1632" height="1224" loading="lazy" decoding="async">
+                        <?= ral_img_picture('img/about photos/4.jpg', 'Team Working', '(max-width: 768px) 92vw, 30vw') ?>
                         <div class="gallery-overlay">
                             <span class="gallery-caption">Designing the Future</span>
                         </div>
                     </div>
 
                     <div class="gallery-item" data-img-src="img/about photos/6.jpeg">
-                        <img src="img/about photos/6.jpeg" alt="Brainstorming Session" width="1920" height="1440" loading="lazy" decoding="async">
+                        <?= ral_img_picture('img/about photos/6.jpeg', 'Brainstorming Session', '(max-width: 768px) 92vw, 30vw') ?>
                         <div class="gallery-overlay">
                             <span class="gallery-caption">Vision into Reality</span>
                         </div>
                     </div>
 
                     <div class="gallery-item" data-img-src="img/about photos/7.jpeg">
-                        <img src="img/about photos/7.jpeg" alt="Team Collaboration" width="2048" height="1536" loading="lazy" decoding="async">
+                        <?= ral_img_picture('img/about photos/7.jpeg', 'Team Collaboration', '(max-width: 768px) 92vw, 30vw') ?>
                         <div class="gallery-overlay">
                             <span class="gallery-caption">Building Connections</span>
                         </div>
                     </div>
 
                     <div class="gallery-item" data-img-src="img/about photos/8.jpeg">
-                        <img src="img/about photos/8.jpeg" alt="Celebrating Success" width="1920" height="1440" loading="lazy" decoding="async">
+                        <?= ral_img_picture('img/about photos/8.jpeg', 'Celebrating Success', '(max-width: 768px) 92vw, 30vw') ?>
                         <div class="gallery-overlay">
                             <span class="gallery-caption">Success in Unity</span>
                         </div>
                     </div>
 
                     <div class="gallery-item" data-img-src="img/about photos/9.jpeg">
-                        <img src="img/about photos/9.jpeg" alt="Innovation Moments" width="2048" height="1536" loading="lazy" decoding="async">
+                        <?= ral_img_picture('img/about photos/9.jpeg', 'Innovation Moments', '(max-width: 768px) 92vw, 30vw') ?>
                         <div class="gallery-overlay">
                             <span class="gallery-caption">Moments of Innovation</span>
                         </div>
                     </div>
 
                     <div class="gallery-item" data-img-src="img/about photos/10.jpg">
-                        <img src="img/about photos/10.jpg" alt="Team Brainstorming" width="2000" height="1126" loading="lazy" decoding="async">
+                        <?= ral_img_picture('img/about photos/10.jpg', 'Team Brainstorming', '(max-width: 768px) 92vw, 30vw') ?>
                         <div class="gallery-overlay">
                             <span class="gallery-caption">Creative Collaboration</span>
                         </div>
                     </div>
 
                     <div class="gallery-item" data-img-src="img/about photos/11.jpg">
-                        <img src="img/about photos/11.jpg" alt="Planning Session" width="1126" height="2000" loading="lazy" decoding="async">
+                        <?= ral_img_picture('img/about photos/11.jpg', 'Planning Session', '(max-width: 768px) 92vw, 30vw') ?>
                         <div class="gallery-overlay">
                             <span class="gallery-caption">Strategizing Together</span>
                         </div>
                     </div>
 
                     <div class="gallery-item" data-img-src="img/about photos/12.jpg">
-                        <img src="img/about photos/12.jpg" alt="Hands-On Work" width="1126" height="2000" loading="lazy" decoding="async">
+                        <?= ral_img_picture('img/about photos/12.jpg', 'Hands-On Work', '(max-width: 768px) 92vw, 30vw') ?>
                         <div class="gallery-overlay">
                             <span class="gallery-caption">Turning Ideas to Action</span>
                         </div>
                     </div>
 
                     <div class="gallery-item" data-img-src="img/about photos/13.jpg">
-                        <img src="img/about photos/13.jpg" alt="Presentation" width="2000" height="1126" loading="lazy" decoding="async">
+                        <?= ral_img_picture('img/about photos/13.jpg', 'Presentation', '(max-width: 768px) 92vw, 30vw') ?>
                         <div class="gallery-overlay">
                             <span class="gallery-caption">Presenting with Passion</span>
                         </div>
                     </div>
 
                     <div class="gallery-item" data-img-src="img/about photos/14.jpg">
-                        <img src="img/about photos/14.jpg" alt="Feedback Session" width="1126" height="2000" loading="lazy" decoding="async">
+                        <?= ral_img_picture('img/about photos/14.jpg', 'Feedback Session', '(max-width: 768px) 92vw, 30vw') ?>
                         <div class="gallery-overlay">
                             <span class="gallery-caption">Learning Through Feedback</span>
                         </div>

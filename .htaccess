@@ -16,7 +16,10 @@
 </IfModule>
 
 # ---------------------------------------------------------------------------
-# Rewrites: block tools/, WebP negotiation (internal rewrites only)
+# Rewrites: block private files and folders, WebP negotiation (internal
+# rewrites only). Access rules use mod_rewrite's [F] (403) rather than
+# Options/Require, so they need no AllowOverride beyond what the rest of this
+# file already uses (FileInfo).
 # ---------------------------------------------------------------------------
 <IfModule mod_rewrite.c>
     RewriteEngine On
@@ -25,6 +28,24 @@
     # NC and the optional trailing dots/spaces cover Windows path aliases
     # such as "Tools/" or "tools./".
     RewriteRule ^tools[.\s]*(?:/|$) - [NC,F]
+
+    # Development-only folders (Composer packages, notes, video project):
+    # no web access either. PHP still loads vendor/ from disk.
+    RewriteRule ^(?:vendor|graphify-out|videos)[.\s]*(?:/|$) - [NC,F]
+
+    # Database backups, lock files, notes and other non-web files, dotfiles
+    # (.git/, .gitignore) and Windows 8.3 short names ("DB_BAC~1.SQL", which
+    # could otherwise reach any of these under a different name).
+    RewriteRule \.(?:sql|lock|md|log|bak|ini|env|sh|ps1|py|cjs|mjs)[.\s]*$ - [NC,F]
+    RewriteRule (?:^|/)(?:composer|package|package-lock)\.json[.\s]*$ - [NC,F]
+    RewriteRule (?:^|/)\. - [F]
+    RewriteRule ~[0-9] - [F]
+
+    # No directory listings: a folder without an index page is 403.
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteCond %{REQUEST_FILENAME}/index.php !-f
+    RewriteCond %{REQUEST_FILENAME}/index.html !-f
+    RewriteRule ^ - [F]
 
     # Every original JPEG/PNG under img/ (but not img/_opt/) is marked, so its
     # response gets "Vary: Accept" (see mod_headers below), whether or not a

@@ -371,9 +371,9 @@ $calendarJsUrl  = 'CalendarLibrary/event-calendar.min.js?v=' . filemtime(__DIR__
             showToast("There was an error in opening the calendar.", 'error');
         });
     }
+    // EventCalendar v4 sizes itself with CSS (it has no updateSize()), so setting the events is enough.
     function updateCalendar(events) {
         ec.setOption("events", events);
-        ec.updateSize();
     }
 
     function closeModal() {
@@ -383,11 +383,6 @@ $calendarJsUrl  = 'CalendarLibrary/event-calendar.min.js?v=' . filemtime(__DIR__
 
     closeCalendarBtn.addEventListener("click", closeModal);
     calendarOverlay.addEventListener("click", closeModal);
-
-    // Optional: handle window resize to update calendar
-    window.addEventListener("resize", () => {
-        if (ec) ec.updateSize();
-    });
 
     const eventDetailsModal = document.getElementById('eventDetailsModal');
     const closeEventDetails = document.getElementById('closeEventDetails');

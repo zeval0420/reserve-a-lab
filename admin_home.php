@@ -32,17 +32,18 @@
                 $pending = (int)($pStmt->get_result()->fetch_assoc()['cnt'] ?? 0);
                 $pStmt->close();
             }
-            $imgVersion = file_exists($lab['mainImagePath']) ? filemtime($lab['mainImagePath']) : time();
+            $mainImage = ral_lab_main_image($lab);
+            $imgVersion = file_exists($mainImage) ? filemtime($mainImage) : time();
             $labsJson[] = [
                 'id'               => $id,
                 'laboratoryName'   => $id,
                 'location'         => $lab['location'] ?? '',
-                'image'            => htmlspecialchars($lab['mainImagePath']) . '?v=' . $imgVersion,
+                'image'            => htmlspecialchars($mainImage) . '?v=' . $imgVersion,
                 'availability'     => $lab['availability'] ?? 'Not Available',
                 'color'            => $lab['color'] ?? '#2B55C4',
                 'pendingRequests'  => $pending,
             ];
-            $labsJson[count($labsJson) - 1] += ral_img_card_fields($lab['mainImagePath']);
+            $labsJson[count($labsJson) - 1] += ral_img_card_fields($mainImage);
         }
     }
 ?>

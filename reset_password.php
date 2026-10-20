@@ -96,8 +96,7 @@
             <?php endif; ?>
         </div>
 
-        <!-- Toast Container -->
-        <div id="toast-container"></div>
+        <?php include('helperFiles/toast.php'); ?>
 
         <script>
             $(document).ready(function() {

@@ -5,6 +5,7 @@
  * For every jpg/jpeg/png under img/ (except img/_opt/ itself) it writes
  *   img/_opt/<rel>.webp        (only when smaller than the original; otherwise an empty <rel>.webp.none marker)
  *   img/_opt/<rel>.640w.webp   (only when the image is wider than 640 px)
+ *   img/_opt/<rel>.1280w.webp  (only when the image is wider than 1280 px)
  * A mirror is rebuilt only when it is missing or older than its original, so running the script
  * again does nothing. Mirrors whose original no longer exists are removed, then empty folders.
  * Originals are never modified.
@@ -79,6 +80,7 @@ foreach (list_files($root, $opt) as $file) {
     clearstatcache();
     $after = [is_file($mirror) ? filemtime($mirror) : null, is_file($marker) ? filemtime($marker) : null];
     $thumb = is_file($opt . '/' . $rel . '.640w.webp');
+    $mid = is_file($opt . '/' . $rel . '.1280w.webp');
     if (!$ok) {
         $counts['skipped']++;
         $state = 'SKIPPED (not converted, see the PHP error log if unexpected)';
@@ -87,9 +89,10 @@ foreach (list_files($root, $opt) as $file) {
         $state = 'up to date';
     } else {
         $counts['built']++;
-        $state = sprintf('built in %.1fs: %s%s', microtime(true) - $t,
+        $state = sprintf('built in %.1fs: %s%s%s', microtime(true) - $t,
             is_file($mirror) ? 'webp ' . filesize($mirror) . ' B' : 'no full-size webp (not smaller)',
-            $thumb ? ', 640w ' . filesize($opt . '/' . $rel . '.640w.webp') . ' B' : '');
+            $thumb ? ', 640w ' . filesize($opt . '/' . $rel . '.640w.webp') . ' B' : '',
+            $mid ? ', 1280w ' . filesize($opt . '/' . $rel . '.1280w.webp') . ' B' : '');
     }
     if ($verbose || $state !== 'up to date') {
         echo $rel . ': ' . $state . "\n";
@@ -99,7 +102,7 @@ foreach (list_files($root, $opt) as $file) {
 // 2. Remove mirrors whose original is gone.
 foreach (list_files($opt) as $file) {
     $rel = substr($file, strlen($opt) + 1);
-    if (preg_match('/^(.+\.(?:jpe?g|png))\.(?:640w\.webp|webp|webp\.none)$/i', $rel, $m)) {
+    if (preg_match('/^(.+\.(?:jpe?g|png))\.(?:640w\.webp|1280w\.webp|webp|webp\.none)$/i', $rel, $m)) {
         $original = $root . '/' . $m[1];
         if (is_file($original)) {
             continue;

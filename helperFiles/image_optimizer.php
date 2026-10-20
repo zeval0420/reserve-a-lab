@@ -6,6 +6,7 @@
  * WebP mirror (see plan.md, contract C2): for an original img/<rel> (jpg, jpeg or png)
  *   img/_opt/<rel>.webp        same size as the original, WebP (written only when smaller than the original)
  *   img/_opt/<rel>.640w.webp   640 px wide WebP, only when the original is wider than 640 px
+ *   img/_opt/<rel>.1280w.webp  1280 px wide WebP, only when the original is wider than 1280 px
  *   img/_opt/<rel>.webp.none   empty marker: "the full-size WebP would not be smaller", so it is not rebuilt every run
  * .htaccess serves img/_opt/<rel>.webp in place of img/<rel> when the browser accepts WebP.
  *
@@ -15,7 +16,7 @@
  * Public functions:
  *   ral_img_process_upload($path)              downsize in place, then rebuild the mirror (for upload code)
  *   ral_img_downsize($path)                    downsize/recompress in place (longest edge <= 1920 px, JPEG q82 progressive)
- *   ral_img_write_mirror($path, $force=false)  write or refresh the mirror and the 640 px thumbnail
+ *   ral_img_write_mirror($path, $force=false)  write or refresh the mirror and its 640/1280 px sizes
  *   ral_img_delete_mirror($path)               delete the mirror files of an original
  *   ral_img_rename_mirror_dir($old, $new)      rename the mirror folder after a gallery folder was renamed
  *   ral_img_mirror_info($relPath)              URLs (with ?v=filemtime) and size of an original's mirror, for pages
@@ -28,6 +29,7 @@ if (!defined('RAL_IMG_MAX_EDGE')) {
     define('RAL_IMG_JPEG_QUALITY', 82);   // JPEG quality for recompressed originals
     define('RAL_IMG_WEBP_QUALITY', 80);   // lossy WebP quality for mirrors of photos
     define('RAL_IMG_THUMB_WIDTH', 640);   // width of the .640w.webp thumbnail
+    define('RAL_IMG_MID_WIDTH', 1280);    // width of the .1280w.webp size (phones with 2-3x screens)
 }
 
 /* ─── PATHS ───────────────────────────────────────────────────── */
@@ -88,15 +90,22 @@ function _ral_img_is_mirrorable($path)
     return in_array(strtolower(pathinfo($path, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png'], true);
 }
 
-/** Mirror file paths for an original: ['full' => ..., 'thumb' => ..., 'none' => ...]. */
+/** Mirror file paths for an original: ['full' => ..., 'thumb' => ..., 'mid' => ..., 'none' => ...]. */
 function _ral_img_mirror_paths($rel)
 {
     $base = ral_img_root() . '/_opt/' . $rel;
     return [
         'full'  => $base . '.webp',
         'thumb' => $base . '.640w.webp',
+        'mid'   => $base . '.1280w.webp',
         'none'  => $base . '.webp.none',
     ];
+}
+
+/** The reduced sizes, as mirror path key => width. Each is written only for wider originals. */
+function _ral_img_reduced_widths()
+{
+    return ['thumb' => RAL_IMG_THUMB_WIDTH, 'mid' => RAL_IMG_MID_WIDTH];
 }
 
 /* ─── ERROR HANDLING ──────────────────────────────────────────── */
@@ -621,11 +630,13 @@ function _ral_img_mirror_current($path, array $p, array $img)
     if ($full === null || filemtime($full) < $src) {
         return false;
     }
-    $wantThumb = $img['dw'] > RAL_IMG_THUMB_WIDTH;
-    if ($wantThumb !== is_file($p['thumb'])) {
-        return false;
+    foreach (_ral_img_reduced_widths() as $key => $width) {
+        $want = $img['dw'] > $width;
+        if ($want !== is_file($p[$key]) || ($want && filemtime($p[$key]) < $src)) {
+            return false;
+        }
     }
-    return !$wantThumb || filemtime($p['thumb']) >= $src;
+    return true;
 }
 
 /** Removes the mirror files of an original. Returns true when none is left. */
@@ -641,7 +652,7 @@ function _ral_img_unlink_mirror(array $p)
 }
 
 /**
- * Writes or refreshes the WebP mirror (and the 640 px thumbnail) of an original under img/.
+ * Writes or refreshes the WebP mirror (and its 640/1280 px sizes) of an original under img/.
  * Without $force it does nothing when the mirror is already up to date. The old mirror is
  * removed first, so a failure leaves no mirror (the original is then served) rather than a stale one.
  * Returns true when the mirror is up to date afterwards.
@@ -692,20 +703,23 @@ function ral_img_write_mirror($path, $force = false)
             }
             unset($full);
 
-            // 640 px wide thumbnail, for srcset.
-            if ($w > RAL_IMG_THUMB_WIDTH) {
-                $th = max(1, (int) round($h * RAL_IMG_THUMB_WIDTH / $w));
-                $thumb = _ral_img_resize($im, RAL_IMG_THUMB_WIDTH, $th, false);
+            // 640 and 1280 px wide sizes, for srcset.
+            foreach (_ral_img_reduced_widths() as $key => $width) {
+                if ($w <= $width) {
+                    continue;
+                }
+                $th = max(1, (int) round($h * $width / $w));
+                $small = _ral_img_resize($im, $width, $th, false);
                 try {
-                    $bytes = _ral_img_webp_bytes($thumb, $lossless);
+                    $bytes = _ral_img_webp_bytes($small, $lossless);
                 } finally {
-                    imagedestroy($thumb);
+                    imagedestroy($small);
                 }
-                $bytes = _ral_img_webp_add_icc($bytes, $img['icc'], RAL_IMG_THUMB_WIDTH, $th);
+                $bytes = _ral_img_webp_add_icc($bytes, $img['icc'], $width, $th);
                 if ($bytes === null) {
-                    throw new RuntimeException('could not embed the colour profile (thumbnail)');
+                    throw new RuntimeException('could not embed the colour profile (' . $width . 'w)');
                 }
-                _ral_img_write_atomic($p['thumb'], $bytes);
+                _ral_img_write_atomic($p[$key], $bytes);
             }
         } catch (Throwable $e) {
             _ral_img_unlink_mirror($p);                 // never leave half a mirror behind
@@ -812,8 +826,26 @@ function ral_img_process_upload($path)
 /* ─── PUBLIC: URLS FOR PAGES ──────────────────────────────────── */
 
 /**
+ * Main image of a lab row (scilab_availability), relative to the project root. When the stored
+ * mainImagePath is missing on disk but the file the upload code names after the lab
+ * ("img/labimages/<lab name>.jpg") exists, that file is returned instead, so an outdated path
+ * never shows a broken card. Otherwise the stored path is returned unchanged. Never throws.
+ */
+function ral_lab_main_image(array $lab)
+{
+    $stored = (string) ($lab['mainImagePath'] ?? '');
+    $project = dirname(__DIR__) . '/';
+    if ($stored !== '' && is_file($project . $stored)) {
+        return $stored;
+    }
+    $safeName = preg_replace("/[^a-zA-Z0-9\s\-_]/", "", (string) ($lab['scilabName'] ?? ''));
+    $byName = 'img/labimages/' . $safeName . '.jpg';
+    return ($safeName !== '' && is_file($project . $byName)) ? $byName : $stored;
+}
+
+/**
  * Extra fields for a lab card (helperFiles/laboratory-card.js): imageWebp, imageWebp640,
- * imageOriginal, imageWidth, imageHeight. Returns [] when the image has no mirror (the card then
+ * imageWebp1280, imageOriginal, imageWidth, imageHeight. Returns [] when the image has no mirror (the card then
  * renders the plain <img> it always did). Never throws.
  */
 function ral_img_card_fields($relPath)
@@ -825,6 +857,7 @@ function ral_img_card_fields($relPath)
     return [
         'imageWebp'     => $info['webp'],
         'imageWebp640'  => $info['webp640'],
+        'imageWebp1280' => $info['webp1280'],
         'imageOriginal' => $info['original'],
         'imageWidth'    => $info['width'],
         'imageHeight'   => $info['height'],
@@ -835,6 +868,7 @@ function ral_img_card_fields($relPath)
  * Mirror URLs for an original given relative to the project root (as stored in the database,
  * e.g. "img/labimages/Lab 1.jpg"). Returns null when there is no mirror, otherwise
  * ['webp' => URL of the full-size WebP or null, 'webp640' => URL of the 640 px WebP or null,
+ *  'webp1280' => URL of the 1280 px WebP or null,
  *  'width' => displayed width, 'height' => displayed height, 'original' => URL of the original].
  * Every URL is percent-encoded per path segment (safe inside srcset) and carries ?v=filemtime.
  */
@@ -850,6 +884,7 @@ function ral_img_mirror_info($relPath)
         $p = _ral_img_mirror_paths($rel);
         $hasFull = is_file($p['full']);
         $hasThumb = is_file($p['thumb']);
+        $hasMid = is_file($p['mid']);
         if (!$hasFull && !$hasThumb) {
             return null;
         }
@@ -864,9 +899,37 @@ function ral_img_mirror_info($relPath)
         return [
             'webp'     => $hasFull ? $url($p['full'], 'img/_opt/' . $rel . '.webp') : null,
             'webp640'  => $hasThumb ? $url($p['thumb'], 'img/_opt/' . $rel . '.640w.webp') : null,
+            'webp1280' => $hasMid ? $url($p['mid'], 'img/_opt/' . $rel . '.1280w.webp') : null,
             'width'    => $img['dw'],
             'height'   => $img['dh'],
             'original' => $url($path, 'img/' . $rel),
         ];
     });
+}
+
+/**
+ * <img> for an original under img/ (path relative to the project root), wrapped in <picture> with a
+ * WebP srcset (640 px, 1280 px and full size) when its mirror exists, so small displays get a small
+ * file. $sizes is the sizes attribute (the displayed width). width/height come from the image, so the
+ * layout is reserved before it loads. Without a mirror it returns the plain <img>. Never throws.
+ */
+function ral_img_picture($relPath, $alt, $sizes, $attrs = 'loading="lazy" decoding="async"')
+{
+    $info = ral_img_mirror_info($relPath);
+    $dims = is_array($info) ? ' width="' . (int) $info['width'] . '" height="' . (int) $info['height'] . '"' : '';
+    $img = '<img src="' . htmlspecialchars($relPath) . '" alt="' . htmlspecialchars($alt) . '"' . $dims
+        . ($attrs !== '' ? ' ' . $attrs : '') . '>';
+    if (!is_array($info)) {
+        return $img;
+    }
+    $candidates = [];
+    if ($info['webp640']) {
+        $candidates[] = $info['webp640'] . ' 640w';
+    }
+    if ($info['webp1280']) {
+        $candidates[] = $info['webp1280'] . ' 1280w';
+    }
+    $candidates[] = ($info['webp'] ?: $info['original']) . ' ' . (int) $info['width'] . 'w';
+    return '<picture><source type="image/webp" srcset="' . htmlspecialchars(implode(', ', $candidates))
+        . '" sizes="' . htmlspecialchars($sizes) . '">' . $img . '</picture>';
 }
