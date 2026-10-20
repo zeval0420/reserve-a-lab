@@ -44,8 +44,11 @@
         $syQuery = mysqli_query($conn, "SELECT value FROM $db_table_sy ORDER BY id DESC LIMIT 1");
         $currentSY = mysqli_fetch_assoc($syQuery)['value'];
 
-        $countQuery = mysqli_query($conn, "SELECT COUNT(*) as total FROM $db_table_requests WHERE $db_col_statusPersonnel = 'pending' AND sy = '$currentSY'");
-        $pendingCount = mysqli_fetch_assoc($countQuery)['total'];
+        $countStmt = $conn->prepare("SELECT COUNT(*) as total FROM $db_table_requests WHERE $db_col_statusPersonnel = 'pending' AND sy = ?");
+        $countStmt->bind_param("s", $currentSY);
+        $countStmt->execute();
+        $pendingCount = $countStmt->get_result()->fetch_assoc()['total'];
+        $countStmt->close();
 
         echo $pendingCount;
         exit;

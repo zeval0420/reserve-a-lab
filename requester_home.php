@@ -1,6 +1,7 @@
 <?php
     include('../scilab/helperFiles/db_connection.php');
     include('helperFiles/session_handler.php');
+    require_once __DIR__ . '/helperFiles/input.php';
     require_once __DIR__ . '/helperFiles/image_optimizer.php';   // WebP mirror URLs for the lab cards
 
     if (!isset($_SESSION['role'])) {
@@ -40,12 +41,10 @@
     $pendingRequestsHtml = '';
     if ($_SESSION['role'] === 'teacher' || $_SESSION['role'] === 'admin') {
         if ($_SESSION['role'] === 'admin') {
-            $sql = "SELECT * FROM scilab_form_requests WHERE statusScilabPersonnel = 'Pending'";
+            $result = $conn->query("SELECT * FROM scilab_form_requests WHERE statusScilabPersonnel = 'Pending'");
         } else {
-            $teacherName = $_SESSION['username'];
-            $sql = "SELECT * FROM scilab_form_requests WHERE teacherInCharge = '$teacherName' AND statusScilabPersonnel = 'Pending'";
+            $result = ral_query($conn, "SELECT * FROM scilab_form_requests WHERE teacherInCharge = ? AND statusScilabPersonnel = 'Pending'", 's', [(string)$_SESSION['username']]);
         }
-        $result = $conn->query($sql);
         $requests = [];
         if ($result) {
             while ($row = $result->fetch_assoc()) {
@@ -62,16 +61,7 @@
             $pendingRequestsHtml .= '<tbody>';
             foreach ($requests as $request) {
                 $requesterID = $request['requesterEmployeeID'];
-                $nameQuery = $conn->query("SELECT firstname, middlename, lastname FROM accounts WHERE employeeID = '$requesterID'");
-                $requesterName = $requesterID;
-                if ($nameQuery && $nameRow = $nameQuery->fetch_assoc()) {
-                    $requesterName = $nameRow['firstname'].' '.$nameRow['middlename'].' '.$nameRow['lastname'];
-                } else {
-                    $studentQuery = $conn->query("SELECT firstname, middlename, lastname FROM student WHERE LRN = '$requesterID'");
-                    if ($studentQuery && $studentRow = $studentQuery->fetch_assoc()) {
-                        $requesterName = $studentRow['firstname'].' '.$studentRow['middlename'].' '.$studentRow['lastname'];
-                    }
-                }
+                $requesterName = ral_display_name($conn, (string)$requesterID);
                 $pendingRequestsHtml .= '<tr>';
                 $pendingRequestsHtml .= '<td>' . htmlspecialchars($requesterName) . '</td>';
                 $pendingRequestsHtml .= '<td>' . htmlspecialchars($request['scilabName']) . '</td>';

@@ -240,7 +240,10 @@ function scilab_resolve_requester_email($conn, $requesterID, $formID = null) {
                 $stmt->close();
                 if (filter_var($username, FILTER_VALIDATE_EMAIL)) return $username;
                 if ($userID !== '') {
-                    $sdRes = $conn->query("SELECT studentEmail FROM student_directory WHERE LRN = '" . $conn->real_escape_string($userID) . "'");
+                    $sdStmt = $conn->prepare("SELECT studentEmail FROM student_directory WHERE LRN = ?");
+                    $sdStmt->bind_param("s", $userID);
+                    $sdStmt->execute();
+                    $sdRes = $sdStmt->get_result();
                     if ($sdRes && $sdRow = $sdRes->fetch_assoc()) {
                         $sdEmail = trim($sdRow['studentEmail'] ?? '');
                         if (filter_var($sdEmail, FILTER_VALIDATE_EMAIL)) return $sdEmail;

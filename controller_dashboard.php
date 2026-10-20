@@ -24,11 +24,11 @@
         $return .= "SET FOREIGN_KEY_CHECKS=0;\n\n";
 
         foreach ($tables as $table) {
-            $result = $conn->query("SELECT * FROM $table");
+            $result = $conn->query("SELECT * FROM `" . str_replace('`', '``', $table) . "`");
             $num_fields = $result->field_count;
 
             $return .= "DROP TABLE IF EXISTS `$table`;";
-            $row2 = $conn->query("SHOW CREATE TABLE $table")->fetch_row();
+            $row2 = $conn->query("SHOW CREATE TABLE `" . str_replace('`', '``', $table) . "`")->fetch_row();
             $return .= "\n\n" . $row2[1] . ";\n\n";
 
             while ($row = $result->fetch_row()) {

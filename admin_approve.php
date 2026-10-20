@@ -5,6 +5,7 @@
 
     include('../scilab/helperFiles/db_connection.php');
     include('helperFiles/session_handler.php');
+    require_once __DIR__ . '/helperFiles/input.php';
 
     $email = $_SESSION['email'];
     $username = $_SESSION['username'];
@@ -19,7 +20,7 @@
         exit();
     }
 
-    $statusFilter = $_GET['status'] ?? 'Pending';
+    $statusFilter = input_enum('status', RAL_REQUEST_STATUSES, 'Pending', $_GET);
     $syResult = $conn->query("SELECT value FROM current WHERE description = 'School Year' ORDER BY id DESC LIMIT 1");
     $currentSY = ($syResult && $syResult->num_rows > 0) ? $syResult->fetch_assoc()['value'] : null;
 
@@ -47,47 +48,22 @@
 
     $days = $timeFrameDays[$timeFrame];
 
-    $fromDate = $_GET['fromDate'] ?? '';
-    $toDate = $_GET['toDate'] ?? '';
+    $fromDate = input_date('fromDate', $_GET);
+    $toDate = input_date('toDate', $_GET);
 
 
-    // ===== ADDED: Build date filter =====
-    if (
-        $filterMode === 'manual' &&
-        !empty($fromDate) &&
-        !empty($toDate)
-    ) {
-
-        // From Date starts at 12:00 AM
-        // To Date includes the entire day
-        $dateFilter = "
-            AND dateRequested >= '$fromDate 00:00:00'
-            AND dateRequested < DATE_ADD('$toDate', INTERVAL 1 DAY)
-        ";
-
-    } elseif ($filterMode === 'manual') {
-
-        // Manual mode but dates have not been selected yet
-        // Do not display any requests
-        $dateFilter = "AND 1 = 0";
-
-    } else {
-
-        // Automatic timeframe mode
-        $dateFilter = "
-            AND dateRequested >= DATE_SUB(NOW(), INTERVAL $days DAY)
-        ";
-    }
+    // ===== Build date filter (bound parameters) =====
+    [$dateFilter, $dateTypes, $dateParams] = ral_request_date_filter($filterMode, $fromDate, $toDate, $days);
     // ===== END ADDED =====
 
     $sql = "
         SELECT *
         FROM scilab_form_requests
-        WHERE statusScilabPersonnel = '$statusFilter'
+        WHERE statusScilabPersonnel = ?
         $dateFilter
         ORDER BY dateRequested DESC
     ";
-    $result = $conn->query($sql);
+    $result = ral_query($conn, $sql, 's' . $dateTypes, array_merge([$statusFilter], $dateParams));
 
     $requests = [];
     $formIDs = [];
@@ -103,13 +79,13 @@
         'Rejected' => 0
     ];
 
-    $countQuery = $conn->query("
+    $countQuery = ral_query($conn, "
         SELECT statusScilabPersonnel AS status, COUNT(*) AS total
         FROM scilab_form_requests
         WHERE 1 = 1
         $dateFilter
         GROUP BY statusScilabPersonnel
-    ");
+    ", $dateTypes, $dateParams);
 
     while ($row = $countQuery->fetch_assoc()) {
         $status = ucfirst(strtolower($row['status']));
@@ -1028,16 +1004,7 @@
                                     $i = 1;
                                     foreach ($requests as $row):
                                         $employeeID = $row['requesterEmployeeID'];
-                                        $nameQuery = $conn->query("SELECT firstname, middlename, lastname FROM accounts WHERE employeeID = '$employeeID'");
-                                        $fullName = $employeeID;
-                                        if ($nameQuery && $nameRow = $nameQuery->fetch_assoc()) {
-                                            $fullName = $nameRow['firstname'].' '.$nameRow['middlename'].' '.$nameRow['lastname'];
-                                        } else {
-                                            $studentQuery = $conn->query("SELECT firstname, middlename, lastname FROM student WHERE LRN = '$employeeID'");
-                                            if ($studentQuery && $studentRow = $studentQuery->fetch_assoc()) {
-                                                $fullName = $studentRow['firstname'].' '.$studentRow['middlename'].' '.$studentRow['lastname'];
-                                            }
-                                        }
+                                        $fullName = ral_display_name($conn, (string)$employeeID);
                                         $row['requesterName'] = $fullName;
                                         $formID = $row['id'];
                                         $materialText = isset($materials[$formID]) ? implode("", $materials[$formID]) : '—';

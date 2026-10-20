@@ -1,6 +1,7 @@
 <?php
     include('../scilab/helperFiles/db_connection.php');
     include('helperFiles/session_handler.php');
+    require_once __DIR__ . '/helperFiles/input.php';
 
     $email = $_SESSION['email'] ?? null;
 
@@ -43,7 +44,7 @@
     $currentSY = $syQuery->fetch_assoc()['value'] ?? null;
 
     // status filter
-    $statusFilter = $_GET['status'] ?? 'Pending';
+    $statusFilter = input_enum('status', RAL_REQUEST_STATUSES, 'Pending', $_GET);
 
     // ===== UPDATED: Time frame / manual date filter =====
         $filterMode = $_GET['filterMode'] ?? 'timeframe';
@@ -67,58 +68,33 @@
 
         $days = $timeFrameDays[$timeFrame];
 
-        $fromDate = $_GET['fromDate'] ?? '';
-        $toDate = $_GET['toDate'] ?? '';
+        $fromDate = input_date('fromDate', $_GET);
+        $toDate = input_date('toDate', $_GET);
 
-        // ===== UPDATED: Build date filter =====
-        if (
-            $filterMode === 'manual' &&
-            !empty($fromDate) &&
-            !empty($toDate)
-        ) {
-
-            // From Date starts at 12:00 AM
-            // To Date includes the entire day
-            $dateFilter = "
-                AND dateRequested >= '$fromDate 00:00:00'
-                AND dateRequested < DATE_ADD('$toDate', INTERVAL 1 DAY)
-            ";
-
-        } elseif ($filterMode === 'manual') {
-
-            // Manual mode but dates have not been selected yet
-            // Do not display any requests
-            $dateFilter = "AND 1 = 0";
-
-        } else {
-
-            // Automatic timeframe mode
-            $dateFilter = "
-                AND dateRequested >= DATE_SUB(NOW(), INTERVAL $days DAY)
-            ";
-        }
+        // ===== Build date filter (bound parameters) =====
+        [$dateFilter, $dateTypes, $dateParams] = ral_request_date_filter($filterMode, $fromDate, $toDate, $days);
         // ===== END UPDATED =====
 
     // requests
     $sql = "
         SELECT *
         FROM scilab_form_requests
-        WHERE requesterEmployeeID='$userID'
-        AND statusScilabPersonnel='$statusFilter'
+        WHERE requesterEmployeeID = ?
+        AND statusScilabPersonnel = ?
         $dateFilter
         ORDER BY dateRequested DESC
     ";
-    $result = $conn->query($sql);
+    $result = ral_query($conn, $sql, 'ss' . $dateTypes, array_merge([(string)$userID, $statusFilter], $dateParams));
 
     // counts  
     $counts = ['Pending'=>0,'Approved'=>0,'Rejected'=>0];
-    $countQuery = $conn->query("
+    $countQuery = ral_query($conn, "
         SELECT statusScilabPersonnel AS status, COUNT(*) AS total
         FROM scilab_form_requests
-        WHERE requesterEmployeeID='$userID'
+        WHERE requesterEmployeeID = ?
         $dateFilter
         GROUP BY statusScilabPersonnel
-    ");
+    ", 's' . $dateTypes, array_merge([(string)$userID], $dateParams));
 
     while ($row = $countQuery->fetch_assoc()) {
         $status = ucfirst(strtolower($row['status']));

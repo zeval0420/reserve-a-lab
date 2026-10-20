@@ -254,13 +254,16 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_unseen_updates') {
     $syQuery = mysqli_query($conn, "SELECT value FROM current ORDER BY id DESC LIMIT 1");
     $currentSY = mysqli_fetch_assoc($syQuery)['value'];
 
-    $result = mysqli_query($conn, "
+    $unseenStmt = $conn->prepare("
         SELECT id 
         FROM scilab_form_requests 
-        WHERE requester = '$user' 
+        WHERE requester = ? 
         AND statusScilabPersonnel IN ('Approved', 'Rejected') 
-        AND sy = '$currentSY'
+        AND sy = ?
     ");
+    $unseenStmt->bind_param("ss", $user, $currentSY);
+    $unseenStmt->execute();
+    $result = $unseenStmt->get_result();
 
     $allSeen = $_SESSION['seen_requests'] ?? [];
     $unseenCount = 0;
