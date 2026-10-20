@@ -41,6 +41,11 @@
     RewriteRule (?:^|/)\. - [F]
     RewriteRule ~[0-9] - [F]
 
+    # Uploaded content lives under img/ and is never code: refuse any script
+    # type there, including double extensions such as "x.php.jpg" and
+    # "x.php.", so a disguised upload cannot be run even if it got through.
+    RewriteRule ^img/(?:.*/)?[^/]*\.(?:php\d?|phtml|phar|pht|phps|cgi|pl|py|sh|asp|aspx|jsp)(?:\.|/|$) - [NC,F]
+
     # No directory listings: a folder without an index page is 403.
     RewriteCond %{REQUEST_FILENAME} -d
     RewriteCond %{REQUEST_FILENAME}/index.php !-f

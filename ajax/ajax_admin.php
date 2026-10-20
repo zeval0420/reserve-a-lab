@@ -5,6 +5,8 @@
     include('../helperFiles/variableDeclarations.php');
     // Downsizes uploaded lab images and keeps their WebP mirror in sync (never stops an upload)
     require_once __DIR__ . '/../helperFiles/image_optimizer.php';
+    // Content checks for uploads and safe lab folder / file names
+    require_once __DIR__ . '/../helperFiles/upload_security.php';
 
     // Get session data
     $email = $_SESSION['email'];
@@ -151,18 +153,18 @@
             exit;
         }
 
-        if (!isset($_FILES['lab_image']) || $_FILES['lab_image']['error'] !== UPLOAD_ERR_OK) {
-            echo "Image upload failed.";
+        $safeLabName = ral_lab_folder_name($labName);
+        if ($safeLabName === '') {
+            echo "Laboratory name must contain letters or numbers.";
             exit;
         }
 
-        $imageFileType = strtolower(pathinfo($_FILES["lab_image"]["name"], PATHINFO_EXTENSION));
-        if (!in_array($imageFileType, ['jpg', 'jpeg'])) {
-            echo "Only JPG/JPEG images are allowed.";
+        $upload = ral_validate_image_upload($_FILES['lab_image'] ?? [], ['image/jpeg' => 'jpg']);
+        if (!$upload['ok']) {
+            echo $upload['error'];
             exit;
         }
 
-        $safeLabName = preg_replace("/[^a-zA-Z0-9\s\-_]/", "", $labName);
         $fileName = $safeLabName . '.jpg';
         $targetPath = "../img/labimages/" . $fileName;
 
@@ -192,7 +194,7 @@
         if ($stmt->execute()) {
             $galleryFolder = "../img/labimages/" . $safeLabName;
             if (!file_exists($galleryFolder)) {
-                mkdir($galleryFolder, 0777, true);
+                mkdir($galleryFolder, 0755, true);
             }
             echo "Success";
         } else {
@@ -223,14 +225,18 @@
             exit;
         }
 
-        $safeLabName = preg_replace("/[^a-zA-Z0-9\s\-_]/", "", $newLabName);
+        $safeLabName = ral_lab_folder_name($newLabName);
+        if ($safeLabName === '') {
+            echo 'Laboratory name must contain letters or numbers.';
+            exit;
+        }
         $imagePath = "img/labimages/" . $safeLabName . ".jpg";
         $fullImagePath = "../" . $imagePath;
 
-        if (isset($_FILES['lab_image']) && $_FILES['lab_image']['error'] === UPLOAD_ERR_OK) {
-            $imageFileType = strtolower(pathinfo($_FILES['lab_image']['name'], PATHINFO_EXTENSION));
-            if (!in_array($imageFileType, ['jpg', 'jpeg'])) {
-                echo 'Invalid file type. Only JPG images allowed.';
+        if (isset($_FILES['lab_image']) && $_FILES['lab_image']['error'] !== UPLOAD_ERR_NO_FILE) {
+            $upload = ral_validate_image_upload($_FILES['lab_image'], ['image/jpeg' => 'jpg']);
+            if (!$upload['ok']) {
+                echo $upload['error'];
                 exit;
             }
 
@@ -254,7 +260,7 @@
                 exit;
             }
 
-            $oldFolder = "../img/labimages/" . preg_replace("/[^a-zA-Z0-9\s\-_]/", "", $oldLabName);
+            $oldFolder = "../img/labimages/" . ral_lab_folder_name($oldLabName);
             $newFolder = "../img/labimages/" . $safeLabName;
             if (file_exists($oldFolder)) {
                 if (rename($oldFolder, $newFolder)) {
@@ -281,7 +287,7 @@
         $action = $_POST['action'];
 
         if ($action === 'getGalleryImages' && isset($_POST['labName'])) {
-            $labName = basename($_POST['labName']);
+            $labName = ral_lab_folder_name($_POST['labName']);
             $directory = "img/labimages/{$labName}/";
             $images = [];
 
@@ -302,45 +308,58 @@
     // Gallery upload (admin_home.php, action upload_gallery_images). Files keep their own names in
     // img/labimages/<lab>/; a name already taken gets a numbered suffix instead of overwriting.
     if (isset($_POST['action']) && $_POST['action'] === 'upload_gallery_images' && isset($_POST['labName'])) {
-        $labName = basename($_POST['labName']);
-        $uploadDir = "../img/labimages/{$labName}/";
+        $labName = ral_lab_folder_name($_POST['labName']);
+        $labsRoot = "../img/labimages/";
+        $uploadDir = $labsRoot . $labName . "/";
 
-        if (!file_exists($uploadDir)) {
-            mkdir($uploadDir, 0777, true);
+        // Only into the gallery folder of a laboratory that exists.
+        if ($labName === '' || !is_dir($uploadDir) || !ral_path_within($uploadDir, $labsRoot)) {
+            echo json_encode(["status" => "error", "message" => "Unknown laboratory."]);
+            exit;
         }
 
+        $saved = 0;
+        $rejected = [];
         if (isset($_FILES['galleryImages']) && is_array($_FILES['galleryImages']['tmp_name'])) {
             foreach ($_FILES['galleryImages']['tmp_name'] as $key => $tmp_name) {
-                if ($_FILES['galleryImages']['error'][$key] !== UPLOAD_ERR_OK || !is_uploaded_file($tmp_name)) continue;
+                $file = [
+                    'name'     => $_FILES['galleryImages']['name'][$key] ?? '',
+                    'tmp_name' => $tmp_name,
+                    'error'    => $_FILES['galleryImages']['error'][$key] ?? UPLOAD_ERR_NO_FILE,
+                ];
+                if ($file['error'] === UPLOAD_ERR_NO_FILE) continue;
 
-                $fileName = basename($_FILES['galleryImages']['name'][$key]);
-                $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-                if (!in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) continue;
-
-                $base = pathinfo($fileName, PATHINFO_FILENAME);
-                $targetPath = $uploadDir . $fileName;
-                for ($n = 2; file_exists($targetPath); $n++) {
-                    $targetPath = $uploadDir . "{$base}_{$n}.{$ext}";
+                $upload = ral_validate_image_upload($file);
+                if (!$upload['ok']) {
+                    $rejected[] = ral_safe_file_base($file['name']) . ': ' . $upload['error'];
+                    continue;
                 }
 
+                // Stored name: the cleaned original name, the extension from the real image type.
+                $base = ral_safe_file_base($file['name']);
+                if ($base === '') $base = 'image';
+                $targetPath = ral_unique_upload_path($uploadDir, $base, $upload['ext']);
+
                 if (move_uploaded_file($tmp_name, $targetPath)) {
+                    chmod($targetPath, 0644);
                     ral_img_process_upload($targetPath);
+                    $saved++;
                 }
             }
         }
 
-        echo json_encode(["status" => "success"]);
+        echo json_encode(["status" => $saved > 0 || !$rejected ? "success" : "error", "saved" => $saved, "rejected" => $rejected]);
         exit;
     }
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         if ($_POST['action'] === 'get_lab_images' && isset($_POST['lab'])) {
-            $lab = $_POST['lab'];
+            $lab = ral_lab_folder_name($_POST['lab']);
             $folder = 'img/labimages/' . $lab;
 
             $images = [];
     
-            if (is_dir('../' . $folder)) {
+            if ($lab !== '' && is_dir('../' . $folder)) {
                 foreach (scandir('../' . $folder) as $file) {
                     $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
                     if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif'])) {
@@ -355,11 +374,14 @@
         }
     }
     if ($_POST['action'] === 'delete_gallery_image' && isset($_POST['labName'], $_POST['fileName'])) {
-        $lab = basename($_POST['labName']);
-        $file = basename($_POST['fileName']);
-        $path = "../img/labimages/$lab/$file";
-    
-        if (file_exists($path)) {
+        $lab = ral_lab_folder_name($_POST['labName']);
+        $file = basename(str_replace(chr(92), '/', $_POST['fileName']));
+        $labDir = "../img/labimages/$lab/";
+        $path = $labDir . $file;
+        $isImage = in_array(strtolower(pathinfo($file, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'gif', 'webp'], true);
+
+        // Only an image file that really sits in that laboratory's gallery folder.
+        if ($lab !== '' && $isImage && is_file($path) && ral_path_within($path, $labDir)) {
             unlink($path);
             ral_img_delete_mirror($path);
             echo 'deleted';

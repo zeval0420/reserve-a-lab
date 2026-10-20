@@ -669,7 +669,16 @@
             $.ajax({
                 url: 'ajax/ajax_admin.php', method: 'POST', data: fd,
                 contentType: false, processData: false,
-                success: () => { showToast('Images uploaded!', 'success'); $('#editGalleryModal').modal('hide'); },
+                dataType: 'json',
+                success: (res) => {
+                    if (res.status !== 'success') {
+                        showToast((res.rejected && res.rejected[0]) || res.message || 'Upload failed.', 'error');
+                        return;
+                    }
+                    const skipped = (res.rejected || []).length;
+                    showToast(skipped ? ('Uploaded ' + res.saved + ', skipped ' + skipped + ' invalid file(s).') : 'Images uploaded!', skipped ? 'warning' : 'success');
+                    $('#editGalleryModal').modal('hide');
+                },
                 error:   () => showToast('Upload failed.', 'error')
             });
         });
