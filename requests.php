@@ -187,6 +187,7 @@
 <html>
     <head>
         <title>My Requests</title>
+        <?php $pageAssets = ['datatables']; ?>
         <?php include('helperFiles/headData.php'); ?>
         <style>
             body { background-color: #f5f5f5; }

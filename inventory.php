@@ -53,6 +53,7 @@
 <html>
     <head>
         <title>Inventory Management</title>
+        <?php $pageAssets = ['datatables', 'barcode']; ?>
         <?php include('helperFiles/headData.php'); ?>
 
         <style>

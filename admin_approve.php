@@ -160,6 +160,7 @@
 <html>
     <head>
         <title>Admin Approval</title>
+        <?php $pageAssets = ['datatables', 'multiselect']; ?>
         <?php include('helperFiles/headData.php'); ?>
         <style>
             body { background-color: #f5f5f5; }

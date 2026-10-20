@@ -1,0 +1,118 @@
+# Reserve-a-Lab: compression, browser caching and WebP negotiation.
+# Every block is wrapped in <IfModule>, so this file is safe on a server
+# that lacks one of the modules (that feature is then simply skipped).
+# PHP/HTML responses get no cache headers here: PHP sessions already send
+# "Cache-Control: no-store, no-cache, must-revalidate".
+
+# ---------------------------------------------------------------------------
+# MIME types (most are already in Apache's mime.types; listed for servers
+# with an older mime.types)
+# ---------------------------------------------------------------------------
+<IfModule mod_mime.c>
+    AddType image/webp .webp
+    AddType image/avif .avif
+    AddType font/woff2 .woff2
+    AddType font/woff .woff
+</IfModule>
+
+# ---------------------------------------------------------------------------
+# Rewrites: block tools/, WebP negotiation (internal rewrites only)
+# ---------------------------------------------------------------------------
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # tools/ holds command-line scripts only: no web access (403).
+    # NC and the optional trailing dots/spaces cover Windows path aliases
+    # such as "Tools/" or "tools./".
+    RewriteRule ^tools[.\s]*(?:/|$) - [NC,F]
+
+    # Every original JPEG/PNG under img/ (but not img/_opt/) is marked, so its
+    # response gets "Vary: Accept" (see mod_headers below), whether or not a
+    # WebP mirror is served for it.
+    RewriteRule ^img/(?!_opt/).+\.(?:jpe?g|png)$ - [NC,E=RAL_IMG_VARY:1]
+
+    # WebP mirror: serve img/_opt/<rel>.webp in place of img/<rel> when the
+    # browser accepts WebP and the mirror file exists. Query strings are kept.
+    # Line 2 finds this directory's filesystem path (%2), so the -f check
+    # works wherever the project is installed. Paths containing % ? or # are
+    # left alone (the original is served).
+    RewriteCond %{HTTP_ACCEPT} image/webp [NC]
+    RewriteCond $0#%{REQUEST_FILENAME} ^([^#]+)#(.*)\1$
+    RewriteCond %2img/_opt/$1.webp -f
+    RewriteRule ^img/((?!_opt/)[^%?#]+\.(?:jpe?g|png))$ img/_opt/$1.webp [NC,E=RAL_WEBP:1,L]
+</IfModule>
+
+# ---------------------------------------------------------------------------
+# Compression: Brotli first, gzip as fallback. Only one encoding is ever
+# applied (each filter skips a response that is already encoded), and both
+# add "Vary: Accept-Encoding". Already-compressed types (images, woff/woff2,
+# PDF, downloads) are not listed, so they are never compressed.
+# ---------------------------------------------------------------------------
+<IfModule mod_setenvif.c>
+    # .svgz is image/svg+xml but already gzipped
+    SetEnvIfNoCase Request_URI "\.svgz$" no-gzip no-brotli
+</IfModule>
+
+<IfModule mod_filter.c>
+    <IfModule mod_brotli.c>
+        AddOutputFilterByType BROTLI_COMPRESS text/html text/plain text/css text/xml application/xml text/javascript application/javascript application/x-javascript application/json image/svg+xml font/ttf font/otf application/x-font-ttf application/vnd.ms-fontobject
+    </IfModule>
+    <IfModule mod_deflate.c>
+        AddOutputFilterByType DEFLATE text/html text/plain text/css text/xml application/xml text/javascript application/javascript application/x-javascript application/json image/svg+xml font/ttf font/otf application/x-font-ttf application/vnd.ms-fontobject
+    </IfModule>
+</IfModule>
+
+# ---------------------------------------------------------------------------
+# Browser caching (static files only; .php is never matched)
+#   ?v=... (versioned URL)              1 year, immutable
+#   assets/vendor/**, assets/fonts/**   1 year
+#   fonts (woff2, woff, ttf, otf, eot)  1 year
+#   images                              30 days
+#   other CSS/JS                        1 day
+# Later "Header set" lines override earlier ones.
+# ---------------------------------------------------------------------------
+<IfModule mod_headers.c>
+    # WebP negotiation: the original and the mirror both vary on Accept
+    # (after the internal rewrite the variable carries a REDIRECT_ prefix).
+    Header merge Vary Accept env=RAL_IMG_VARY
+    Header merge Vary Accept env=REDIRECT_RAL_IMG_VARY
+
+    <FilesMatch "\.(?i:jpe?g|png|gif|webp|avif|svg|ico)$">
+        Header set Cache-Control "public, max-age=2592000"
+    </FilesMatch>
+    <FilesMatch "\.(?i:css|js|mjs)$">
+        Header set Cache-Control "public, max-age=86400"
+    </FilesMatch>
+    <FilesMatch "\.(?i:woff2?|ttf|otf|eot)$">
+        Header set Cache-Control "public, max-age=31536000"
+    </FilesMatch>
+    <FilesMatch "\.(?i:css|js|mjs|map|json|jpe?g|png|gif|webp|avif|svg|ico|woff2?|ttf|otf|eot)$">
+        Header set Cache-Control "public, max-age=31536000" "expr=%{REQUEST_URI} =~ m#/assets/(?:vendor|fonts)/#"
+        Header set Cache-Control "public, max-age=31536000, immutable" "expr=%{QUERY_STRING} =~ /(?:^|&)v=/"
+    </FilesMatch>
+</IfModule>
+
+# Fallback when mod_headers is missing but mod_expires is present:
+# type-based lifetimes only (no ?v= distinction). PHP output (text/html,
+# application/json) is not listed, so it is not affected.
+<IfModule !mod_headers.c>
+    <IfModule mod_expires.c>
+        ExpiresActive On
+        ExpiresByType image/jpeg "access plus 30 days"
+        ExpiresByType image/png "access plus 30 days"
+        ExpiresByType image/gif "access plus 30 days"
+        ExpiresByType image/webp "access plus 30 days"
+        ExpiresByType image/avif "access plus 30 days"
+        ExpiresByType image/svg+xml "access plus 30 days"
+        ExpiresByType image/x-icon "access plus 30 days"
+        ExpiresByType image/vnd.microsoft.icon "access plus 30 days"
+        ExpiresByType text/css "access plus 1 day"
+        ExpiresByType text/javascript "access plus 1 day"
+        ExpiresByType application/javascript "access plus 1 day"
+        ExpiresByType font/woff2 "access plus 1 year"
+        ExpiresByType font/woff "access plus 1 year"
+        ExpiresByType font/ttf "access plus 1 year"
+        ExpiresByType font/otf "access plus 1 year"
+        ExpiresByType application/vnd.ms-fontobject "access plus 1 year"
+    </IfModule>
+</IfModule>

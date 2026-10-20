@@ -1,6 +1,7 @@
 <?php
     include('../scilab/helperFiles/db_connection.php');
     include('helperFiles/session_handler.php');
+    require_once __DIR__ . '/helperFiles/image_optimizer.php';   // WebP mirror URLs for the lab cards
 
     if (!isset($_SESSION['role'])) {
         header("Location: index.php");
@@ -41,6 +42,7 @@
                 'color'            => $lab['color'] ?? '#2B55C4',
                 'pendingRequests'  => $pending,
             ];
+            $labsJson[count($labsJson) - 1] += ral_img_card_fields($lab['mainImagePath']);
         }
     }
 ?>
@@ -48,9 +50,10 @@
 <html lang="en">
     <head>
         <title>Admin Home</title>
+        <?php $pageAssets = []; ?>
         <?php include('helperFiles/headData.php'); ?>
         <link rel="stylesheet" href="css/laboratory-card.css?v=<?= filemtime(__DIR__ . '/css/laboratory-card.css') ?>">
-        <link rel="stylesheet" href="css/home-heading.css">
+        <link rel="stylesheet" href="css/home-heading.css?v=<?= filemtime(__DIR__ . '/css/home-heading.css') ?>">
         <style>
             .main-wrapper {
                 width: 80%;
@@ -418,7 +421,7 @@
             container.className = `lab-gallery--${variant}`;
 
             // Render lab cards via the JS component
-            container.innerHTML = labsData.map(lab => createLabCard(lab, variant)).join('');
+            container.innerHTML = labsData.map((lab, i) => createLabCard(lab, variant, i)).join('');
 
             // Append "Add Lab" card
             const addCard = document.createElement('div');
@@ -600,7 +603,7 @@
             galleryImages = images;
             currentIndex = 0;
             if (isMain) {
-                $('#galleryCarousel').html(`<img src="${images[0]}" class="img-fluid rounded" alt="Main Lab Image" style="max-height:500px;">`);
+                $('#galleryCarousel').html(`<img src="${images[0]}" class="img-fluid rounded" alt="Main Lab Image" style="max-height:500px;" decoding="async">`);
             } else {
                 updateGalleryImage();
             }
@@ -610,7 +613,7 @@
 
         function updateGalleryImage() {
             if (!galleryImages.length) return;
-            $('#galleryCarousel').html(`<img src="${galleryImages[currentIndex]}" alt="Lab Image">`);
+            $('#galleryCarousel').html(`<img src="${galleryImages[currentIndex]}" alt="Lab Image" decoding="async">`);
         }
 
         function nextImage() { if (galleryImages.length) { currentIndex = (currentIndex + 1) % galleryImages.length; updateGalleryImage(); } }
@@ -647,7 +650,7 @@
                     const name = img.split('/').pop();
                     cont.append(`
                         <div class="image-wrapper">
-                            <img src="${img}" class="img-thumbnail shadow-sm">
+                            <img src="${img}" class="img-thumbnail shadow-sm" loading="lazy" decoding="async">
                             <button type="button" class="btn btn-sm btn-danger rounded-circle shadow delete-image-btn"
                                 data-img="${name}" title="Delete Image">
                                 <i class="bi bi-x"></i>

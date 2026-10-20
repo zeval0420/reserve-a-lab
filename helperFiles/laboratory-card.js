@@ -73,12 +73,61 @@ function _colorBar(color) {
 }
 
 /**
+ * Displayed width of the card image per variant (matches laboratory-card.css), for `sizes`.
+ * Generous on purpose: a too-large guess only costs bytes, a too-small one costs sharpness.
+ */
+const _LAB_IMAGE_SIZES = {
+    complete: '(max-width: 768px) 95vw, (max-width: 1100px) 40vw, 30vw',
+    compact:  '(max-width: 480px) 95vw, (max-width: 768px) 50vw, 300px',
+    list:     '110px',
+};
+
+/**
+ * How many cards (in render order) are likely above the fold for a variant:
+ * their images load eagerly, the rest stay lazy.
+ */
+function _eagerImageCount(variant) {
+    const w = window.innerWidth || document.documentElement.clientWidth || 1024;
+    if (variant === 'list') return 6;                  // small rows, several fit on screen
+    if (variant === 'compact') return w <= 768 ? 2 : 4;
+    if (w <= 768) return 1;                            // complete: one column on small screens
+    return Math.max(1, Math.floor((w * 0.8 + 20) / 300)); // complete: first grid row
+}
+
+/**
+ * Card image. When the page supplies WebP mirror URLs (imageWebp640 / imageWebp + imageWidth),
+ * renders <picture> with a WebP srcset and the original <img> as fallback; otherwise a plain <img>.
+ * The <img> always keeps the class lab-card__image (pages bind the gallery click to it).
+ * `index` is the card's position in the gallery: the first visible cards load eagerly and the
+ * very first gets fetchpriority="high" (it is the LCP element); without an index the image is lazy.
+ */
+function _labImage(image, name, data, variant, index) {
+    const eager = typeof index === 'number' && index < _eagerImageCount(variant);
+    const loadAttrs = eager ? (index === 0 ? ' fetchpriority="high"' : '') : ' loading="lazy"';
+    const w = parseInt(data.imageWidth, 10);
+    const h = parseInt(data.imageHeight, 10);
+    const sizeAttrs = (w > 0 && h > 0) ? ` width="${w}" height="${h}"` : '';
+    const img = `<img class="lab-card__image" src="${_escapeHtml(image)}" alt="${_escapeHtml(name)}"${sizeAttrs}${loadAttrs}>`;
+
+    const candidates = [];
+    if (data.imageWebp640) candidates.push(`${data.imageWebp640} 640w`);
+    if (w > 0) {
+        const full = data.imageWebp || (data.imageWebp640 ? data.imageOriginal : null);
+        if (full) candidates.push(`${full} ${w}w`);
+    }
+    if (!candidates.length || !(w > 0)) return img;
+
+    const sizes = _LAB_IMAGE_SIZES[variant] || _LAB_IMAGE_SIZES.complete;
+    return `<picture class="lab-card__picture"><source type="image/webp" srcset="${_escapeHtml(candidates.join(', '))}" sizes="${sizes}">${img}</picture>`;
+}
+
+/**
  * Image or icon placeholder.
  * The placeholder background matches the lab color on client cards.
  */
-function _imageOrPlaceholder(image, name, bgColor) {
+function _imageOrPlaceholder(image, name, bgColor, data, variant, index) {
     if (image) {
-        return `<img class="lab-card__image" src="${_escapeHtml(image)}" alt="${_escapeHtml(name)}" loading="lazy">`;
+        return _labImage(image, name, data || {}, variant, index);
     }
     const bg = bgColor ? `style="background:linear-gradient(135deg,${_escapeHtml(bgColor)}22,${_escapeHtml(bgColor)}55);"` : '';
     return `<div class="lab-card__image-placeholder" ${bg}><i class="bi bi-buildings"></i></div>`;
@@ -141,7 +190,7 @@ function _requestButton(id, isAvailable) {
 /* ─── VARIANT 1: COMPLETE CARD (CLIENT) ─────────────────────── */
 /* ─── ═══════════════════════════════════════════════════════ ── */
 
-function _buildCompleteCard(data, isAvailable) {
+function _buildCompleteCard(data, isAvailable, index) {
     const id = _escapeHtml(String(data.id));
     return `
         <div class="lab-card lab-card--complete ${isAvailable ? '' : 'unavailable'}"
@@ -156,7 +205,7 @@ function _buildCompleteCard(data, isAvailable) {
 
             <!-- 16:9 Image -->
             <div class="lab-card__image-wrap">
-                ${_imageOrPlaceholder(data.image, data.laboratoryName, data.color)}
+                ${_imageOrPlaceholder(data.image, data.laboratoryName, data.color, data, 'complete', index)}
             </div>
 
             <!-- Body -->
@@ -187,7 +236,7 @@ function _buildCompleteCard(data, isAvailable) {
 /* ─── VARIANT 2: COMPACT CARD (CLIENT) ──────────────────────── */
 /* ─── ═══════════════════════════════════════════════════════ ── */
 
-function _buildCompactCard(data, isAvailable) {
+function _buildCompactCard(data, isAvailable, index) {
     const id = _escapeHtml(String(data.id));
     return `
         <div class="lab-card lab-card--compact ${isAvailable ? '' : 'unavailable'}"
@@ -202,7 +251,7 @@ function _buildCompactCard(data, isAvailable) {
 
             <!-- Thumbnail with overlaid badges -->
             <div class="lab-card__image-wrap">
-                ${_imageOrPlaceholder(data.image, data.laboratoryName, data.color)}
+                ${_imageOrPlaceholder(data.image, data.laboratoryName, data.color, data, 'compact', index)}
                 <div class="lab-card__availability-overlay">
                     <span id="lab-avail-badge-compact-${id}">${_availabilityBadge(isAvailable)}</span>
                 </div>
@@ -231,7 +280,7 @@ function _buildCompactCard(data, isAvailable) {
 /* ─── VARIANT 3: LIST CARD (ADMIN) ──────────────────────────── */
 /* ─── ═══════════════════════════════════════════════════════ ── */
 
-function _buildListCard(data, isAvailable) {
+function _buildListCard(data, isAvailable, index) {
     const id = _escapeHtml(String(data.id));
     return `
         <div class="lab-card lab-card--list ${isAvailable ? '' : 'unavailable'}"
@@ -244,7 +293,7 @@ function _buildListCard(data, isAvailable) {
             <div class="lab-card__inner">
                 <!-- Thumbnail (no color bar — admin sees full color badge in footer) -->
                 <div class="lab-card__image-wrap">
-                    ${_imageOrPlaceholder(data.image, data.laboratoryName, null)}
+                    ${_imageOrPlaceholder(data.image, data.laboratoryName, null, data, 'list', index)}
                 </div>
 
                 <!-- Right content -->
@@ -291,19 +340,21 @@ function _buildListCard(data, isAvailable) {
  *
  * @param {Object} data     — lab data object
  * @param {string} variant  — "complete" | "compact" | "list"
+ * @param {number} [index]  — position in the gallery (0 = first); the first visible cards load
+ *                            their image eagerly, the rest lazily. Omitted: lazy.
  * @returns {string}
  */
-function createLabCard(data, variant) {
+function createLabCard(data, variant, index) {
     const isAvailable = data.availability === 'Available';
     _labCardState[data.id] = isAvailable;
 
     switch (variant) {
-        case 'complete': return _buildCompleteCard(data, isAvailable);
-        case 'compact':  return _buildCompactCard(data, isAvailable);
-        case 'list':     return _buildListCard(data, isAvailable);
+        case 'complete': return _buildCompleteCard(data, isAvailable, index);
+        case 'compact':  return _buildCompactCard(data, isAvailable, index);
+        case 'list':     return _buildListCard(data, isAvailable, index);
         default:
             console.warn(`[LabCard] Unknown variant "${variant}". Defaulting to "complete".`);
-            return _buildCompleteCard(data, isAvailable);
+            return _buildCompleteCard(data, isAvailable, index);
     }
 }
 
@@ -317,7 +368,7 @@ function createLabCard(data, variant) {
  */
 function renderLabGallery(container, labsArray, variant) {
     if (!container) return;
-    container.innerHTML = labsArray.map(lab => createLabCard(lab, variant)).join('');
+    container.innerHTML = labsArray.map((lab, i) => createLabCard(lab, variant, i)).join('');
     if (typeof AOS !== 'undefined') AOS.refresh();
 }
 
