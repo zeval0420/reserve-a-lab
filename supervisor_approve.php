@@ -1,5 +1,7 @@
 <?php
 include('../scilab/helperFiles/db_connection.php');
+// Starts the session so emailed-link visitors get a CSRF token for the approve/reject call
+include('helperFiles/session_handler.php');
 include('helperFiles/variableDeclarations.php');
 
 $email = $_SESSION['email'] ?? null;

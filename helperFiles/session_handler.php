@@ -16,7 +16,13 @@
     session_start();
     $timeout_duration = 28800; // 8 hours
 
-    if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity']) > $timeout_duration) {
+    // Emailed approval links work without a login, so an expired session must not bounce those visitors to index.php
+    $ral_link_flow = in_array(basename($_SERVER['PHP_SELF']), ['supervisor_approve.php', 'ajax_supervisor_action.php'], true);
+
+    if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity']) > $timeout_duration && $ral_link_flow) {
+        session_unset();
+        session_regenerate_id(true);
+    } elseif (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity']) > $timeout_duration) {
         session_unset();
         session_destroy();
         $_SESSION['session_expired'] = true;
