@@ -8,6 +8,9 @@
         exit();
     }
 
+    // Every POST here (SQL console, clear history) must come from this page's own forms
+    ral_require_csrf();
+
     if (isset($_GET['view_phpinfo']) && $_GET['view_phpinfo'] === 'true') {
         phpinfo();
         exit();
@@ -306,6 +309,7 @@
         </div>
 
         <form method="POST" onsubmit="return confirm('Are you sure you want to execute this query?');" style="margin-bottom: 25px;">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '') ?>">
             <div class="form-group">
                 <label for="sql_query" class="font-weight-bold" style="color: #2B55C4;">SQL Query Execution</label>
                 <textarea name="sql_query" id="sql_query" class="form-control" placeholder="SELECT * FROM accounts..."><?php echo isset($_POST['sql_query']) ? htmlspecialchars($_POST['sql_query']) : ''; ?></textarea>
@@ -354,6 +358,7 @@
             <div class="panel-heading" style="display:flex; justify-content:space-between; align-items:center;">
                 <h3 class="panel-title" style="color: #2B55C4; font-weight:bold;"><i class="bi bi-clock-history"></i> Query History</h3>
                 <form method="POST" style="margin:0;">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '') ?>">
                     <input type="hidden" name="clear_history" value="true">
                     <button type="submit" class="btn-liquid-danger btn-sm" style="padding: 4px 10px; font-size: 12px;">Clear History</button>
                 </form>

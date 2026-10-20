@@ -3,6 +3,9 @@ include('../../scilab/helperFiles/db_connection.php');
 include('../helperFiles/session_handler.php');
 include('../helperFiles/variableDeclarations.php');
 
+// Login, guest sign-up and password-reset requests are made from the login page, which carries the token
+ral_require_csrf();
+
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 

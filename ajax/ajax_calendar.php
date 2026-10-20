@@ -5,10 +5,8 @@ include('../helperFiles/session_handler.php');
 $email = $_SESSION['email'] ?? null;
 $username = $_SESSION['username'] ?? null;
 
-if (!isset($_SESSION['role'])) {
-    header("Location: index.php");
-    exit();
-}
+ral_require_login();
+ral_require_csrf();
 
 
 

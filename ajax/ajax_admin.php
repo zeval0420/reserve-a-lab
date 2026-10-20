@@ -3,6 +3,9 @@
     include('../../scilab/helperFiles/db_connection.php');
     include('../helperFiles/session_handler.php');
     include('../helperFiles/variableDeclarations.php');
+    // Admin-only endpoint: logged in with the admin role, and a valid CSRF token on POST
+    ral_require_role(['admin']);
+    ral_require_csrf();
     // Downsizes uploaded lab images and keeps their WebP mirror in sync (never stops an upload)
     require_once __DIR__ . '/../helperFiles/image_optimizer.php';
     // Content checks for uploads and safe lab folder / file names

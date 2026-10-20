@@ -1,6 +1,7 @@
 <?php
 include('../../scilab/helperFiles/db_connection.php');
 include('../helperFiles/session_handler.php');
+ral_require_login();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'change_password') {
     $csrfToken = $_POST['csrf_token'] ?? '';

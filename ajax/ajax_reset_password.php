@@ -4,7 +4,7 @@ include('../../scilab/helperFiles/db_connection.php');
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = $_POST['email'] ?? '';
     $token = $_POST['token'] ?? '';
-    $timestamp = $_POST['ts'] ?? 0;
+    $timestamp = (int)($_POST['ts'] ?? 0);
     $newPassword = $_POST['new_password'] ?? '';
 
     if (empty($email) || empty($token) || empty($newPassword) || empty($timestamp)) {
@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Reconstruct token: md5(email + current_password_hash + secret_salt + timestamp)
         $expectedToken = md5($email . $row['password'] . 'SciLabSecretSalt2025' . $timestamp);
 
-        if ($token === $expectedToken) {
+        if (is_string($token) && hash_equals($expectedToken, $token)) {
             // Token valid, update password
             $newHash = md5($newPassword);
             $update = $conn->prepare("UPDATE accounts SET password = ? WHERE email = ?");

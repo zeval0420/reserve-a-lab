@@ -11,6 +11,9 @@
     include('../helperFiles/session_handler.php');
     include('../helperFiles/variableDeclarations.php');
     include_once('../helperFiles/scilab_email.php');
+    // Admin-only endpoint: logged in with the admin role, and a valid CSRF token on POST
+    ral_require_role(['admin']);
+    ral_require_csrf();
 
     // Get session data
     $email = $_SESSION['email'];

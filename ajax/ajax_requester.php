@@ -2,6 +2,10 @@
 include('../../scilab/helperFiles/db_connection.php');
 include('../helperFiles/session_handler.php');
 
+// Any logged-in user; POSTs must carry a valid CSRF token
+ral_require_login();
+ral_require_csrf();
+
 function parseTimeRangeMinutes($range) {
     if (!$range) return null;
     $parts = preg_split('/\s+to\s+/i', $range);

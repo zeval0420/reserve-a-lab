@@ -37,6 +37,10 @@ include('../helperFiles/session_handler.php');
 include('../helperFiles/variableDeclarations.php');
 include_once('../helperFiles/scilab_email.php');
 
+// Any logged-in user; POSTs must carry a valid CSRF token
+ral_require_login();
+ral_require_csrf();
+
 function formatTime($time)
 {
     return date("g:i A", strtotime($time));

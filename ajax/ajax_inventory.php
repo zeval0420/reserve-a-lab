@@ -4,6 +4,10 @@ include_once(__DIR__ . '/../../scilab/helperFiles/db_connection.php');
 include_once(__DIR__ . '/../helperFiles/session_handler.php');
 include_once(__DIR__ . '/../helperFiles/variableDeclarations.php');
 
+// Inventory is managed by admins only; POSTs must carry a valid CSRF token
+ral_require_role(['admin']);
+ral_require_csrf();
+
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 

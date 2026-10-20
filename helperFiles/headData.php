@@ -26,6 +26,7 @@ $__headUrl = function ($rel) {
 ?>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="csrf-token" content="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '') ?>">
 
 <!-- Raleway (latin) is used on first paint: start the download early -->
 <link rel="preload" href="assets/fonts/raleway/raleway-latin.woff2" as="font" type="font/woff2" crossorigin>
@@ -101,6 +102,35 @@ $__headUrl = function ($rel) {
 
 <!-- jQuery 3.3.1 -->
 <script src="<?= $__headUrl('jQuery-3.3.1/jquery-3.3.1.min.js') ?>"></script>
+
+<!-- Send the CSRF token with every same-origin jQuery and fetch request (checked by ral_require_csrf() in the ajax/ endpoints) -->
+<script>
+(function () {
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    var token = meta ? meta.content : '';
+    if (!token) return;
+
+    jQuery.ajaxPrefilter(function (options, original, jqXHR) {
+        if (!options.crossDomain) jqXHR.setRequestHeader('X-CSRF-Token', token);
+    });
+
+    if (window.fetch) {
+        var nativeFetch = window.fetch;
+        window.fetch = function (input, init) {
+            var url = typeof input === 'string' ? input : (input && input.url) || '';
+            var sameOrigin = false;
+            try { sameOrigin = new URL(url, location.href).origin === location.origin; } catch (e) {}
+            if (sameOrigin) {
+                init = Object.assign({}, init);
+                var headers = new Headers(init.headers || (input instanceof Request ? input.headers : undefined));
+                headers.set('X-CSRF-Token', token);
+                init.headers = headers;
+            }
+            return nativeFetch.call(this, input, init);
+        };
+    }
+})();
+</script>
 
 <!-- Bootstrap JS 3.3.7 -->
 <script src="<?= $__headUrl('bootstrap3.3.7/js/bootstrap.min.js') ?>"></script>

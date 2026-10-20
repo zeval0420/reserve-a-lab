@@ -9,6 +9,7 @@ include('helperFiles/variableDeclarations.php'); // $active_server is declared h
 $active_server = "beta";
 
 if (isset($_POST['local_login']) && $_POST['local_login'] === 'true') {
+    ral_require_csrf();
     $u = $_POST['username'] ?? '';
     $p = $_POST['password'] ?? '';
     if ($u === 'admin.controller' && md5($p) === 'e63ff18bb1478deb7059c5bec3aeaa39') {
@@ -63,6 +64,7 @@ if (isset($_SESSION['role'])) {
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>var RAL_CSRF_TOKEN = <?= json_encode($_SESSION['csrf_token'] ?? '') ?>;</script>
     <title>Reserve-a-Lab · PSHS-IRC</title>
     <!-- Self-hosted fonts (same files Google Fonts served: variable woff2, latin + latin-ext) -->
     <link rel="preload" href="assets/fonts/playfair-display/playfair-display-v40-latin.woff2" as="font" type="font/woff2" crossorigin />
@@ -1248,6 +1250,7 @@ if (isset($_SESSION['role'])) {
                 const xhr = new XMLHttpRequest();
                 xhr.open('POST', 'ajax/ajax_login.php', true);
                 xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                xhr.setRequestHeader('X-CSRF-Token', RAL_CSRF_TOKEN);
                 xhr.onload = function () {
                     if (xhr.status === 200) {
                         if (xhr.responseText.trim() === 'success') {
@@ -1342,6 +1345,7 @@ if (isset($_SESSION['role'])) {
                 const xhr = new XMLHttpRequest();
                 xhr.open('POST', 'ajax/ajax_login.php', true);
                 xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                xhr.setRequestHeader('X-CSRF-Token', RAL_CSRF_TOKEN);
                 xhr.onload = function () {
                     if (xhr.status === 200) {
                         if (xhr.responseText.trim() === 'success') {
@@ -1405,6 +1409,7 @@ if (isset($_SESSION['role'])) {
                     const xhrLocal = new XMLHttpRequest();
                     xhrLocal.open('POST', 'index.php', true);
                     xhrLocal.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                    xhrLocal.setRequestHeader('X-CSRF-Token', RAL_CSRF_TOKEN);
                     xhrLocal.onload = function () {
                         if (xhrLocal.status === 200 && xhrLocal.responseText.trim() === 'success') {
                             window.location.href = loginRedirect || "controller_dashboard.php";
@@ -1424,6 +1429,7 @@ if (isset($_SESSION['role'])) {
                 const xhrAuth = new XMLHttpRequest();
                 xhrAuth.open('POST', 'ajax/ajax_login.php', true);
                 xhrAuth.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                xhrAuth.setRequestHeader('X-CSRF-Token', RAL_CSRF_TOKEN);
                 xhrAuth.onload = function () {
                     if (xhrAuth.status === 200) {
                         const response = xhrAuth.responseText.trim();

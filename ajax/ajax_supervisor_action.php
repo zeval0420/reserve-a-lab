@@ -448,6 +448,7 @@ function sendNotificationToCIDChief($conn, $requestID) {
 }
 
 if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
+    ral_require_login();
     $csrfToken = $_POST['csrf_token'] ?? '';
     if (!is_string($csrfToken) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $csrfToken)) {
         http_response_code(403);
@@ -703,6 +704,10 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
 
 header('Content-Type: application/json');
 
+// Approvals arrive as JSON from supervisor_approve.php, which sends the CSRF token as a header.
+// Visitors with only an emailed link have a session too, so the token applies to them as well.
+ral_require_csrf();
+
 $username = $_SESSION['username'] ?? null;
 
 $input = json_decode(file_get_contents('php://input'), true);
@@ -759,9 +764,50 @@ if ($action === 'force_approve_override') {
     exit;
 }
 
-// Authorize: a logged-in session OR a valid passwordless approval token for this stage.
+/**
+ * May the logged-in user act on this approval stage? Mirrors supervisor_approve.php:
+ * supervisor = the teacher in charge, AUH = a teacher position, lab personnel = a lab
+ * personnel position, CID chief = a chief position. Force approval is admin-only.
+ */
+function ral_session_can_act_on_stage($conn, $stage, array $request)
+{
+    global $accepted_admin_roles;
+
+    if (!ral_is_logged_in()) {
+        return false;
+    }
+    if ($stage === 'force_approve') {
+        return $_SESSION['role'] === 'admin';
+    }
+
+    $employeeID = (string)($_SESSION['employeeID'] ?? '');
+    if ($employeeID === '') {
+        return false;
+    }
+    $res = ral_query($conn, "SELECT firstname, middlename, lastname, position FROM accounts WHERE employeeID = ? AND status = 'active'", 's', [$employeeID]);
+    $user = $res ? $res->fetch_assoc() : null;
+    if (!$user) {
+        return false;
+    }
+    $position = (string)($user['position'] ?? '');
+
+    switch ($stage) {
+        case 'supervisor':
+            $formattedName = trim($user['lastname'] . ', ' . $user['firstname'] . ' ' . $user['middlename']);
+            return $formattedName !== ',' && strpos((string)($request['teacherInCharge'] ?? ''), $formattedName) !== false;
+        case 'subject_teacher':
+            return strpos(strtolower($position), 'teacher') !== false;
+        case 'lab_personnel':
+            return in_array($position, $accepted_admin_roles, true);
+        case 'cid_chief':
+            return strpos(strtolower($position), 'chief') !== false;
+    }
+    return false;
+}
+
+// Authorize: a session whose user holds the role for this stage, OR a valid passwordless approval token for it.
 $authorized = false;
-if ($username !== null) {
+if ($username !== null && ral_session_can_act_on_stage($conn, $fieldPrefix, $request)) {
     $authorized = true;
 } elseif (isset($input['token']) && $fieldPrefix !== 'force_approve' && scilab_approval_token_valid($requestId, $fieldPrefix, $input['token'])) {
     $authorized = true;
