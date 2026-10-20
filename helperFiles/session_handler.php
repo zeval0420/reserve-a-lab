@@ -100,4 +100,47 @@
             }
         }
     }
+
+    /*
+     * Attempt throttling, kept in the visitor's own session (no database table).
+     * A bucket counts attempts inside a window; once it reaches $max the visitor is
+     * locked out for 30 s, doubling with every further attempt up to 15 minutes.
+     * Limit: it follows the session cookie, so it slows ordinary guessing and
+     * scripted form abuse but a client that discards its cookie starts afresh.
+     */
+    if (!function_exists('ral_throttle_wait')) {
+        /** Seconds the visitor must still wait for this bucket (0 = free to try). */
+        function ral_throttle_wait($bucket)
+        {
+            $until = (int)($_SESSION['_throttle'][$bucket]['locked_until'] ?? 0);
+            return max(0, $until - time());
+        }
+
+        /** The message to show a locked-out visitor. */
+        function ral_throttle_message($seconds)
+        {
+            return 'Too many attempts. Please try again in ' . ($seconds >= 60 ? ceil($seconds / 60) . ' minute(s)' : $seconds . ' second(s)') . '.';
+        }
+
+        /** Record one attempt (a failed login, or any account/e-mail request). */
+        function ral_throttle_hit($bucket, $max = 5, $window = 900)
+        {
+            $now = time();
+            $state = $_SESSION['_throttle'][$bucket] ?? ['count' => 0, 'first' => $now, 'locked_until' => 0];
+            if ($now - $state['first'] > $window && $state['locked_until'] <= $now) {
+                $state = ['count' => 0, 'first' => $now, 'locked_until' => 0];
+            }
+            $state['count']++;
+            if ($state['count'] >= $max) {
+                $state['locked_until'] = $now + min(900, 30 * (2 ** ($state['count'] - $max)));
+            }
+            $_SESSION['_throttle'][$bucket] = $state;
+        }
+
+        /** Forget a bucket, e.g. after a successful login. */
+        function ral_throttle_clear($bucket)
+        {
+            unset($_SESSION['_throttle'][$bucket]);
+        }
+    }
 ?>

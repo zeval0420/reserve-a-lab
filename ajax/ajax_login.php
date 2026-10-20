@@ -17,6 +17,12 @@ if (isset($_POST["action"]) && $_POST["action"] === "loginUser") {
     $input_identity = $_POST['email']; // This field handles both email and username
     $password = $_POST['password'];
 
+    $wait = ral_throttle_wait('login');
+    if ($wait > 0) {
+        echo ral_throttle_message($wait);
+        exit();
+    }
+
     // Detect input type
     $is_email = (strpos($input_identity, '@') !== false);
     $email_query = $is_email ? $input_identity : $input_identity . '@irc.pshs.edu.ph';
@@ -35,8 +41,10 @@ if (isset($_POST["action"]) && $_POST["action"] === "loginUser") {
         $hashedInput = md5($password);
 
         if ($hashedInput !== $user[$db_col_password]) {
+            ral_throttle_hit('login');
             echo "invalid_password";
         } else {
+            ral_throttle_clear('login');
             /* 
              * Authentication successful. 
              * Populate session data with employee details for subsequent operations.
@@ -109,6 +117,7 @@ if (isset($_POST["action"]) && $_POST["action"] === "loginUser") {
         $newAccountsResult = $stmt_new->get_result();
 
         if ($newAccountsResult->num_rows === 0) {
+            ral_throttle_hit('login');
             $username_suggested = str_replace('@irc.pshs.edu.ph', '', $student['studentEmail']);
             echo json_encode([
                 "status" => "prompt_create_account",
@@ -116,8 +125,7 @@ if (isset($_POST["action"]) && $_POST["action"] === "loginUser") {
                 "middlename" => $student['middlename'],
                 "lastname" => $student['lastname'],
                 "username" => $username_suggested,
-                "email" => $student['studentEmail'],
-                "studentid" => $student['LRN']
+                "email" => $student['studentEmail']
             ]);
             $stmt_new->close();
             $stmt->close();
@@ -131,11 +139,13 @@ if (isset($_POST["action"]) && $_POST["action"] === "loginUser") {
         // Verify using MD5 to match login system
         $hashedInput = md5($password);
         if ($hashedInput !== $new_user['password']) {
+            ral_throttle_hit('login');
             echo "invalid_password";
             $stmt->close();
             $conn->close();
             exit();
         }
+        ral_throttle_clear('login');
 
         /*
          * Student authentication successful.
@@ -173,8 +183,10 @@ if (isset($_POST["action"]) && $_POST["action"] === "loginUser") {
         $hashedInput = md5($password);
 
         if ($hashedInput !== $new_user['password']) {
+            ral_throttle_hit('login');
             echo "invalid_password";
         } else {
+            ral_throttle_clear('login');
             session_regenerate_id(true);
             $_SESSION[$session_role] = "guest";
             
@@ -216,10 +228,17 @@ if (isset($_POST["action"]) && $_POST["action"] === "loginUser") {
     $conn->close();
 
     // If none of the attempts succeed
+    ral_throttle_hit('login');
     echo "prompt_create_account";
 }
 
 if (isset($_POST["action"]) && $_POST["action"] === "guestLogin") {
+    $wait = ral_throttle_wait('register');
+    if ($wait > 0) {
+        echo ral_throttle_message($wait);
+        exit();
+    }
+    ral_throttle_hit('register', 5, 3600);
     $email = $_POST['email']; // Note: mapped from reg-email
     $username = $_POST['username'];
     $password = md5($_POST['password']);
@@ -267,6 +286,13 @@ if (isset($_POST["action"]) && $_POST["action"] === "guestLogin") {
 }
 
 if (isset($_POST["action"]) && $_POST["action"] === "forgotPassword") {
+    $wait = ral_throttle_wait('forgot');
+    if ($wait > 0) {
+        echo ral_throttle_message($wait);
+        exit();
+    }
+    ral_throttle_hit('forgot', 3, 900);
+
     $email = $_POST['email'];
 
     /* Locate the account in the administrative/employee accounts table. */

@@ -118,6 +118,33 @@
     </FilesMatch>
 </IfModule>
 
+# ---------------------------------------------------------------------------
+# Security headers
+#   nosniff            a file is never treated as a different type than it is served as
+#   X-Frame-Options    only this site may frame its pages (clickjacking)
+#   Referrer-Policy    approval links carry ?token=...; other sites only learn the origin
+#   Permissions-Policy camera stays available to the barcode scanner, nothing else is
+#   HSTS               sent only over HTTPS
+#   CSP                scripts, styles, images, fonts, XHR and forms stay on this site; no
+#                      plug-ins; no <base> tricks. Pages use inline scripts and styles, so
+#                      'unsafe-inline' is still needed. Left out (RAL_NO_CSP): games/, which
+#                      holds third-party games that load files from their own CDNs, and
+#                      controller_dashboard.php, which sends its own CSP for CodeMirror
+#                      (two policies would both apply, and the stricter one would win).
+# ---------------------------------------------------------------------------
+<IfModule mod_setenvif.c>
+    SetEnvIf Request_URI "/games/" RAL_NO_CSP
+    SetEnvIf Request_URI "/controller_dashboard\.php$" RAL_NO_CSP
+</IfModule>
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "camera=(self), microphone=(), geolocation=(), payment=()"
+    Header always set Strict-Transport-Security "max-age=31536000" "expr=%{HTTPS} == 'on'"
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; media-src 'self' blob:; worker-src 'self' blob:; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'" env=!RAL_NO_CSP
+</IfModule>
+
 # Fallback when mod_headers is missing but mod_expires is present:
 # type-based lifetimes only (no ?v= distinction). PHP output (text/html,
 # application/json) is not listed, so it is not affected.

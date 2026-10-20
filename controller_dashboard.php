@@ -11,6 +11,9 @@
     // Every POST here (SQL console, clear history) must come from this page's own forms
     ral_require_csrf();
 
+    // Same policy as the rest of the site, plus the CodeMirror editor files from cdnjs
+    header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'");
+
     if (isset($_GET['view_phpinfo']) && $_GET['view_phpinfo'] === 'true') {
         phpinfo();
         exit();

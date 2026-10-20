@@ -10,6 +10,11 @@ $active_server = "beta";
 
 if (isset($_POST['local_login']) && $_POST['local_login'] === 'true') {
     ral_require_csrf();
+    $wait = ral_throttle_wait('local_login');
+    if ($wait > 0) {
+        echo 'fail';
+        exit();
+    }
     $u = $_POST['username'] ?? '';
     $p = $_POST['password'] ?? '';
     if ($u === 'admin.controller' && md5($p) === 'e63ff18bb1478deb7059c5bec3aeaa39') {
@@ -17,8 +22,10 @@ if (isset($_POST['local_login']) && $_POST['local_login'] === 'true') {
         $_SESSION['role'] = 'admin';
         $_SESSION['username'] = 'Admin Controller';
         $_SESSION['email'] = 'admin.controller@local';
+        ral_throttle_clear('local_login');
         echo 'success';
     } else {
+        ral_throttle_hit('local_login');
         echo 'fail';
     }
     exit();
@@ -1471,6 +1478,8 @@ if (isset($_SESSION['role'])) {
                             showAlert('Account not found. Please create an account.', 'error');
                             // optionally open the register modal
                             openModal('modal-register');
+                        } else if (response.indexOf('Too many attempts') === 0) {
+                            showAlert(response, 'error');
                         } else if (response === "invalid_password") {
                             setValidationState(passwordField, 'invalid');
                             showAlert('Incorrect password.', 'error');
