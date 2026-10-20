@@ -1259,17 +1259,17 @@
                     activeItems.sort((a, b) => a.item.localeCompare(b.item));
                     activeItems.forEach(item => {
                         const thresholdVal = (item.threshold_qty !== null && item.threshold_qty !== undefined) ? item.threshold_qty : '';
-                        const desc = item.description ? item.description : '<span class="text-muted">No Description</span>';
+                        const desc = item.description ? ralEsc(item.description) : '<span class="text-muted">No Description</span>';
                         
                         const qtyVal = parseInt(item.quantity);
                         const isLow = item.threshold_qty !== null && item.threshold_qty !== '' && qtyVal <= parseInt(item.threshold_qty);
                         const rowStyle = isLow ? 'background-color: #fff3f3;' : '';
                         
                         tbody.append(`
-                            <tr style="${rowStyle}" data-id="${item.id}">
-                                <td><strong>${item.item}</strong> <small class="text-muted">(${item.classification})</small></td>
+                            <tr style="${rowStyle}" data-id="${ralEsc(item.id)}">
+                                <td><strong>${ralEsc(item.item)}</strong> <small class="text-muted">(${ralEsc(item.classification)})</small></td>
                                 <td>${desc}</td>
-                                <td>${item.quantity} ${item.unit}</td>
+                                <td>${ralEsc(item.quantity)} ${ralEsc(item.unit)}</td>
                                 <td>
                                     <input type="number" class="form-control liquid-input threshold-input" 
                                            value="${thresholdVal}" min="0" placeholder="No Alert" 

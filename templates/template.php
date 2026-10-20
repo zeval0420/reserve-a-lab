@@ -237,7 +237,7 @@
                 <tbody>
                     <?php foreach ($materials as $m): ?>
                     <tr>
-                        <td><?= $m['quantity'] ?></td>
+                        <td><?= htmlspecialchars($m['quantity']) ?></td>
                         <td><?= htmlspecialchars($m['item']) ?></td>
                         <td><?= htmlspecialchars($m['description']) ?></td>
                         <td><?= htmlspecialchars($m['issuedCondition']) ?></td>

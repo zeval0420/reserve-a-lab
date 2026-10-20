@@ -1,4 +1,18 @@
 <?php
+    // Session cookie: not readable by scripts, not sent on cross-site POSTs, HTTPS-only when the site is served over HTTPS
+    if (session_status() === PHP_SESSION_NONE) {
+        $ral_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || strtolower($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+        ini_set('session.use_strict_mode', '1');   // never adopt a session ID the server did not issue
+        ini_set('session.use_only_cookies', '1');
+        session_set_cookie_params([
+            'lifetime' => 0,
+            'path'     => '/',
+            'secure'   => $ral_https,
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
+    }
     session_start();
     $timeout_duration = 28800; // 8 hours
 

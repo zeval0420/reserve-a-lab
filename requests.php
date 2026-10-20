@@ -809,10 +809,10 @@
                                 <?php endif; ?>
 
                                 <td><?= htmlspecialchars($row['scilabName']) ?></td>
-                                <td><?= "Grade {$row['gradeLevel']} - {$row['sections']}" ?></td>
+                                <td><?= htmlspecialchars("Grade {$row['gradeLevel']} - {$row['sections']}") ?></td>
                                 <td><?= htmlspecialchars($row['subject']) ?></td>
                                 <td><?= htmlspecialchars($row['subjectTopic']) ?></td>
-                                <td><?= htmlspecialchars($row['inclusiveDate'])." (".$row['inclusiveTime'].")" ?></td>
+                                <td><?= htmlspecialchars($row['inclusiveDate'] . " (" . $row['inclusiveTime'] . ")") ?></td>
                                 <?php
                                     $allMats = $materials[$row['id']] ?? [];
                                     $totalMats = count($allMats);
@@ -861,7 +861,7 @@
                                 <td>
                                     <?php $as = $row['_approval_status']; ?>
                                     <span class="badge badge-<?= $as === 'Approved' ? 'success' : ($as === 'Rejected' ? 'danger' : 'warning') ?>">
-                                        <?= $as ?>
+                                        <?= htmlspecialchars($as) ?>
                                     </span>
                                 </td>
 
@@ -869,7 +869,7 @@
                                     <button
                                         class="btn-liquid view-btn"
                                         data-status="<?= $statusFilter ?>"
-                                        data-request='<?= json_encode($row) ?>'
+                                        data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'
                                         data-materials-detailed='<?= htmlspecialchars($materialsDetailedText, ENT_QUOTES, 'UTF-8') ?>'
                                     >
                                         View
@@ -1005,28 +1005,28 @@
                         <div class="detail-field">
                             <div class="detail-label">Full Name</div>
                             <div class="detail-value">
-                                ${data.requesterName || data.requesterEmployeeID || '—'}
+                                ${ralEsc(data.requesterName || data.requesterEmployeeID) || '—'}
                             </div>
                         </div>
 
                         <div class="detail-field">
                             <div class="detail-label">Student / Faculty ID</div>
                             <div class="detail-value">
-                                ${data.requesterEmployeeID || '—'}
+                                ${ralEsc(data.requesterEmployeeID) || '—'}
                             </div>
                         </div>
 
                         <div class="detail-field">
                             <div class="detail-label">Department</div>
                             <div class="detail-value">
-                                ${data.requesterDepartment || '—'}
+                                ${ralEsc(data.requesterDepartment) || '—'}
                             </div>
                         </div>
 
                         <div class="detail-field">
                             <div class="detail-label">Contact Email</div>
                             <div class="detail-value">
-                                ${data.requesterEmail || '—'}
+                                ${ralEsc(data.requesterEmail) || '—'}
                             </div>
                         </div>
 
@@ -1041,56 +1041,56 @@
                         <div class="detail-field">
                             <div class="detail-label">Laboratory</div>
                             <div class="detail-value">
-                                ${data.scilabName || '—'}
+                                ${ralEsc(data.scilabName) || '—'}
                             </div>
                         </div>
 
                         <div class="detail-field">
                             <div class="detail-label">Date of Use</div>
                             <div class="detail-value">
-                                ${data.inclusiveDate || '—'}
+                                ${ralEsc(data.inclusiveDate) || '—'}
                             </div>
                         </div>
 
                         <div class="detail-field">
                             <div class="detail-label">Time</div>
                             <div class="detail-value">
-                                ${data.inclusiveTime || '—'}
+                                ${ralEsc(data.inclusiveTime) || '—'}
                             </div>
                         </div>
 
                         <div class="detail-field">
                             <div class="detail-label">Teacher-in-Charge</div>
                             <div class="detail-value">
-                                ${teacher}
+                                ${ralEsc(teacher)}
                             </div>
                         </div>
 
                         <div class="detail-field">
                             <div class="detail-label">Grade Level</div>
                             <div class="detail-value">
-                                ${data.gradeLevel || '—'}
+                                ${ralEsc(data.gradeLevel) || '—'}
                             </div>
                         </div>
 
                         <div class="detail-field">
                             <div class="detail-label">Section/s</div>
                             <div class="detail-value">
-                                ${data.sections || '—'}
+                                ${ralEsc(data.sections) || '—'}
                             </div>
                         </div>
 
                         <div class="detail-field">
                             <div class="detail-label">Subject</div>
                             <div class="detail-value">
-                                ${data.subject || '—'}
+                                ${ralEsc(data.subject) || '—'}
                             </div>
                         </div>
 
                         <div class="detail-field">
                             <div class="detail-label">Topic</div>
                             <div class="detail-value">
-                                ${data.subjectTopic || '—'}
+                                ${ralEsc(data.subjectTopic) || '—'}
                             </div>
                         </div>
 
@@ -1144,7 +1144,7 @@
                                 <div class="detail-label">Feedback</div>
 
                                 <div class="detail-value" style="display: block;">
-                                    ${data.feedback || '—'}
+                                    ${ralEsc(data.feedback) || '—'}
                                 </div>
 
                             </div>

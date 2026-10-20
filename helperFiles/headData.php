@@ -103,9 +103,16 @@ $__headUrl = function ($rel) {
 <!-- jQuery 3.3.1 -->
 <script src="<?= $__headUrl('jQuery-3.3.1/jquery-3.3.1.min.js') ?>"></script>
 
-<!-- Send the CSRF token with every same-origin jQuery and fetch request (checked by ral_require_csrf() in the ajax/ endpoints) -->
+<!-- ralEsc(): HTML escaping for client-side templates. Also sends the CSRF token with every same-origin jQuery and fetch request (checked by ral_require_csrf() in the ajax/ endpoints) -->
 <script>
 (function () {
+    // HTML-escape text before it goes into innerHTML / .html() / template strings
+    window.ralEsc = function (v) {
+        return String(v == null ? '' : v).replace(/[&<>"'`]/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;' }[c];
+        });
+    };
+
     var meta = document.querySelector('meta[name="csrf-token"]');
     var token = meta ? meta.content : '';
     if (!token) return;

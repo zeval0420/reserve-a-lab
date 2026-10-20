@@ -1620,7 +1620,7 @@
 
                                 $('#admin-conflict-warning').html(`
                                     <div class="alert alert-danger" style="margin-bottom:15px; border-radius:8px;">
-                                        <strong><i class="glyphicon glyphicon-ban-circle"></i> Severe Conflict:</strong> An <b>approved</b> request already exists for this timeframe (${res.details.time}). Force approving this will double-book the room.
+                                        <strong><i class="glyphicon glyphicon-ban-circle"></i> Severe Conflict:</strong> An <b>approved</b> request already exists for this timeframe (${ralEsc(res.details.time)}). Force approving this will double-book the room.
                                     </div>
                                 `);
 
@@ -1634,7 +1634,7 @@
 
                                 $('#admin-conflict-warning').html(`
                                     <div class="alert alert-warning" style="margin-bottom:15px; border-radius:8px;">
-                                        <strong><i class="glyphicon glyphicon-warning-sign"></i> Pending Conflict:</strong> There is another pending request for this timeframe (${res.details.time} - ${res.details.subject}).
+                                        <strong><i class="glyphicon glyphicon-warning-sign"></i> Pending Conflict:</strong> There is another pending request for this timeframe (${ralEsc(res.details.time)} - ${ralEsc(res.details.subject)}).
                                     </div>
                                 `);
                             }
@@ -1735,11 +1735,11 @@
             $(document).on('click', '.reject-btn', function () {
                 const data = $(this).data('request');
                 $('#rejectSummaryContent').html(`
-                    <p><strong>Requester:</strong> ${data.requesterName || data.requesterEmployeeID}</p>
-                    <p><strong>Subject:</strong> ${data.subject}</p>
-                    <p><strong>Topic:</strong> ${data.subjectTopic}</p>
-                    <p><strong>Date of Use:</strong> ${data.inclusiveDate}</p>
-                    <p><strong>Time:</strong> ${data.inclusiveTime}</p>
+                    <p><strong>Requester:</strong> ${ralEsc(data.requesterName || data.requesterEmployeeID)}</p>
+                    <p><strong>Subject:</strong> ${ralEsc(data.subject)}</p>
+                    <p><strong>Topic:</strong> ${ralEsc(data.subjectTopic)}</p>
+                    <p><strong>Date of Use:</strong> ${ralEsc(data.inclusiveDate)}</p>
+                    <p><strong>Time:</strong> ${ralEsc(data.inclusiveTime)}</p>
                     <p>
                         <strong>Requested Materials:</strong><br>
                         ${data.materialsDetailed}
@@ -1852,12 +1852,12 @@
                         for (const classification in response.items) {
                             if (response.items.hasOwnProperty(classification) && response.items[classification].length > 0) {
                                 hasItems = true;
-                                content += `<h4>${classification}</h4>`;
+                                content += `<h4>${ralEsc(classification)}</h4>`;
                                 content += '<table class="table table-bordered table-striped mt-2 mb-4"><thead><tr><th>Item</th><th>Description</th><th>Quantity Used</th><th>Requestor</th><th>Date of Use</th><th style="width: 100px; text-align: center;">Action</th></tr></thead><tbody>';
                                 response.items[classification].forEach(i => {
-                                    const description = i.description || 'N/A';
-                                    const unit = i.unit || ''; // Fallback for items with no unit
-                                    content += `<tr><td>${i.item}</td><td>${description}</td><td>${i.quantity} ${unit}</td><td>${i.requestor}</td><td>${i.date} (${i.time})</td><td style="text-align: center;"><a href="supervisor_approve.php?id=${i.formID}" target="_blank" class="btn btn-liquid" style="padding: 2px 8px; font-size: 11px; margin: 0; display: inline-block;">View Details</a></td></tr>`;
+                                    const description = ralEsc(i.description || 'N/A');
+                                    const unit = ralEsc(i.unit || ''); // Fallback for items with no unit
+                                    content += `<tr><td>${ralEsc(i.item)}</td><td>${description}</td><td>${ralEsc(i.quantity)} ${unit}</td><td>${ralEsc(i.requestor)}</td><td>${ralEsc(i.date)} (${ralEsc(i.time)})</td><td style="text-align: center;"><a href="supervisor_approve.php?id=${encodeURIComponent(i.formID)}" target="_blank" class="btn btn-liquid" style="padding: 2px 8px; font-size: 11px; margin: 0; display: inline-block;">View Details</a></td></tr>`;
                                 });
                                 content += '</tbody></table>';
                             }
@@ -1871,7 +1871,7 @@
                         }
                     } else {
                         // Handle cases where success is false or the response is malformed
-                        $('#summaryContent').html(`<p class="text-danger mt-3">Error: ${response.message || 'Could not generate summary.'}</p>`);
+                        $('#summaryContent').html(`<p class="text-danger mt-3">Error: ${ralEsc(response.message || 'Could not generate summary.')}</p>`);
                     }
                 }).fail(function() {
                     $btn.prop('disabled', false).html(originalText);

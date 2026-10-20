@@ -409,11 +409,11 @@ $calendarJsUrl  = 'CalendarLibrary/event-calendar.min.js?v=' . filemtime(__DIR__
 
                 let buttonsHtml = '';
                 if (data.statusScilabPersonnel === 'Approved') {
-                    buttonsHtml += `<a href="templates/print_template.php?id=${data.id}" target="_blank" class="btn-liquid" style="margin-right: 5px;"><i class="bi bi-file-earmark-pdf"></i> Download PDF</a>`;
+                    buttonsHtml += `<a href="templates/print_template.php?id=${encodeURIComponent(data.id)}" target="_blank" class="btn-liquid" style="margin-right: 5px;"><i class="bi bi-file-earmark-pdf"></i> Download PDF</a>`;
                 }
 
                 if (currentUserRole === 'admin') {
-                    buttonsHtml += `<a href="admin_approve.php?status=Approved&search=${data.id}" class="btn-liquid">View Full Request</a>`;
+                    buttonsHtml += `<a href="admin_approve.php?status=Approved&search=${encodeURIComponent(data.id)}" class="btn-liquid">View Full Request</a>`;
                 }
 
                 if (buttonsHtml) {
@@ -421,12 +421,12 @@ $calendarJsUrl  = 'CalendarLibrary/event-calendar.min.js?v=' . filemtime(__DIR__
                 }
 
                 eventBody.innerHTML = `
-                    <p><strong>Requester:</strong> ${data.requesterName || data.requesterEmployeeID}</p>
-                    <p><strong>Subject:</strong> ${data.subject}</p>
-                    <p><strong>Topic:</strong> ${data.subjectTopic}</p>
-                    <p><strong>Date:</strong> ${data.inclusiveDate}</p>
-                    <p><strong>Time:</strong> ${data.inclusiveTime}</p>
-                    <p><strong>Status:</strong> <span class="badge" style="background-color:#28a745;">${data.statusScilabPersonnel}</span></p>
+                    <p><strong>Requester:</strong> ${ralEsc(data.requesterName || data.requesterEmployeeID)}</p>
+                    <p><strong>Subject:</strong> ${ralEsc(data.subject)}</p>
+                    <p><strong>Topic:</strong> ${ralEsc(data.subjectTopic)}</p>
+                    <p><strong>Date:</strong> ${ralEsc(data.inclusiveDate)}</p>
+                    <p><strong>Time:</strong> ${ralEsc(data.inclusiveTime)}</p>
+                    <p><strong>Status:</strong> <span class="badge" style="background-color:#28a745;">${ralEsc(data.statusScilabPersonnel)}</span></p>
                     ${buttonsHtml}
                 `;
             },

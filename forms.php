@@ -607,7 +607,7 @@
         function buildItemOptions(itemsObj) {
             return Object.keys(itemsObj).map(item => {
                 const data = itemsObj[item];
-                return `<option value="${item}" data-unit="${data.unit || ''}">${item}</option>`;
+                return `<option value="${ralEsc(item)}" data-unit="${ralEsc(data.unit || '')}">${ralEsc(item)}</option>`;
             }).join('');
         }
 
@@ -697,7 +697,7 @@
                     $descSelect.empty().append('<option value="">Select Description</option>');
                     const descs = getDescriptionsForItem(selectedItem, classType);
                     if (selectedItem && descs.length) {
-                        descs.forEach(d => $descSelect.append(`<option value="${d}">${d}</option>`));
+                        descs.forEach(d => $descSelect.append(`<option value="${ralEsc(d)}">${ralEsc(d)}</option>`));
                         $descSelect.prop('disabled', false);
                     } else {
                         $descSelect.prop('disabled', true).val('');
@@ -828,7 +828,7 @@
 
             // Default 1 student row
             const allStudentList = Object.values(allStudents).flat();
-            const studentOpts = allStudentList.map(s => `<option value="${s}">${s}</option>`).join('');
+            const studentOpts = allStudentList.map(s => `<option value="${ralEsc(s)}">${ralEsc(s)}</option>`).join('');
             $('#student-list-table tbody').append(`
                 <tr>
                     <td>
@@ -1026,7 +1026,7 @@
                         const conflictWord = res.conflict_type === 'approved' ? 'approved' : 'pending';
                         conflictAlert = `
                             <div class="alert alert-warning" style="margin-bottom: 15px;">
-                                <strong>Schedule Conflict:</strong> An <b>${conflictWord}</b> request already exists for this timeframe (${res.details.time} - ${res.details.subject}). Approval is to the discretion of the Science Laboratory Personnel.
+                                <strong>Schedule Conflict:</strong> An <b>${conflictWord}</b> request already exists for this timeframe (${ralEsc(res.details.time)} - ${ralEsc(res.details.subject)}). Approval is to the discretion of the Science Laboratory Personnel.
                             </div>
                         `;
                     }
@@ -1358,13 +1358,13 @@
                             if (res.conflict_type === 'approved') {
                                 $('#conflict-warning-container').html(`
                                     <div class="alert alert-warning" style="margin-bottom:0; padding:10px; border-radius:8px;">
-                                        <strong><i class="glyphicon glyphicon-warning-sign"></i> Schedule Conflict:</strong> An <b>approved</b> request already exists for this timeframe (${res.details.time}). Approval is to the discretion of the Science Laboratory Personnel.
+                                        <strong><i class="glyphicon glyphicon-warning-sign"></i> Schedule Conflict:</strong> An <b>approved</b> request already exists for this timeframe (${ralEsc(res.details.time)}). Approval is to the discretion of the Science Laboratory Personnel.
                                     </div>
                                 `).fadeIn();
                             } else if (res.conflict_type === 'pending') {
                                 $('#conflict-warning-container').html(`
                                     <div class="alert alert-warning" style="margin-bottom:0; padding:10px; border-radius:8px;">
-                                        <strong><i class="glyphicon glyphicon-warning-sign"></i> Pending Request Conflict:</strong> There is a pending request for this timeframe (${res.details.time} - ${res.details.subject}). Be aware when submitting.
+                                        <strong><i class="glyphicon glyphicon-warning-sign"></i> Pending Request Conflict:</strong> There is a pending request for this timeframe (${ralEsc(res.details.time)} - ${ralEsc(res.details.subject)}). Be aware when submitting.
                                     </div>
                                 `).fadeIn();
                             }
@@ -1432,10 +1432,10 @@
                     let seenUnits = new Set();
                     let unitOpts = '<option value="">Select Unit</option>';
                     subjects.forEach(s => {
-                        subjOpts += `<option value="${s.description}">${s.description}</option>`;
+                        subjOpts += `<option value="${ralEsc(s.description)}">${ralEsc(s.description)}</option>`;
                         if (!seenUnits.has(s.unit)) {
                             seenUnits.add(s.unit);
-                            unitOpts += `<option value="${s.unit}">${s.unit}</option>`;
+                            unitOpts += `<option value="${ralEsc(s.unit)}">${ralEsc(s.unit)}</option>`;
                         }
                     });
                     $('#subject_select').html(subjOpts).prop('disabled', false);
@@ -1490,13 +1490,13 @@
                 const select = $(this);
                 const current = select.val();
                 select.empty().append('<option value="">Select Student</option>');
-                students.forEach(s => select.append(`<option value="${s}" ${s === current ? 'selected' : ''}>${s}</option>`));
+                students.forEach(s => select.append(`<option value="${ralEsc(s)}" ${s === current ? 'selected' : ''}>${ralEsc(s)}</option>`));
             });
         }
 
         function populateStudentDropdownsByGrade(grade) {
             $.post('ajax/ajax_forms.php', { action: 'get_students_by_grade', grade }, function(students) {
-                const options = students.length ? students.map(s => `<option value="${s.name}">${s.name}</option>`).join('') : '';
+                const options = students.length ? students.map(s => `<option value="${ralEsc(s.name)}">${ralEsc(s.name)}</option>`).join('') : '';
                 $('.student-select').each(function() {
                     const current = $(this).val();
                     $(this).html('<option value="">Select Student</option>' + options).val(current);

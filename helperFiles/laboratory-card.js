@@ -25,9 +25,15 @@ const _isAdminMode = (typeof isAdmin !== 'undefined' && isAdmin) || window.locat
 
 /* ─── UTILITY: HTML ESCAPE ─────────────────────────────────── */
 function _escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str ?? '';
-    return div.innerHTML;
+    // Escapes quotes as well, so the result is safe inside "double-quoted" attributes
+    return String(str ?? '').replace(/[&<>"'`]/g, c => (
+        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;' }[c]
+    ));
+}
+
+/** A value as a JavaScript string literal for an inline handler: onclick="fn(${_jsArg(id)})". */
+function _jsArg(value) {
+    return _escapeHtml(JSON.stringify(String(value ?? '')));
 }
 
 /* ─── SHARED FRAGMENTS ─────────────────────────────────────── */
@@ -158,13 +164,12 @@ function _toggleSwitch(id, isAvailable) {
  * Admin action buttons: Edit + Remove.
  */
 function _actionButtons(id) {
-    const escapedId = _escapeHtml(String(id)).replace(/'/g, "\\'");
     return `
         <div class="lab-card__actions">
-            <button class="btn-liquid btn-liquid-info" onclick="openEditModal('${escapedId}')" title="Edit laboratory">
+            <button class="btn-liquid btn-liquid-info" onclick="openEditModal(${_jsArg(id)})" title="Edit laboratory">
                 <i class="bi bi-pencil me-1"></i>Edit
             </button>
-            <button class="btn-liquid btn-liquid-danger" onclick="openRemoveModal('${escapedId}')" title="Remove laboratory">
+            <button class="btn-liquid btn-liquid-danger" onclick="openRemoveModal(${_jsArg(id)})" title="Remove laboratory">
                 <i class="bi bi-trash me-1"></i>Remove
             </button>
         </div>`;
@@ -177,11 +182,10 @@ function _actionButtons(id) {
 function _requestButton(id, isAvailable) {
     const disabled = isAvailable ? '' : 'disabled';
     const label    = isAvailable ? '<i class="bi bi-calendar-plus me-1"></i>Request' : '<i class="bi bi-x-circle me-1"></i>Unavailable';
-    const escapedId = _escapeHtml(String(id)).replace(/'/g, "\\'");
     return `
         <button
             class="btn-lab-request"
-            onclick="requestLaboratory('${escapedId}')"
+            onclick="requestLaboratory(${_jsArg(id)})"
             ${disabled}
             title="${isAvailable ? 'Reserve this laboratory' : 'This laboratory is currently unavailable'}"
         >${label}</button>`;

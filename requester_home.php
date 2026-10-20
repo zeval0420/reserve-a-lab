@@ -445,7 +445,7 @@
                         const pending = pendingCounts[labName] || 0;
                         const pendingBadge = card.find('.lab-badge-pending');
                         if (pendingBadge.length) {
-                            pendingBadge.html(`<i class="bi bi-clock"></i> ${pending} pending`);
+                            pendingBadge.html(`<i class="bi bi-clock"></i> ${Number(pending) || 0} pending`);
                             pendingBadge.toggleClass('has-pending', pending > 0);
                         }
                     });
@@ -472,7 +472,7 @@
 
         function updateGalleryImage() {
             if (!galleryImages.length) return;
-            $('#galleryCarousel').html(`<img src="${galleryImages[currentIndex]}" alt="Lab Image" decoding="async">`);
+            $('#galleryCarousel').html(`<img src="${ralEsc(galleryImages[currentIndex])}" alt="Lab Image" decoding="async">`);
         }
 
         function nextImage() { if (galleryImages.length) { currentIndex = (currentIndex + 1) % galleryImages.length; updateGalleryImage(); } }

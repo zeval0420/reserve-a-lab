@@ -134,10 +134,10 @@
                 if (response && response.items) {
                     const serverItems = response.items.map(item => ({
                         type: 'warning',
-                        timestamp: item.submitted,
-                        message: `<strong>${item.requester}</strong> requested <strong>${item.lab}</strong>.<br><small>For ${item.date} ${item.time}</small>${item.flag ? `<span class="request-flag">FLAGGED &lt;3 days before use</span>` : ''}`,
+                        timestamp: ralEsc(item.submitted),
+                        message: `<strong>${ralEsc(item.requester)}</strong> requested <strong>${ralEsc(item.lab)}</strong>.<br><small>For ${ralEsc(item.date)} ${ralEsc(item.time)}</small>${item.flag ? `<span class="request-flag">FLAGGED &lt;3 days before use</span>` : ''}`,
                         source: 'server',
-                        link: `admin_approve.php?status=Pending&search=${item.id}`,
+                        link: `admin_approve.php?status=Pending&search=${encodeURIComponent(item.id)}`,
                         flag: item.flag ? 1 : 0
                     }));
                     displayItems = [...serverItems, ...displayItems];
@@ -155,13 +155,13 @@
         }
 
         container.innerHTML = filtered.map(item => {
-            const viewLink = item.link ? `<div style="margin-top:8px; text-align:right;"><a href="${item.link}" style="font-weight:600; text-decoration:none; color:inherit; font-size:12px; border-bottom:1px dotted currentColor;">Review Request &rarr;</a></div>` : '';
+            const viewLink = item.link ? `<div style="margin-top:8px; text-align:right;"><a href="${ralEsc(item.link)}" style="font-weight:600; text-decoration:none; color:inherit; font-size:12px; border-bottom:1px dotted currentColor;">Review Request &rarr;</a></div>` : '';
             const flagClass = item.flag ? ' flagged' : '';
             return `
-            <div class="ns-item ${item.type}${flagClass}">
+            <div class="ns-item ${ralEsc(item.type)}${flagClass}">
                 <div class="ns-item-header">
-                    <span>${item.type}</span>
-                    <span>${item.timestamp}</span>
+                    <span>${ralEsc(item.type)}</span>
+                    <span>${item.source === 'server' ? item.timestamp : ralEsc(item.timestamp)}</span>
                 </div>
                 <div class="ns-item-body">${item.message}${viewLink}</div>
             </div>

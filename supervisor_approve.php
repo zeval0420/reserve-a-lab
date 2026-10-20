@@ -1442,7 +1442,7 @@ function getStepIcon($class)
                                     Pending Conflict:
                                 </strong>
                                 There is another pending request for this timeframe
-                                (${res.details.time} - ${res.details.subject}).
+                                (${ralEsc(res.details.time)} - ${ralEsc(res.details.subject)}).
                             </div>
                         `);
 

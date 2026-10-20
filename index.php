@@ -13,6 +13,7 @@ if (isset($_POST['local_login']) && $_POST['local_login'] === 'true') {
     $u = $_POST['username'] ?? '';
     $p = $_POST['password'] ?? '';
     if ($u === 'admin.controller' && md5($p) === 'e63ff18bb1478deb7059c5bec3aeaa39') {
+        session_regenerate_id(true);
         $_SESSION['role'] = 'admin';
         $_SESSION['username'] = 'Admin Controller';
         $_SESSION['email'] = 'admin.controller@local';

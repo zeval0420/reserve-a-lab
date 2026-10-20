@@ -41,6 +41,7 @@ if (isset($_POST["action"]) && $_POST["action"] === "loginUser") {
              * Authentication successful. 
              * Populate session data with employee details for subsequent operations.
              */
+            session_regenerate_id(true);
             $_SESSION[$session_employeeID] = $user[$db_col_employeeID];
             $_SESSION[$session_email] = $user[$db_col_email];
             $_SESSION[$session_firstname] = $user[$db_col_firstname];
@@ -140,6 +141,7 @@ if (isset($_POST["action"]) && $_POST["action"] === "loginUser") {
          * Student authentication successful.
          * Establish the session state utilizing the verified student information.
          */
+        session_regenerate_id(true);
         $_SESSION[$session_employeeID] = $student['LRN'];
         $_SESSION[$session_email] = $student['studentEmail'];
         $_SESSION[$session_firstname] = $student[$db_col_firstname];
@@ -173,6 +175,7 @@ if (isset($_POST["action"]) && $_POST["action"] === "loginUser") {
         if ($hashedInput !== $new_user['password']) {
             echo "invalid_password";
         } else {
+            session_regenerate_id(true);
             $_SESSION[$session_role] = "guest";
             
             $resolvedEmail = '';
@@ -245,6 +248,7 @@ if (isset($_POST["action"]) && $_POST["action"] === "guestLogin") {
     $stmt->bind_param("sssssss", $userID, $firstname, $middlename, $lastname, $username, $password, $institution);
     
     if ($stmt->execute()) {
+        session_regenerate_id(true);
         $_SESSION[$session_role] = "guest";
         $_SESSION[$session_email] = $email;
         $_SESSION[$session_firstname] = $firstname;

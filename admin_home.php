@@ -466,7 +466,7 @@
                 <div class="lab-card__admin-actions">
                     <a href="admin_approve.php?status=Pending&search=${encodeURIComponent(lab.id)}"
                        class="btn-liquid" style="font-size:12px;">
-                        <i class="bi bi-clock me-1"></i>${lab.pendingRequests} Pending
+                        <i class="bi bi-clock me-1"></i>${Number(lab.pendingRequests) || 0} Pending
                     </a>
                     <button class="btn-liquid admin-edit-btn" data-scilab="${_escapeHtml(lab.id)}" style="font-size:12px;">
                         <i class="bi bi-pencil me-1"></i>Edit
@@ -604,7 +604,7 @@
             galleryImages = images;
             currentIndex = 0;
             if (isMain) {
-                $('#galleryCarousel').html(`<img src="${images[0]}" class="img-fluid rounded" alt="Main Lab Image" style="max-height:500px;" decoding="async">`);
+                $('#galleryCarousel').html(`<img src="${ralEsc(images[0])}" class="img-fluid rounded" alt="Main Lab Image" style="max-height:500px;" decoding="async">`);
             } else {
                 updateGalleryImage();
             }
@@ -614,7 +614,7 @@
 
         function updateGalleryImage() {
             if (!galleryImages.length) return;
-            $('#galleryCarousel').html(`<img src="${galleryImages[currentIndex]}" alt="Lab Image" decoding="async">`);
+            $('#galleryCarousel').html(`<img src="${ralEsc(galleryImages[currentIndex])}" alt="Lab Image" decoding="async">`);
         }
 
         function nextImage() { if (galleryImages.length) { currentIndex = (currentIndex + 1) % galleryImages.length; updateGalleryImage(); } }
@@ -651,9 +651,9 @@
                     const name = img.split('/').pop();
                     cont.append(`
                         <div class="image-wrapper">
-                            <img src="${img}" class="img-thumbnail shadow-sm" loading="lazy" decoding="async">
+                            <img src="${ralEsc(img)}" class="img-thumbnail shadow-sm" loading="lazy" decoding="async">
                             <button type="button" class="btn btn-sm btn-danger rounded-circle shadow delete-image-btn"
-                                data-img="${name}" title="Delete Image">
+                                data-img="${ralEsc(name)}" title="Delete Image">
                                 <i class="bi bi-x"></i>
                             </button>
                         </div>`);
