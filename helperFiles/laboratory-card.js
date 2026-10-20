@@ -95,7 +95,7 @@ function _eagerImageCount(variant) {
 }
 
 /**
- * Card image. When the page supplies WebP mirror URLs (imageWebp640 / imageWebp + imageWidth),
+ * Card image. When the page supplies WebP mirror URLs (imageWebp640 / imageWebp1280 / imageWebp + imageWidth),
  * renders <picture> with a WebP srcset and the original <img> as fallback; otherwise a plain <img>.
  * The <img> always keeps the class lab-card__image (pages bind the gallery click to it).
  * `index` is the card's position in the gallery: the first visible cards load eagerly and the
@@ -111,6 +111,7 @@ function _labImage(image, name, data, variant, index) {
 
     const candidates = [];
     if (data.imageWebp640) candidates.push(`${data.imageWebp640} 640w`);
+    if (data.imageWebp1280) candidates.push(`${data.imageWebp1280} 1280w`);
     if (w > 0) {
         const full = data.imageWebp || (data.imageWebp640 ? data.imageOriginal : null);
         if (full) candidates.push(`${full} ${w}w`);

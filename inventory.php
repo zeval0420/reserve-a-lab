@@ -550,9 +550,11 @@
                 if (dataTable) {
                     try { dataTable.destroy(); } catch (e) { /* ignore */ }
                 }
-                const tbody = $('#inventory-body');
-                tbody.empty();
+                $('#inventory-body').empty();
 
+                // Rows go to DataTables as data (same cell HTML as before) with deferRender, so only
+                // the rows on the visible page get DOM nodes instead of all of them at page load.
+                const rows = [];
                 if (allInventory[type] && allInventory[type].length !== 0) {
                     allInventory[type].forEach(item => {
                         if (item.classification !== type || item.status === 'Removed') return;
@@ -564,24 +566,30 @@
                         const qtyDisplay = isLow ? `<span class="text-danger" style="font-weight:bold;"><i class="bi bi-exclamation-triangle-fill"></i> ${item.quantity}</span>` : item.quantity;
                         const statusDisplay = isLow ? `<span class="badge badge-danger" style="background-color:#c0392b; color:#fff; padding: 4px 8px; border-radius: 4px;">Low Stock</span>` : item.status;
 
-                        const row = `
-                            <tr data-id="${item.id}">
-                                <td>${item.item}</td>
-                                <td>${item.productID}</td>
-                                <td>${item.description || ''}</td>
-                                <td data-quantity="${item.quantity}">${qtyDisplay}</td>
-                                <td>${item.unit}</td>
-                                <td data-status="${item.status}">${statusDisplay}</td>
-                                <td>
-                                    <button class="btn-liquid edit-btn" style="padding: 6px 12px;"><i class="bi bi-pencil"></i></button>
-                                    <button class="btn-liquid-danger delete-btn" style="padding: 6px 12px;"><i class="bi bi-trash"></i></button>
-                                </td>
-                            </tr>`;
-                        tbody.append(row);
+                        const row = [
+                            item.item,
+                            item.productID,
+                            item.description || '',
+                            qtyDisplay,
+                            item.unit,
+                            statusDisplay,
+                            `<button class="btn-liquid edit-btn" style="padding: 6px 12px;"><i class="bi bi-pencil"></i></button>
+                                    <button class="btn-liquid-danger delete-btn" style="padding: 6px 12px;"><i class="bi bi-trash"></i></button>`
+                        ];
+                        row.attrs = { id: item.id, quantity: item.quantity, status: item.status };
+                        rows.push(row);
                     });
                 }
 
                 dataTable = $('#inventory-table').DataTable({
+                    data: rows,
+                    deferRender: true,
+                    // the attributes edit mode, the edit/remove buttons and the scanner read from the row
+                    createdRow: function (tr, data) {
+                        $(tr).attr('data-id', data.attrs.id);
+                        $('td', tr).eq(3).attr('data-quantity', data.attrs.quantity);
+                        $('td', tr).eq(5).attr('data-status', data.attrs.status);
+                    },
                     language: {
                         emptyTable: "No " + type.toLowerCase() + (type !== "Equipment" ? "s" : "") + " in inventory."
                     },
@@ -1340,6 +1348,7 @@
                                 const d = this.data();
                                 if (d && d[1] && d[1].toString().trim() === code) {
                                     const node = this.node();
+                                    if (!node) return; // never drawn (deferRender)
                                     $(node).css('background-color', '#fff3cd');
                                     $('html, body').animate({ scrollTop: $(node).offset().top - 100 }, 600);
                                     setTimeout(() => $(node).css('background-color', ''), 2000);

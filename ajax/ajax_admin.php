@@ -296,7 +296,9 @@
         }
     }
 
-    if (isset($_FILES['galleryImages']) && isset($_POST['labName'])) {
+    // Gallery upload (admin_home.php, action upload_gallery_images). Files keep their own names in
+    // img/labimages/<lab>/; a name already taken gets a numbered suffix instead of overwriting.
+    if (isset($_POST['action']) && $_POST['action'] === 'upload_gallery_images' && isset($_POST['labName'])) {
         $labName = basename($_POST['labName']);
         $uploadDir = "../img/labimages/{$labName}/";
 
@@ -304,20 +306,30 @@
             mkdir($uploadDir, 0777, true);
         }
 
-        foreach ($_FILES['galleryImages']['tmp_name'] as $key => $tmp_name) {
-            $fileName = basename($_FILES['galleryImages']['name'][$key]);
-            $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-            if (!in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) continue;
+        if (isset($_FILES['galleryImages']) && is_array($_FILES['galleryImages']['tmp_name'])) {
+            foreach ($_FILES['galleryImages']['tmp_name'] as $key => $tmp_name) {
+                if ($_FILES['galleryImages']['error'][$key] !== UPLOAD_ERR_OK || !is_uploaded_file($tmp_name)) continue;
 
-            $targetPath = $uploadDir . $fileName;
-            if (move_uploaded_file($tmp_name, $targetPath)) {
-                ral_img_process_upload($targetPath);
+                $fileName = basename($_FILES['galleryImages']['name'][$key]);
+                $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+                if (!in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) continue;
+
+                $base = pathinfo($fileName, PATHINFO_FILENAME);
+                $targetPath = $uploadDir . $fileName;
+                for ($n = 2; file_exists($targetPath); $n++) {
+                    $targetPath = $uploadDir . "{$base}_{$n}.{$ext}";
+                }
+
+                if (move_uploaded_file($tmp_name, $targetPath)) {
+                    ral_img_process_upload($targetPath);
+                }
             }
         }
 
         echo json_encode(["status" => "success"]);
         exit;
     }
+
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         if ($_POST['action'] === 'get_lab_images' && isset($_POST['lab'])) {
             $lab = $_POST['lab'];
@@ -339,41 +351,6 @@
             exit;
         }
     }
-    if ($_POST['action'] === 'upload_gallery_images' && isset($_POST['labName'])) {
-        $lab = preg_replace('/[^a-zA-Z0-9_\-]/', '', $_POST['labName']);
-        $folder = "../img/labimages/$lab/";
-    
-        if (!file_exists($folder)) {
-            mkdir($folder, 0777, true);
-        }
-    
-        if (isset($_FILES['galleryImages']) && is_array($_FILES['galleryImages']['tmp_name'])) {
-            foreach ($_FILES['galleryImages']['tmp_name'] as $i => $tmpPath) {
-                $originalName = $_FILES['galleryImages']['name'][$i];
-                $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
-    
-                if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif'])) {
-                    $uniqueName = $lab . '_' . time() . '_' . bin2hex(random_bytes(3)) . '.' . $ext;
-                    $targetPath = $folder . $uniqueName;
-    
-                    if (is_uploaded_file($tmpPath)) {
-                        if (move_uploaded_file($tmpPath, $targetPath)) {
-                            error_log("Uploaded: $uniqueName");
-                            ral_img_process_upload($targetPath);
-                        } else {
-                            error_log("Failed to move file to: $targetPath");
-                        }
-                    } else {
-                        error_log("Not a valid uploaded file: $tmpPath");
-                    }
-                }
-            }
-        }
-    
-        echo 'success';
-        exit;
-    }    
-    
     if ($_POST['action'] === 'delete_gallery_image' && isset($_POST['labName'], $_POST['fileName'])) {
         $lab = basename($_POST['labName']);
         $file = basename($_POST['fileName']);

@@ -87,6 +87,17 @@ if (isset($_SESSION['role'])) {
             unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
         }
 
+        /* Local Arial resized to Inter's metrics (advance widths, ascent, descent), shown until Inter
+           arrives, so the swap does not move the card. */
+        @font-face {
+            font-family: 'Inter Fallback';
+            src: local('Arial'), local('ArialMT');
+            size-adjust: 105.6%;
+            ascent-override: 91.7%;
+            descent-override: 22.8%;
+            line-gap-override: 0%;
+        }
+
         /* latin-ext */
         @font-face {
             font-family: 'Playfair Display';
@@ -151,7 +162,7 @@ if (isset($_SESSION['role'])) {
         html,
         body {
             height: 100%;
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            font-family: 'Inter', 'Inter Fallback', system-ui, -apple-system, sans-serif;
             background: var(--bg-page);
             color: var(--text-primary);
             -webkit-font-smoothing: antialiased;

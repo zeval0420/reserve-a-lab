@@ -157,6 +157,9 @@
             }
             .form-title h4 { color: white; font-size: 2.7rem; font-weight: bold; }
             .container { flex: 1; }
+            /* body is a flex column, so Bootstrap's auto side margins shrink a width:auto .container
+               to its content: on phones it widened (layout shift) once the material rows were added */
+            @media (max-width: 767px) { .container { width: 100%; } }
             .form-container {
                 background-color: white; padding: 30px; margin: 20px 0 60px;
                 border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.07);
@@ -1458,18 +1461,17 @@
             let currentDisabledDates = [];
             const today = new Date().toISOString().split('T')[0];
             const datepicker = document.getElementById('datepicker');
-            const sessionDate = "<?php echo $_SESSION['selected_date'] ?? ''; ?>";
+            const sessionDate = <?= json_encode((string) ($_SESSION['selected_date'] ?? ''), JSON_HEX_TAG) ?>;
 
             function dateInputHandler() {
                 if(currentDisabledDates.includes(this.value)) { showToast('This date is unavailable for the selected venue.', 'warning'); this.value=''; }
             }
 
-            document.addEventListener('DOMContentLoaded', function() {
-                datepicker.setAttribute('min', today);
-                datepicker.value = sessionDate && sessionDate >= today ? sessionDate : '';
-                datepicker.addEventListener('input', dateInputHandler);
-                loadDisabledDates($('#venue_select').val());
-            });
+            // Already inside jQuery's ready handler, so this runs now (a DOMContentLoaded listener added here never fired).
+            datepicker.setAttribute('min', today);
+            datepicker.value = sessionDate && sessionDate >= today ? sessionDate : '';
+            datepicker.addEventListener('input', dateInputHandler);
+            loadDisabledDates($('#venue_select').val());
 
             $('#venue_select').on('change', function() { datepicker.value=''; loadDisabledDates($(this).val()); });
 
