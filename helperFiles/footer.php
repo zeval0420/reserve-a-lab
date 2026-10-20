@@ -23,7 +23,7 @@
 
             <!-- Column 3: Center logo -->
             <div class="col-12 col-md-2 mb-2 mb-md-0 footer-logo-col" style="padding-top: 15px;">
-                <img src="img/logo.png" alt="PSHS Logo" class="footer-logo">
+                <img src="img/logo.png" alt="PSHS Logo" class="footer-logo" width="70" height="70" loading="lazy" decoding="async">
             </div>
 
             <!-- Column 4: Contact and About -->

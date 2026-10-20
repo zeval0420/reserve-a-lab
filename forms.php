@@ -143,7 +143,10 @@
 <html>
     <head>
         <title>Request Form</title>
+        <?php $pageAssets = ['multiselect']; ?>
         <?php include('helperFiles/headData.php'); ?>
+        <!-- The .form-title background is the LCP element; it is only discovered after layout, so fetch it early. -->
+        <link rel="preload" href="img/laboratoryBackground.jpg" as="image" fetchpriority="high">
 
         <style>
             :root { --main-blue: #2B55C4; }
@@ -176,6 +179,10 @@
             /* Multiselect consistency */
             .form-group .multiselect-native-select .btn-group, 
             .form-group .btn-group { width: 100%; }
+            /* Before bootstrap-multiselect runs (at document ready) these native multi-selects render as
+               tall list boxes, then collapse to the 38px button and shift the form up (CLS). Give them the
+               button's height up front. The plugin hides them with an inline display:none afterwards. */
+            #sections-checkboxes, #teacher-checkboxes { display: block; width: 100%; height: 38px; }
             button.multiselect {
                 width: 100%; text-align: left; 
                 background: linear-gradient(135deg, rgba(43, 85, 196, 0.05), rgba(43, 85, 196, 0.15)) !important;

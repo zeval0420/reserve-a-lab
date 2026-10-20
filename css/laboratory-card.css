@@ -743,3 +743,9 @@
         justify-content: flex-end;
     }
 }
+
+/* <picture> wrapper around card images (WebP srcset): generates no box of its own,
+   so the <img> is laid out exactly as when it was a direct child of the image wrap. */
+.lab-card__picture {
+    display: contents;
+}

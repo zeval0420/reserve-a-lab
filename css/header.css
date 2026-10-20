@@ -34,6 +34,7 @@
    gap above handles spacing without breaking markup */
 .logo {
     height: 60px;
+    width: auto; /* keeps the image ratio: the width/height attributes only reserve space */
     flex-shrink: 0;
     /* REMOVED float: used flex on #banner instead;
        float: left on img retained from original inline style,

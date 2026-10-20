@@ -64,11 +64,49 @@ if (isset($_SESSION['role'])) {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Reserve-a-Lab · PSHS-IRC</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap"
-        rel="stylesheet" />
+    <!-- Self-hosted fonts (same files Google Fonts served: variable woff2, latin + latin-ext) -->
+    <link rel="preload" href="assets/fonts/playfair-display/playfair-display-v40-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <style>
+        /* latin-ext */
+        @font-face {
+            font-family: 'Inter';
+            font-style: normal;
+            font-weight: 300 700;
+            font-display: swap;
+            src: url(assets/fonts/inter/inter-v20-latin-ext.woff2) format('woff2');
+            unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+        }
+
+        /* latin */
+        @font-face {
+            font-family: 'Inter';
+            font-style: normal;
+            font-weight: 300 700;
+            font-display: swap;
+            src: url(assets/fonts/inter/inter-v20-latin.woff2) format('woff2');
+            unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+        }
+
+        /* latin-ext */
+        @font-face {
+            font-family: 'Playfair Display';
+            font-style: normal;
+            font-weight: 600 700;
+            font-display: swap;
+            src: url(assets/fonts/playfair-display/playfair-display-v40-latin-ext.woff2) format('woff2');
+            unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+        }
+
+        /* latin */
+        @font-face {
+            font-family: 'Playfair Display';
+            font-style: normal;
+            font-weight: 600 700;
+            font-display: swap;
+            src: url(assets/fonts/playfair-display/playfair-display-v40-latin.woff2) format('woff2');
+            unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+        }
+    </style>
     <style>
         /* ─────────────────────────────────────────
        DESIGN TOKENS & SYSTEM VARIABLES
@@ -203,14 +241,14 @@ if (isset($_SESSION['role'])) {
                 animation: panel-entrance 0.7s var(--transition) both;
             }
 
+            /* Transform-only entrance: starting from opacity 0 hid all content from the
+               first paint (Lighthouse NO_FCP on mobile, late LCP on desktop). */
             @keyframes panel-entrance {
                 from {
-                    opacity: 0;
                     transform: translateX(30px) scale(0.98);
                 }
 
                 to {
-                    opacity: 1;
                     transform: translateX(0) scale(1);
                 }
             }
@@ -281,14 +319,13 @@ if (isset($_SESSION['role'])) {
             animation: card-entrance 0.6s var(--transition) both;
         }
 
+        /* Transform-only entrance (see panel-entrance): content is visible from the first paint. */
         @keyframes card-entrance {
             from {
-                opacity: 0;
                 transform: translateY(20px) scale(0.98);
             }
 
             to {
-                opacity: 1;
                 transform: translateY(0) scale(1);
             }
         }
@@ -800,7 +837,7 @@ if (isset($_SESSION['role'])) {
 
                         <div class="institution" aria-label="Institution Profile">
                             <div class="logo-circle" aria-hidden="true">
-                                <img src="img/logo.png" alt="Philippine Science High School Logo"
+                                <img src="img/logo.png" alt="Philippine Science High School Logo" width="60" height="60"
                                     style="width: 100%; height: 100%; object-fit: contain;">
                             </div>
                             <div class="institution-text">

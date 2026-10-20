@@ -7,6 +7,7 @@
 <html>
     <head>
         <title>Reset Password</title>
+        <?php $pageAssets = []; ?>
         <?php include('helperFiles/headData.php'); ?>
         <style>
             body {

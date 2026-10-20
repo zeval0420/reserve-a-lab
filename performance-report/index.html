@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Performance Report</title>
+<style>
+:root{--bg:#f6f7fb;--card:#fff;--ink:#14182b;--muted:#5b6478;--line:#e3e6ef;--accent:#0036af;--before:#b8c0d4;--good:#137a3f;--good-bg:#e5f5ec;--ok:#8a5a00;--ok-bg:#fdf1d9;--bad:#b42318;--bad-bg:#fde8e7}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1220;--card:#171b2e;--ink:#e8eaf3;--muted:#a1a8bd;--line:#2a3050;--accent:#7aa2ff;--before:#4a5272;--good:#5fd28f;--good-bg:#12301f;--ok:#f2c05c;--ok-bg:#33280f;--bad:#ff8a80;--bad-bg:#3a1514}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1180px;margin:0 auto;padding:32px 16px 64px}
+h1{font-size:28px;margin:0 0 4px}h2{font-size:20px;margin:40px 0 10px}h3{font-size:16px;margin:20px 0 8px}
+.sub{color:var(--muted);margin:0 0 24px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+.kpi .k{color:var(--muted);font-size:13px}.kpi .v{font-size:26px;font-weight:700;margin-top:4px}.kpi .v small{font-size:15px;color:var(--muted);font-weight:500}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:12px}
+.tablewrap{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:760px;font-size:14px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}thead th{color:var(--muted);font-weight:600;font-size:13px}
+tbody th{font-weight:600}td b{font-weight:650}
+.pill{display:inline-block;min-width:34px;text-align:center;padding:1px 8px;border-radius:999px;font-weight:650;font-size:13px}
+.pill.good{background:var(--good-bg);color:var(--good)}.pill.ok{background:var(--ok-bg);color:var(--ok)}.pill.bad{background:var(--bad-bg);color:var(--bad)}
+.d{font-size:12px;margin-left:4px}.d.up{color:var(--good)}.d.down{color:var(--bad)}.d.same{color:var(--muted)}
+.links a{color:var(--accent);margin-right:6px}
+svg{width:100%;height:auto;display:block}svg .grid{stroke:var(--line)}svg .axis,svg .val{fill:var(--muted);font-size:11px}svg .val.strong{fill:var(--ink);font-weight:650}svg .lbl{fill:var(--ink);font-size:13px}
+svg .bar-b{fill:var(--before)}svg .bar-a{fill:var(--accent)}
+.legend{display:flex;gap:16px;color:var(--muted);font-size:13px;margin-bottom:8px}.legend i{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+details{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-top:10px}summary{cursor:pointer;padding:12px 16px;font-weight:600}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 16px 16px}figure{margin:0}figcaption{color:var(--muted);font-size:13px;margin-bottom:6px}
+.pair img{width:100%;max-height:520px;object-fit:cover;object-position:top;border:1px solid var(--line);border-radius:8px;background:#fff}
+ul{margin:6px 0 0;padding-left:20px}li{margin:4px 0}code{font-size:13px;background:var(--bg);padding:1px 5px;border-radius:4px}
+.note{color:var(--muted);font-size:13px}
+@media (max-width:640px){.pair{grid-template-columns:1fr}h1{font-size:23px}}
+</style></head><body><main>
+<h1>Reserve-a-Lab performance report</h1>
+<p class="sub">Branch perf/lighthouse-optimization, measured on local XAMPP on 19 October 2026 with Lighthouse 12.8 and Playwright 1.64 (Chrome). Same 9 pages, same test accounts and same request (ID 48) before and after.</p>
+
+<div class="kpis">
+  <div class="kpi"><div class="k">Average mobile Lighthouse score</div><div class="v">61 → 86 <small>/ 100</small></div></div>
+  <div class="kpi"><div class="k">Average mobile LCP</div><div class="v">8.7 s → 3.7 s</div></div>
+  <div class="kpi"><div class="k">All 9 pages, total download</div><div class="v">14.3 MB → 3.5 MB</div></div>
+  <div class="kpi"><div class="k">Slow connection, average full load</div><div class="v">8.9 s → 2.2 s</div></div>
+</div>
+<p class="note">Mobile averages cover the 8 pages Lighthouse could score both times. The login page is left out of them: it could not be scored on mobile before (Lighthouse error NO_FCP) and scores 100 now.</p>
+
+<h2>Mobile performance score per page</h2>
+<div class="card"><div class="legend"><span><i style="background:var(--before)"></i>Before</span><span><i style="background:var(--accent)"></i>After</span></div><svg viewBox="0 0 760 344" role="img" aria-label="Mobile Lighthouse performance score per page, before and after"><line x1="150" x2="150" y1="22" y2="334" class="grid"/><text x="150" y="16" class="axis" text-anchor="middle">0</text><line x1="292.5" x2="292.5" y1="22" y2="334" class="grid"/><text x="292.5" y="16" class="axis" text-anchor="middle">25</text><line x1="435" x2="435" y1="22" y2="334" class="grid"/><text x="435" y="16" class="axis" text-anchor="middle">50</text><line x1="577.5" x2="577.5" y1="22" y2="334" class="grid"/><text x="577.5" y="16" class="axis" text-anchor="middle">75</text><line x1="720" x2="720" y1="22" y2="334" class="grid"/><text x="720" y="16" class="axis" text-anchor="middle">100</text><text x="140" y="45" class="lbl" text-anchor="end">Login</text><rect x="150" y="31" width="0" height="11" rx="2" class="bar-b"><title>Before: failed (NO_FCP)</title></rect><text x="155" y="40" class="val">failed</text><rect x="150" y="45" width="570" height="11" rx="2" class="bar-a"><title>After: 100</title></rect><text x="725" y="54" class="val strong">100</text><text x="140" y="79" class="lbl" text-anchor="end">About</text><rect x="150" y="65" width="302.1" height="11" rx="2" class="bar-b"><title>Before: 53</title></rect><text x="457.1" y="74" class="val">53</text><rect x="150" y="79" width="438.9000000000001" height="11" rx="2" class="bar-a"><title>After: 77</title></rect><text x="593.9000000000001" y="88" class="val strong">77</text><text x="140" y="113" class="lbl" text-anchor="end">Requester home</text><rect x="150" y="99" width="347.7" height="11" rx="2" class="bar-b"><title>Before: 61</title></rect><text x="502.7" y="108" class="val">61</text><rect x="150" y="113" width="484.5" height="11" rx="2" class="bar-a"><title>After: 85</title></rect><text x="639.5" y="122" class="val strong">85</text><text x="140" y="147" class="lbl" text-anchor="end">Request form</text><rect x="150" y="133" width="347.7" height="11" rx="2" class="bar-b"><title>Before: 61</title></rect><text x="502.7" y="142" class="val">61</text><rect x="150" y="147" width="507.29999999999995" height="11" rx="2" class="bar-a"><title>After: 89</title></rect><text x="662.3" y="156" class="val strong">89</text><text x="140" y="181" class="lbl" text-anchor="end">Request tracker</text><rect x="150" y="167" width="364.79999999999995" height="11" rx="2" class="bar-b"><title>Before: 64</title></rect><text x="519.8" y="176" class="val">64</text><rect x="150" y="181" width="501.6" height="11" rx="2" class="bar-a"><title>After: 88</title></rect><text x="656.6" y="190" class="val strong">88</text><text x="140" y="215" class="lbl" text-anchor="end">Teacher approval</text><rect x="150" y="201" width="359.1" height="11" rx="2" class="bar-b"><title>Before: 63</title></rect><text x="514.1" y="210" class="val">63</text><rect x="150" y="215" width="524.4" height="11" rx="2" class="bar-a"><title>After: 92</title></rect><text x="679.4" y="224" class="val strong">92</text><text x="140" y="249" class="lbl" text-anchor="end">Admin home</text><rect x="150" y="235" width="347.7" height="11" rx="2" class="bar-b"><title>Before: 61</title></rect><text x="502.7" y="244" class="val">61</text><rect x="150" y="249" width="478.79999999999995" height="11" rx="2" class="bar-a"><title>After: 84</title></rect><text x="633.8" y="258" class="val strong">84</text><text x="140" y="283" class="lbl" text-anchor="end">Admin approvals</text><rect x="150" y="269" width="353.4" height="11" rx="2" class="bar-b"><title>Before: 62</title></rect><text x="508.4" y="278" class="val">62</text><rect x="150" y="283" width="501.6" height="11" rx="2" class="bar-a"><title>After: 88</title></rect><text x="656.6" y="292" class="val strong">88</text><text x="140" y="317" class="lbl" text-anchor="end">Inventory</text><rect x="150" y="303" width="353.4" height="11" rx="2" class="bar-b"><title>Before: 62</title></rect><text x="508.4" y="312" class="val">62</text><rect x="150" y="317" width="484.5" height="11" rx="2" class="bar-a"><title>After: 85</title></rect><text x="639.5" y="326" class="val strong">85</text></svg></div>
+
+<h2>Lighthouse, mobile</h2>
+<p class="note">Simulated mid-range phone on a slow 4G connection (Lighthouse default). Median of 3 runs per page.</p>
+<div class="card"><div class="tablewrap"><table><thead><tr><th>Page</th><th>Score</th><th>FCP</th><th>LCP</th><th>TBT</th><th>CLS</th><th>Page weight</th><th>Requests</th><th>Reports</th></tr></thead><tbody><tr><th scope="row">Login</th>
+      <td><span class="pill bad" title="NO_FCP">failed</span> → <span class="pill good">100</span></td>
+      <td>— → <b>1.1 s</b></td>
+      <td>— → <b>1.5 s</b> </td>
+      <td>— → <b>0</b> ms</td>
+      <td>— → <b>0.009</b></td>
+      <td>— → <b>140 KB</b></td>
+      <td>— → <b>5</b></td>
+      <td class="links"><a href="lighthouse/before.login.mobile.html">before</a> <a href="lighthouse/after.login.mobile.html">after</a></td></tr><tr><th scope="row">About</th>
+      <td><span class="pill ok">53</span> → <span class="pill ok">77</span></td>
+      <td>4.8 s → <b>2.4 s</b></td>
+      <td>17.7 s → <b>5.5 s</b> <span class="d up">−12.2 s</span></td>
+      <td>345 → <b>0</b> ms</td>
+      <td>0 → <b>0</b></td>
+      <td>6.3 MB → <b>979 KB</b></td>
+      <td>52 → <b>20</b></td>
+      <td class="links"><a href="lighthouse/before.about.mobile.html">before</a> <a href="lighthouse/after.about.mobile.html">after</a></td></tr><tr><th scope="row">Requester home</th>
+      <td><span class="pill ok">61</span> → <span class="pill ok">85</span></td>
+      <td>4.5 s → <b>2.3 s</b></td>
+      <td>8.2 s → <b>4.0 s</b> <span class="d up">−4.3 s</span></td>
+      <td>123 → <b>0</b> ms</td>
+      <td>0 → <b>0</b></td>
+      <td>1.4 MB → <b>656 KB</b></td>
+      <td>42 → <b>26</b></td>
+      <td class="links"><a href="lighthouse/before.requester_home.mobile.html">before</a> <a href="lighthouse/after.requester_home.mobile.html">after</a></td></tr><tr><th scope="row">Request form</th>
+      <td><span class="pill ok">61</span> → <span class="pill ok">89</span></td>
+      <td>5.3 s → <b>2.7 s</b></td>
+      <td>7.5 s → <b>3.2 s</b> <span class="d up">−4.3 s</span></td>
+      <td>124 → <b>0</b> ms</td>
+      <td>0 → <b>0.018</b></td>
+      <td>1.0 MB → <b>346 KB</b></td>
+      <td>34 → <b>19</b></td>
+      <td class="links"><a href="lighthouse/before.forms.mobile.html">before</a> <a href="lighthouse/after.forms.mobile.html">after</a></td></tr><tr><th scope="row">Request tracker</th>
+      <td><span class="pill ok">64</span> → <span class="pill ok">88</span></td>
+      <td>4.5 s → <b>2.9 s</b></td>
+      <td>6.5 s → <b>3.2 s</b> <span class="d up">−3.3 s</span></td>
+      <td>77 → <b>0</b> ms</td>
+      <td>0 → <b>0</b></td>
+      <td>859 KB → <b>319 KB</b></td>
+      <td>29 → <b>21</b></td>
+      <td class="links"><a href="lighthouse/before.requests.mobile.html">before</a> <a href="lighthouse/after.requests.mobile.html">after</a></td></tr><tr><th scope="row">Teacher approval</th>
+      <td><span class="pill ok">63</span> → <span class="pill good">92</span></td>
+      <td>4.8 s → <b>2.6 s</b></td>
+      <td>6.9 s → <b>2.9 s</b> <span class="d up">−4.1 s</span></td>
+      <td>0 → <b>0</b> ms</td>
+      <td>0 → <b>0</b></td>
+      <td>901 KB → <b>305 KB</b></td>
+      <td>31 → <b>14</b></td>
+      <td class="links"><a href="lighthouse/before.supervisor_approve.mobile.html">before</a> <a href="lighthouse/after.supervisor_approve.mobile.html">after</a></td></tr><tr><th scope="row">Admin home</th>
+      <td><span class="pill ok">61</span> → <span class="pill ok">84</span></td>
+      <td>4.6 s → <b>2.4 s</b></td>
+      <td>8.4 s → <b>4.0 s</b> <span class="d up">−4.4 s</span></td>
+      <td>103 → <b>0</b> ms</td>
+      <td>0 → <b>0</b></td>
+      <td>1.4 MB → <b>658 KB</b></td>
+      <td>41 → <b>25</b></td>
+      <td class="links"><a href="lighthouse/before.admin_home.mobile.html">before</a> <a href="lighthouse/after.admin_home.mobile.html">after</a></td></tr><tr><th scope="row">Admin approvals</th>
+      <td><span class="pill ok">62</span> → <span class="pill ok">88</span></td>
+      <td>4.8 s → <b>2.9 s</b></td>
+      <td>6.9 s → <b>3.2 s</b> <span class="d up">−3.7 s</span></td>
+      <td>132 → <b>0</b> ms</td>
+      <td>0 → <b>0</b></td>
+      <td>902 KB → <b>332 KB</b></td>
+      <td>30 → <b>23</b></td>
+      <td class="links"><a href="lighthouse/before.admin_approve.mobile.html">before</a> <a href="lighthouse/after.admin_approve.mobile.html">after</a></td></tr><tr><th scope="row">Inventory</th>
+      <td><span class="pill ok">62</span> → <span class="pill ok">85</span></td>
+      <td>5.2 s → <b>2.9 s</b></td>
+      <td>7.2 s → <b>3.5 s</b> <span class="d up">−3.7 s</span></td>
+      <td>78 → <b>133</b> ms</td>
+      <td>0 → <b>0</b></td>
+      <td>1008 KB → <b>380 KB</b></td>
+      <td>30 → <b>23</b></td>
+      <td class="links"><a href="lighthouse/before.inventory.mobile.html">before</a> <a href="lighthouse/after.inventory.mobile.html">after</a></td></tr></tbody></table></div></div>
+<h2>Lighthouse, desktop</h2>
+<div class="card"><div class="tablewrap"><table><thead><tr><th>Page</th><th>Score</th><th>FCP</th><th>LCP</th><th>TBT</th><th>CLS</th><th>Page weight</th><th>Requests</th><th>Reports</th></tr></thead><tbody><tr><th scope="row">Login</th>
+      <td><span class="pill good">94</span> → <span class="pill good">100</span></td>
+      <td>1.2 s → <b>0.3 s</b></td>
+      <td>1.2 s → <b>0.3 s</b> <span class="d up">−0.9 s</span></td>
+      <td>0 → <b>0</b> ms</td>
+      <td>0 → <b>0.002</b></td>
+      <td>425 KB → <b>140 KB</b></td>
+      <td>7 → <b>6</b></td>
+      <td class="links"><a href="lighthouse/before.login.desktop.html">before</a> <a href="lighthouse/after.login.desktop.html">after</a></td></tr><tr><th scope="row">About</th>
+      <td><span class="pill ok">83</span> → <span class="pill good">99</span></td>
+      <td>1.2 s → <b>0.5 s</b></td>
+      <td>2.6 s → <b>1.0 s</b> <span class="d up">−1.6 s</span></td>
+      <td>0 → <b>0</b> ms</td>
+      <td>0 → <b>0</b></td>
+      <td>6.3 MB → <b>979 KB</b></td>
+      <td>52 → <b>20</b></td>
+      <td class="links"><a href="lighthouse/before.about.desktop.html">before</a> <a href="lighthouse/after.about.desktop.html">after</a></td></tr><tr><th scope="row">Requester home</th>
+      <td><span class="pill ok">89</span> → <span class="pill good">100</span></td>
+      <td>1.1 s → <b>0.5 s</b></td>
+      <td>1.9 s → <b>0.7 s</b> <span class="d up">−1.2 s</span></td>
+      <td>0 → <b>0</b> ms</td>
+      <td>0 → <b>0</b></td>
+      <td>1.5 MB → <b>377 KB</b></td>
+      <td>43 → <b>27</b></td>
+      <td class="links"><a href="lighthouse/before.requester_home.desktop.html">before</a> <a href="lighthouse/after.requester_home.desktop.html">after</a></td></tr><tr><th scope="row">Request form</th>
+      <td><span class="pill good">91</span> → <span class="pill good">100</span></td>
+      <td>1.2 s → <b>0.6 s</b></td>
+      <td>1.6 s → <b>0.7 s</b> <span class="d up">−0.9 s</span></td>
+      <td>0 → <b>0</b> ms</td>
+      <td>0.022 → <b>0.001</b></td>
+      <td>1.0 MB → <b>346 KB</b></td>
+      <td>34 → <b>19</b></td>
+      <td class="links"><a href="lighthouse/before.forms.desktop.html">before</a> <a href="lighthouse/after.forms.desktop.html">after</a></td></tr><tr><th scope="row">Request tracker</th>
+      <td><span class="pill good">93</span> → <span class="pill good">100</span></td>
+      <td>1.1 s → <b>0.6 s</b></td>
+      <td>1.4 s → <b>0.7 s</b> <span class="d up">−0.7 s</span></td>
+      <td>0 → <b>0</b> ms</td>
+      <td>0.001 → <b>0</b></td>
+      <td>859 KB → <b>319 KB</b></td>
+      <td>29 → <b>21</b></td>
+      <td class="links"><a href="lighthouse/before.requests.desktop.html">before</a> <a href="lighthouse/after.requests.desktop.html">after</a></td></tr><tr><th scope="row">Teacher approval</th>
+      <td><span class="pill good">92</span> → <span class="pill good">100</span></td>
+      <td>1.2 s → <b>0.6 s</b></td>
+      <td>1.5 s → <b>0.6 s</b> <span class="d up">−0.8 s</span></td>
+      <td>0 → <b>0</b> ms</td>
+      <td>0 → <b>0</b></td>
+      <td>901 KB → <b>305 KB</b></td>
+      <td>31 → <b>14</b></td>
+      <td class="links"><a href="lighthouse/before.supervisor_approve.desktop.html">before</a> <a href="lighthouse/after.supervisor_approve.desktop.html">after</a></td></tr><tr><th scope="row">Admin home</th>
+      <td><span class="pill good">92</span> → <span class="pill good">100</span></td>
+      <td>1.1 s → <b>0.5 s</b></td>
+      <td>1.7 s → <b>0.7 s</b> <span class="d up">−1.0 s</span></td>
+      <td>0 → <b>0</b> ms</td>
+      <td>0 → <b>0</b></td>
+      <td>1.5 MB → <b>379 KB</b></td>
+      <td>42 → <b>26</b></td>
+      <td class="links"><a href="lighthouse/before.admin_home.desktop.html">before</a> <a href="lighthouse/after.admin_home.desktop.html">after</a></td></tr><tr><th scope="row">Admin approvals</th>
+      <td><span class="pill good">93</span> → <span class="pill good">100</span></td>
+      <td>1.1 s → <b>0.6 s</b></td>
+      <td>1.4 s → <b>0.7 s</b> <span class="d up">−0.8 s</span></td>
+      <td>0 → <b>0</b> ms</td>
+      <td>0.002 → <b>0</b></td>
+      <td>902 KB → <b>332 KB</b></td>
+      <td>30 → <b>23</b></td>
+      <td class="links"><a href="lighthouse/before.admin_approve.desktop.html">before</a> <a href="lighthouse/after.admin_approve.desktop.html">after</a></td></tr><tr><th scope="row">Inventory</th>
+      <td><span class="pill good">92</span> → <span class="pill good">100</span></td>
+      <td>1.2 s → <b>0.6 s</b></td>
+      <td>1.5 s → <b>0.7 s</b> <span class="d up">−0.8 s</span></td>
+      <td>0 → <b>0</b> ms</td>
+      <td>0.002 → <b>0</b></td>
+      <td>1008 KB → <b>380 KB</b></td>
+      <td>30 → <b>23</b></td>
+      <td class="links"><a href="lighthouse/before.inventory.desktop.html">before</a> <a href="lighthouse/after.inventory.desktop.html">after</a></td></tr></tbody></table></div></div>
+
+<h2>Real slow-connection test</h2>
+<p class="note">Chrome with real throttling: 1.6 Mbps down, 750 Kbps up, 150 ms latency, CPU slowed 4×, empty cache, 390 px phone screen.</p>
+<div class="card"><div class="tablewrap"><table><thead><tr><th>Page</th><th>First paint (FCP)</th><th>Main content (LCP)</th><th>Fully loaded</th><th>Downloaded</th><th>Requests</th></tr></thead><tbody><tr><th scope="row">Login</th>
+      <td>1.6 s → <b>0.5 s</b></td>
+      <td>1.8 s → <b>0.5 s</b> <span class="d up">−1.2 s</span></td>
+      <td>2.1 s → <b>0.9 s</b> <span class="d up">−1.3 s</span></td>
+      <td>339 KB → <b>140 KB</b></td>
+      <td>4 → <b>5</b></td></tr><tr><th scope="row">About</th>
+      <td>4.7 s → <b>1.7 s</b></td>
+      <td>16.2 s → <b>3.2 s</b> <span class="d up">−13.0 s</span></td>
+      <td>31.8 s → <b>3.2 s</b> <span class="d up">−28.6 s</span></td>
+      <td>6.3 MB → <b>594 KB</b></td>
+      <td>50 → <b>17</b></td></tr><tr><th scope="row">Requester home</th>
+      <td>3.6 s → <b>1.4 s</b></td>
+      <td>3.6 s → <b>2.0 s</b> <span class="d up">−1.6 s</span></td>
+      <td>6.7 s → <b>2.3 s</b> <span class="d up">−4.3 s</span></td>
+      <td>636 KB → <b>371 KB</b></td>
+      <td>31 → <b>22</b></td></tr><tr><th scope="row">Request form</th>
+      <td>3.2 s → <b>1.6 s</b></td>
+      <td>6.2 s → <b>1.6 s</b> <span class="d up">−4.6 s</span></td>
+      <td>7.0 s → <b>2.2 s</b> <span class="d up">−4.9 s</span></td>
+      <td>758 KB → <b>358 KB</b></td>
+      <td>27 → <b>16</b></td></tr><tr><th scope="row">Request tracker</th>
+      <td>3.9 s → <b>1.7 s</b></td>
+      <td>6.1 s → <b>1.7 s</b> <span class="d up">−4.3 s</span></td>
+      <td>6.2 s → <b>2.2 s</b> <span class="d up">−4.0 s</span></td>
+      <td>607 KB → <b>331 KB</b></td>
+      <td>26 → <b>21</b></td></tr><tr><th scope="row">Teacher approval</th>
+      <td>3.7 s → <b>1.5 s</b></td>
+      <td>5.5 s → <b>1.5 s</b> <span class="d up">−4.0 s</span></td>
+      <td>7.6 s → <b>2.0 s</b> <span class="d up">−5.6 s</span></td>
+      <td>870 KB → <b>317 KB</b></td>
+      <td>28 → <b>14</b></td></tr><tr><th scope="row">Admin home</th>
+      <td>3.1 s → <b>1.3 s</b></td>
+      <td>3.1 s → <b>1.9 s</b> <span class="d up">−1.2 s</span></td>
+      <td>5.6 s → <b>2.3 s</b> <span class="d up">−3.3 s</span></td>
+      <td>650 KB → <b>373 KB</b></td>
+      <td>31 → <b>22</b></td></tr><tr><th scope="row">Admin approvals</th>
+      <td>2.8 s → <b>1.7 s</b></td>
+      <td>5.3 s → <b>1.7 s</b> <span class="d up">−3.6 s</span></td>
+      <td>5.9 s → <b>2.2 s</b> <span class="d up">−3.8 s</span></td>
+      <td>649 KB → <b>344 KB</b></td>
+      <td>27 → <b>23</b></td></tr><tr><th scope="row">Inventory</th>
+      <td>3.2 s → <b>1.6 s</b></td>
+      <td>6.3 s → <b>1.6 s</b> <span class="d up">−4.7 s</span></td>
+      <td>7.5 s → <b>2.3 s</b> <span class="d up">−5.3 s</span></td>
+      <td>756 KB → <b>392 KB</b></td>
+      <td>27 → <b>23</b></td></tr></tbody></table></div></div>
+
+<h2>Functional checks</h2>
+<p class="note">Automated Playwright checks per page: libraries load, tables and widgets initialise, and interactions work (login error, calendar, profile menu, password modal, lab gallery, table search, barcode scanner).</p>
+<div class="card"><div class="tablewrap"><table><thead><tr><th>Page</th><th>Checks</th><th>Before</th><th>After</th><th>JS errors</th><th>Failed requests</th></tr></thead><tbody><tr><th scope="row">Login</th><td>3</td><td><span class="pill good">all passed</span></td><td><span class="pill good">all passed</span></td><td>0 → <b>0</b></td><td>0 → <b>0</b></td></tr><tr><th scope="row">About</th><td>7</td><td><span class="pill good">all passed</span></td><td><span class="pill good">all passed</span></td><td>0 → <b>0</b></td><td>2 → <b>0</b></td></tr><tr><th scope="row">Requester home</th><td>8</td><td><span class="pill good">all passed</span></td><td><span class="pill good">all passed</span></td><td>6 → <b>6</b></td><td>8 → <b>6</b></td></tr><tr><th scope="row">Request form</th><td>8</td><td><span class="pill good">all passed</span></td><td><span class="pill good">all passed</span></td><td>0 → <b>0</b></td><td>2 → <b>0</b></td></tr><tr><th scope="row">Request tracker</th><td>7</td><td><span class="pill good">all passed</span></td><td><span class="pill good">all passed</span></td><td>0 → <b>0</b></td><td>2 → <b>0</b></td></tr><tr><th scope="row">Teacher approval</th><td>2</td><td><span class="pill good">all passed</span></td><td><span class="pill good">all passed</span></td><td>0 → <b>0</b></td><td>2 → <b>0</b></td></tr><tr><th scope="row">Admin home</th><td>8</td><td><span class="pill bad" title="edit lab modal opens: error: locator.click: Timeout 30000ms exceeded.
+lab image opens gallery editor: error: locator.waitFor: Timeout 8000ms exceeded.">2 failed</span></td><td><span class="pill good">all passed</span></td><td>6 → <b>6</b></td><td>8 → <b>6</b></td></tr><tr><th scope="row">Admin approvals</th><td>8</td><td><span class="pill good">all passed</span></td><td><span class="pill good">all passed</span></td><td>0 → <b>0</b></td><td>2 → <b>0</b></td></tr><tr><th scope="row">Inventory</th><td>9</td><td><span class="pill good">all passed</span></td><td><span class="pill good">all passed</span></td><td>0 → <b>0</b></td><td>2 → <b>0</b></td></tr></tbody></table></div></div>
+<p class="note">Admin home “2 failed” before: both were faults in the first version of the test, not in the site (one clicked a button covered by another element, the other waited for the wrong dialog). The corrected test passes on the current site. The remaining JS errors and failed requests on the two home pages are the three missing lab images listed under known issues.</p>
+
+<h2>What changed</h2>
+<div class="card"><h3>Scripts and stylesheets</h3><ul><li>All libraries are served from the site itself instead of 6 different CDNs (jQuery 3.3.1, Bootstrap 3.3.7, Bootstrap Icons 1.10.5, DataTables 1.13.6 + Responsive + Select, bootstrap-multiselect 0.9.13, Quagga2 1.12.1). Versions are unchanged.</li><li>Pages now load only the libraries they use (<code>$pageAssets</code> in <code>helperFiles/headData.php</code>): DataTables only on the tracker, approvals and inventory pages; multiselect only on the request form and approvals; the barcode scanner only on inventory, deferred.</li><li>Removed the second copy of the barcode scanner (two versions were loading on every page) and the JsBarcode library, which no page used.</li><li>The calendar library (123 KB) loads only when “View Calendar” is first clicked, instead of blocking every page.</li><li>Removed the bootstrap-multiselect stylesheet link, which had always returned 404.</li><li>Deleted two files nothing referenced: <code>helperFiles/HeadFoot.css</code>, <code>helperFiles/tables.js</code>.</li><li>Local CSS and JS files carry a <code>?v=</code> version, so browsers can cache them for a year and still pick up edits.</li></ul></div><div class="card"><h3>Fonts</h3><ul><li>Raleway, Inter, Playfair Display and Plus Jakarta Sans are self-hosted as WOFF2 with <code>font-display: swap</code> (the same files Google Fonts served).</li><li>The fonts used for the first text on screen are preloaded.</li></ul></div><div class="card"><h3>Images</h3><ul><li>Every image under <code>img/</code> was recompressed in place, keeping names and formats, so database paths and galleries still work: 137.4 MB → 17.2 MB.</li><li>WebP copies (and 640 px thumbnails) live in <code>img/_opt/</code>; the server sends the WebP automatically to browsers that support it, with no change to any URL.</li><li>New uploads are downsized to 1920 px and get WebP copies automatically (<code>helperFiles/image_optimizer.php</code>, hooked into every upload, replace, rename and delete path). <code>tools/optimize_images.php</code> rebuilds the copies from the command line.</li><li>Lab cards use <code>&lt;picture&gt;</code> with WebP sources; the first visible card photo loads at once with high priority (it is the largest element on the home pages), the rest load as you scroll.</li><li>About page: the hero image is preloaded; team and gallery photos load as you scroll and have width and height, so nothing jumps.</li><li><code>img/logo.png</code>: 248 KB → 24 KB (320 × 320, transparency kept).</li></ul></div><div class="card"><h3>Layout shifts, LCP and interaction</h3><ul><li>Login page: the card and side panel no longer fade in from fully transparent (they still slide in). Lighthouse could not measure the page on mobile before (NO_FCP).</li><li>Request form: the two multi-select boxes get their final height before the plugin runs, so the form no longer jumps; the header background (the largest element) is preloaded.</li><li>Header and footer logos have width and height; the footer logo loads lazily.</li></ul></div><div class="card"><h3>Server (Apache)</h3><ul><li>Enabled mod_brotli, mod_deflate, mod_expires and mod_filter in <code>C:\xampp\apache\conf\httpd.conf</code> (backup: <code>httpd.conf.bak-perf</code>).</li><li>New <code>.htaccess</code>: Brotli or gzip compression for text files; cache headers (1 year for versioned files, fonts and vendor files, 30 days for images, 1 day for other CSS/JS, nothing added for PHP pages); WebP negotiation; web access to <code>tools/</code> blocked. Every block is guarded with <code>&lt;IfModule&gt;</code>, so the file is safe on a server without those modules.</li></ul></div>
+
+<h2>Known issues found (not changed)</h2>
+<div class="card"><ul><li><b>Security:</b> <code>helperFiles/db_back_scilab_context.sql</code> (a database backup) and <code>composer.lock</code> can be downloaded by anyone who knows the URL. Move the backup out of the web folder or block it.</li><li>Three lab records point to images that do not exist (<code>img/labimages/lab2.jpg</code>, <code>lab3.jpg</code>, <code>lab4.jpg</code>), causing 404 errors on both home pages.</li><li>The calendar calls <code>ec.updateSize()</code>, which this version of EventCalendar does not have; it throws an error when the lab filter changes or the calendar is reopened (events still update).</li><li><code>reset_password.php</code> calls <code>showToast</code>, which lives in the footer that page does not include, so its messages would throw an error.</li><li><code>forms.php</code> registers a <code>DOMContentLoaded</code> listener inside jQuery's ready handler; it never fires.</li><li>In <code>ajax/ajax_admin.php</code>, the first gallery-upload handler catches every upload, so the second one (<code>upload_gallery_images</code>) is never reached.</li><li>Inventory, mobile: blocking time 78 → 133 ms (still under the 200 ms “good” line). It is the same work as before (building the 521-row inventory table at page load); it now runs after the first paint, which arrives 2.4 s sooner, so Lighthouse counts it. Total script time dropped from 290 to 215 ms.</li><li>Login and request form, mobile: layout shift 0.009 and 0.018 (under the 0.1 “good” line). Login: the self-hosted Inter font swapping in. Request form: a shift that already existed but used to happen before the first paint (the form container widens when the material rows are added).</li><li>Possible next steps: a 1280 px image size so phones do not pick the full 2048 px photo; WebP thumbnails for the About page team photos (about 380 KB less).</li></ul></div>
+
+<h2>Screenshots, before and after</h2>
+<p class="note">Full-page screenshots after the page settled. Click a screenshot to open it full size.</p>
+<details><summary>Login</summary><div class="pair">
+        <figure><figcaption>Before · desktop</figcaption><a href="shots/before.login.desktop.png"><img loading="lazy" src="shots/before.login.desktop.png" alt="Login before, desktop"></a></figure>
+        <figure><figcaption>After · desktop · 0.002% pixels differ</figcaption><a href="shots/after.login.desktop.png"><img loading="lazy" src="shots/after.login.desktop.png" alt="Login after, desktop"></a></figure>
+      </div><div class="pair">
+        <figure><figcaption>Before · phone</figcaption><a href="shots/before.login.phone.png"><img loading="lazy" src="shots/before.login.phone.png" alt="Login before, phone"></a></figure>
+        <figure><figcaption>After · phone · 0.007% pixels differ</figcaption><a href="shots/after.login.phone.png"><img loading="lazy" src="shots/after.login.phone.png" alt="Login after, phone"></a></figure>
+      </div></details><details><summary>About</summary><div class="pair">
+        <figure><figcaption>Before · desktop</figcaption><a href="shots/before.about.desktop.png"><img loading="lazy" src="shots/before.about.desktop.png" alt="About before, desktop"></a></figure>
+        <figure><figcaption>After · desktop · 0.129% pixels differ</figcaption><a href="shots/after.about.desktop.png"><img loading="lazy" src="shots/after.about.desktop.png" alt="About after, desktop"></a></figure>
+      </div><div class="pair">
+        <figure><figcaption>Before · phone</figcaption><a href="shots/before.about.phone.png"><img loading="lazy" src="shots/before.about.phone.png" alt="About before, phone"></a></figure>
+        <figure><figcaption>After · phone · 2.808% pixels differ</figcaption><a href="shots/after.about.phone.png"><img loading="lazy" src="shots/after.about.phone.png" alt="About after, phone"></a></figure>
+      </div></details><details><summary>Requester home</summary><div class="pair">
+        <figure><figcaption>Before · desktop</figcaption><a href="shots/before.requester_home.desktop.png"><img loading="lazy" src="shots/before.requester_home.desktop.png" alt="Requester home before, desktop"></a></figure>
+        <figure><figcaption>After · desktop · 0.073% pixels differ</figcaption><a href="shots/after.requester_home.desktop.png"><img loading="lazy" src="shots/after.requester_home.desktop.png" alt="Requester home after, desktop"></a></figure>
+      </div><div class="pair">
+        <figure><figcaption>Before · phone</figcaption><a href="shots/before.requester_home.phone.png"><img loading="lazy" src="shots/before.requester_home.phone.png" alt="Requester home before, phone"></a></figure>
+        <figure><figcaption>After · phone · 0.493% pixels differ</figcaption><a href="shots/after.requester_home.phone.png"><img loading="lazy" src="shots/after.requester_home.phone.png" alt="Requester home after, phone"></a></figure>
+      </div></details><details><summary>Request form</summary><div class="pair">
+        <figure><figcaption>Before · desktop</figcaption><a href="shots/before.forms.desktop.png"><img loading="lazy" src="shots/before.forms.desktop.png" alt="Request form before, desktop"></a></figure>
+        <figure><figcaption>After · desktop · 0.011% pixels differ</figcaption><a href="shots/after.forms.desktop.png"><img loading="lazy" src="shots/after.forms.desktop.png" alt="Request form after, desktop"></a></figure>
+      </div><div class="pair">
+        <figure><figcaption>Before · phone</figcaption><a href="shots/before.forms.phone.png"><img loading="lazy" src="shots/before.forms.phone.png" alt="Request form before, phone"></a></figure>
+        <figure><figcaption>After · phone · 0.001% pixels differ</figcaption><a href="shots/after.forms.phone.png"><img loading="lazy" src="shots/after.forms.phone.png" alt="Request form after, phone"></a></figure>
+      </div></details><details><summary>Request tracker</summary><div class="pair">
+        <figure><figcaption>Before · desktop</figcaption><a href="shots/before.requests.desktop.png"><img loading="lazy" src="shots/before.requests.desktop.png" alt="Request tracker before, desktop"></a></figure>
+        <figure><figcaption>After · desktop · 0.219% pixels differ</figcaption><a href="shots/after.requests.desktop.png"><img loading="lazy" src="shots/after.requests.desktop.png" alt="Request tracker after, desktop"></a></figure>
+      </div><div class="pair">
+        <figure><figcaption>Before · phone</figcaption><a href="shots/before.requests.phone.png"><img loading="lazy" src="shots/before.requests.phone.png" alt="Request tracker before, phone"></a></figure>
+        <figure><figcaption>After · phone · 0.249% pixels differ</figcaption><a href="shots/after.requests.phone.png"><img loading="lazy" src="shots/after.requests.phone.png" alt="Request tracker after, phone"></a></figure>
+      </div></details><details><summary>Teacher approval</summary><div class="pair">
+        <figure><figcaption>Before · desktop</figcaption><a href="shots/before.supervisor_approve.desktop.png"><img loading="lazy" src="shots/before.supervisor_approve.desktop.png" alt="Teacher approval before, desktop"></a></figure>
+        <figure><figcaption>After · desktop · 0.033% pixels differ</figcaption><a href="shots/after.supervisor_approve.desktop.png"><img loading="lazy" src="shots/after.supervisor_approve.desktop.png" alt="Teacher approval after, desktop"></a></figure>
+      </div><div class="pair">
+        <figure><figcaption>Before · phone</figcaption><a href="shots/before.supervisor_approve.phone.png"><img loading="lazy" src="shots/before.supervisor_approve.phone.png" alt="Teacher approval before, phone"></a></figure>
+        <figure><figcaption>After · phone · 0.279% pixels differ</figcaption><a href="shots/after.supervisor_approve.phone.png"><img loading="lazy" src="shots/after.supervisor_approve.phone.png" alt="Teacher approval after, phone"></a></figure>
+      </div></details><details><summary>Admin home</summary><div class="pair">
+        <figure><figcaption>Before · desktop</figcaption><a href="shots/before.admin_home.desktop.png"><img loading="lazy" src="shots/before.admin_home.desktop.png" alt="Admin home before, desktop"></a></figure>
+        <figure><figcaption>After · desktop · 0.071% pixels differ</figcaption><a href="shots/after.admin_home.desktop.png"><img loading="lazy" src="shots/after.admin_home.desktop.png" alt="Admin home after, desktop"></a></figure>
+      </div><div class="pair">
+        <figure><figcaption>Before · phone</figcaption><a href="shots/before.admin_home.phone.png"><img loading="lazy" src="shots/before.admin_home.phone.png" alt="Admin home before, phone"></a></figure>
+        <figure><figcaption>After · phone · 0.279% pixels differ</figcaption><a href="shots/after.admin_home.phone.png"><img loading="lazy" src="shots/after.admin_home.phone.png" alt="Admin home after, phone"></a></figure>
+      </div></details><details><summary>Admin approvals</summary><div class="pair">
+        <figure><figcaption>Before · desktop</figcaption><a href="shots/before.admin_approve.desktop.png"><img loading="lazy" src="shots/before.admin_approve.desktop.png" alt="Admin approvals before, desktop"></a></figure>
+        <figure><figcaption>After · desktop · 0.029% pixels differ</figcaption><a href="shots/after.admin_approve.desktop.png"><img loading="lazy" src="shots/after.admin_approve.desktop.png" alt="Admin approvals after, desktop"></a></figure>
+      </div><div class="pair">
+        <figure><figcaption>Before · phone</figcaption><a href="shots/before.admin_approve.phone.png"><img loading="lazy" src="shots/before.admin_approve.phone.png" alt="Admin approvals before, phone"></a></figure>
+        <figure><figcaption>After · phone · 0.003% pixels differ</figcaption><a href="shots/after.admin_approve.phone.png"><img loading="lazy" src="shots/after.admin_approve.phone.png" alt="Admin approvals after, phone"></a></figure>
+      </div></details><details><summary>Inventory</summary><div class="pair">
+        <figure><figcaption>Before · desktop</figcaption><a href="shots/before.inventory.desktop.png"><img loading="lazy" src="shots/before.inventory.desktop.png" alt="Inventory before, desktop"></a></figure>
+        <figure><figcaption>After · desktop · 0.021% pixels differ</figcaption><a href="shots/after.inventory.desktop.png"><img loading="lazy" src="shots/after.inventory.desktop.png" alt="Inventory after, desktop"></a></figure>
+      </div><div class="pair">
+        <figure><figcaption>Before · phone</figcaption><a href="shots/before.inventory.phone.png"><img loading="lazy" src="shots/before.inventory.phone.png" alt="Inventory before, phone"></a></figure>
+        <figure><figcaption>After · phone · 0.002% pixels differ</figcaption><a href="shots/after.inventory.phone.png"><img loading="lazy" src="shots/after.inventory.phone.png" alt="Inventory after, phone"></a></figure>
+      </div></details>
+
+<p class="note" style="margin-top:32px">Before: commit a86d973 on main. After: uncommitted changes on branch perf/lighthouse-optimization. Lighthouse runs on localhost, so server response time is near zero; on the school server the absolute times will be higher, but the savings in downloaded bytes and blocking requests carry over.</p>
+</main></body></html>

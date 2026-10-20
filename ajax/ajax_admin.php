@@ -3,6 +3,8 @@
     include('../../scilab/helperFiles/db_connection.php');
     include('../helperFiles/session_handler.php');
     include('../helperFiles/variableDeclarations.php');
+    // Downsizes uploaded lab images and keeps their WebP mirror in sync (never stops an upload)
+    require_once __DIR__ . '/../helperFiles/image_optimizer.php';
 
     // Get session data
     $email = $_SESSION['email'];
@@ -165,6 +167,7 @@
             echo "Failed to move uploaded image.";
             exit;
         }
+        ral_img_process_upload($targetPath);
 
         $relativePath = "img/labimages/" . $fileName;
 
@@ -232,6 +235,7 @@
                 echo 'Failed to move uploaded image.';
                 exit;
             }
+            ral_img_process_upload($fullImagePath);
         }
 
         if ($oldLabName !== $newLabName) {
@@ -250,7 +254,9 @@
             $oldFolder = "../img/labimages/" . preg_replace("/[^a-zA-Z0-9\s\-_]/", "", $oldLabName);
             $newFolder = "../img/labimages/" . $safeLabName;
             if (file_exists($oldFolder)) {
-                rename($oldFolder, $newFolder);
+                if (rename($oldFolder, $newFolder)) {
+                    ral_img_rename_mirror_dir($oldFolder, $newFolder);
+                }
             }
         }
 
@@ -304,7 +310,9 @@
             if (!in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) continue;
 
             $targetPath = $uploadDir . $fileName;
-            move_uploaded_file($tmp_name, $targetPath);
+            if (move_uploaded_file($tmp_name, $targetPath)) {
+                ral_img_process_upload($targetPath);
+            }
         }
 
         echo json_encode(["status" => "success"]);
@@ -351,6 +359,7 @@
                     if (is_uploaded_file($tmpPath)) {
                         if (move_uploaded_file($tmpPath, $targetPath)) {
                             error_log("Uploaded: $uniqueName");
+                            ral_img_process_upload($targetPath);
                         } else {
                             error_log("Failed to move file to: $targetPath");
                         }
@@ -372,6 +381,7 @@
     
         if (file_exists($path)) {
             unlink($path);
+            ral_img_delete_mirror($path);
             echo 'deleted';
         } else {
             echo 'not found';

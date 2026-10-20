@@ -1,6 +1,7 @@
 <?php
     include('../scilab/helperFiles/db_connection.php');
     include('helperFiles/session_handler.php');
+    require_once __DIR__ . '/helperFiles/image_optimizer.php';   // WebP mirror URLs for the lab cards
 
     if (!isset($_SESSION['role'])) {
         header("Location: index.php");
@@ -30,6 +31,7 @@
                 'color'            => $lab['color'] ?? '#2B55C4',
                 'pendingRequests'  => 0, // refreshed dynamically
             ];
+            $labsJson[count($labsJson) - 1] += ral_img_card_fields($lab['mainImagePath']);
         }
     }
 
@@ -93,9 +95,10 @@
 <html lang="en">
     <head>
         <title>Home</title>
+        <?php $pageAssets = []; ?>
         <?php include('helperFiles/headData.php'); ?>
         <link rel="stylesheet" href="css/laboratory-card.css?v=<?= filemtime(__DIR__ . '/css/laboratory-card.css') ?>">
-        <link rel="stylesheet" href="css/home-heading.css">
+        <link rel="stylesheet" href="css/home-heading.css?v=<?= filemtime(__DIR__ . '/css/home-heading.css') ?>">
         <style>
             .main-wrapper {
                 width: 80%;
@@ -338,7 +341,7 @@
             container.className = `lab-gallery--${variant}`;
 
             // Render lab cards via the JS component
-            container.innerHTML = labsData.map(lab => createLabCard(lab, variant)).join('');
+            container.innerHTML = labsData.map((lab, i) => createLabCard(lab, variant, i)).join('');
 
             // Inject the schedule block inside each card body
             labsData.forEach(lab => {
@@ -478,7 +481,7 @@
 
         function updateGalleryImage() {
             if (!galleryImages.length) return;
-            $('#galleryCarousel').html(`<img src="${galleryImages[currentIndex]}" alt="Lab Image">`);
+            $('#galleryCarousel').html(`<img src="${galleryImages[currentIndex]}" alt="Lab Image" decoding="async">`);
         }
 
         function nextImage() { if (galleryImages.length) { currentIndex = (currentIndex + 1) % galleryImages.length; updateGalleryImage(); } }

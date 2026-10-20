@@ -1,7 +1,9 @@
-<head>
-    <link rel="stylesheet" href="CalendarLibrary/event-calendar.min.css">
-    <script src="CalendarLibrary/event-calendar.min.js"></script>
-    <style>
+<?php
+// EventCalendar's CSS and JS are loaded on the first click of "View Calendar" (see loadCalendarAssets()).
+$calendarCssUrl = 'CalendarLibrary/event-calendar.min.css?v=' . filemtime(__DIR__ . '/../CalendarLibrary/event-calendar.min.css');
+$calendarJsUrl  = 'CalendarLibrary/event-calendar.min.js?v=' . filemtime(__DIR__ . '/../CalendarLibrary/event-calendar.min.js');
+?>
+    <style id="calendarStyles">
         /* Overlay for modal */
         #calendarOverlay {
             display: none;
@@ -174,7 +176,6 @@
         }
         #closeEventDetails:hover { color: #000; }
     </style>
-</head>
 
 <div id="calendarOverlay"></div>
 
@@ -212,9 +213,46 @@
     let ec = null;
     let events_array = [];
 
+    // EventCalendar's CSS and JS are loaded once, on the first click of "View Calendar".
+    // The stylesheet is inserted where its <link> used to be (just before #calendarStyles),
+    // so the cascade order is the same as when it was loaded with the page.
+    let calendarCssPromise = null;
+    let calendarJsPromise = null;
+    function loadCalendarAssets() {
+        if (!calendarCssPromise) {
+            calendarCssPromise = new Promise((done) => {
+                const link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = <?= json_encode($calendarCssUrl) ?>;
+                link.onload = link.onerror = () => done();
+                const styles = document.getElementById('calendarStyles');
+                styles.parentNode.insertBefore(link, styles);
+            });
+        }
+        if (!calendarJsPromise) {
+            calendarJsPromise = (typeof EventCalendar !== 'undefined')
+                ? Promise.resolve()
+                : new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = <?= json_encode($calendarJsUrl) ?>;
+                    script.onload = () => resolve();
+                    script.onerror = () => {
+                        script.remove();
+                        calendarJsPromise = null; // allow a retry on the next click
+                        reject(new Error('Could not load the calendar library'));
+                    };
+                    document.head.appendChild(script);
+                });
+        }
+        return Promise.all([calendarCssPromise, calendarJsPromise]);
+    }
+
     openCalendarBtn.addEventListener("click", () => {
         calendarModal.style.display = "flex";
         calendarOverlay.style.display = "block";
+
+        // Start loading the calendar library while the events are fetched
+        loadCalendarAssets().catch(() => { /* reported by createCalendar() */ });
 
         // Set date picker to today
         const today = new Date().toISOString().split('T')[0];
@@ -288,34 +326,50 @@
         }
     });
 
+    // While a calendar's creation is scheduled (library loading + the 60 ms delay), further calls
+    // only replace the events it will be created with, so a second calendar is never created.
+    let ecCreationPending = false;
+    let ecPendingEvents = [];
+
     function createCalendar(events) {
-        setTimeout(() => {
-            ec = EventCalendar.create(document.getElementById('ec'), {
-                initialDate: new Date(),  // <-- start at today
-                // a seven-column week grid is unreadable on a phone, so start on the day view there
-                initialView: window.innerWidth <= 430 ? 'timeGridDay' : 'timeGridWeek',
-                scrollTime: '06:00:00',
-                view: window.innerWidth <= 430 ? 'timeGridDay' : 'timeGridWeek',
-                headerToolbar: {
-                    start: 'dayGridMonth,timeGridWeek,timeGridDay',
-                    center: 'title',
-                    end: 'today prev,next'
-                },
-                buttonText: {
-                    today: 'Today',
-                    dayGridMonth: 'Month',
-                    timeGridWeek: 'Week',
-                    timeGridDay: 'Day'
-                },
-                events: events,
-                nowIndicator: true,
-                eventStartEditable: false,   // cannot drag/move events
-                eventDurationEditable: false, // cannot resize events
-                eventClick: function(info) {
-                    showEventDetails(info.event.id);
-                }
-            });
-        }, 60);
+        ecPendingEvents = events;
+        if (ecCreationPending) return;
+        ecCreationPending = true;
+
+        loadCalendarAssets().then(() => {
+            setTimeout(() => {
+                ecCreationPending = false;
+                ec = EventCalendar.create(document.getElementById('ec'), {
+                    initialDate: new Date(),  // <-- start at today
+                    // a seven-column week grid is unreadable on a phone, so start on the day view there
+                    initialView: window.innerWidth <= 430 ? 'timeGridDay' : 'timeGridWeek',
+                    scrollTime: '06:00:00',
+                    view: window.innerWidth <= 430 ? 'timeGridDay' : 'timeGridWeek',
+                    headerToolbar: {
+                        start: 'dayGridMonth,timeGridWeek,timeGridDay',
+                        center: 'title',
+                        end: 'today prev,next'
+                    },
+                    buttonText: {
+                        today: 'Today',
+                        dayGridMonth: 'Month',
+                        timeGridWeek: 'Week',
+                        timeGridDay: 'Day'
+                    },
+                    events: ecPendingEvents,
+                    nowIndicator: true,
+                    eventStartEditable: false,   // cannot drag/move events
+                    eventDurationEditable: false, // cannot resize events
+                    eventClick: function(info) {
+                        showEventDetails(info.event.id);
+                    }
+                });
+            }, 60);
+        }, (err) => {
+            ecCreationPending = false;
+            console.log("Calendar library error:", err);
+            showToast("There was an error in opening the calendar.", 'error');
+        });
     }
     function updateCalendar(events) {
         ec.setOption("events", events);
