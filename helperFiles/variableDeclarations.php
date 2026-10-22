@@ -177,6 +177,36 @@ if (!function_exists('scilab_approval_token_valid')) {
     }
 }
 
+if (!function_exists('scilab_user_holds_designation')) {
+    /**
+     * Does this active account hold the given designation (case-insensitive,
+     * trimmed) for the current school year?
+     */
+    function scilab_user_holds_designation($conn, $employeeID, $designation)
+    {
+        $employeeID = trim((string)$employeeID);
+        $designation = trim((string)$designation);
+        if ($employeeID === '' || $designation === '') {
+            return false;
+        }
+        $syRes = $conn->query("SELECT value FROM current WHERE description = 'School Year' ORDER BY id DESC LIMIT 1");
+        $syRow = $syRes ? $syRes->fetch_assoc() : null;
+        $sy = $syRow['value'] ?? null;
+        if (!$sy) {
+            return false;
+        }
+        $stmt = $conn->prepare("SELECT 1 FROM designation d JOIN accounts a ON a.employeeID = d.employeeID WHERE d.sy = ? AND d.employeeID = ? AND LOWER(TRIM(d.designation)) = LOWER(?) AND a.status = 'active' LIMIT 1");
+        if (!$stmt) {
+            return false;
+        }
+        $stmt->bind_param("sss", $sy, $employeeID, $designation);
+        $stmt->execute();
+        $holds = $stmt->get_result()->num_rows > 0;
+        $stmt->close();
+        return $holds;
+    }
+}
+
 if (!function_exists('scilab_auh_designation')) {
     /**
      * Resolve the Area Unit Head (AUH) designation for a given subject.

@@ -98,6 +98,90 @@ if (isset($_POST['action']) && $_POST['action'] == 'stock_in_inventory') {
     exit;
 }
 
+// DEDUCT STOCK (single or batch; all-or-nothing, one reason for the whole batch)
+// POST: action=deduct_inventory, reason, items[i][id], items[i][quantity]
+// Response: JSON {status:'success', batch_id, count} or {status:'error', message}
+if (isset($_POST['action']) && $_POST['action'] == 'deduct_inventory') {
+    header('Content-Type: application/json');
+    $fail = function ($msg) use ($conn) {
+        echo json_encode(['status' => 'error', 'message' => $msg]);
+        $conn->close();
+        exit;
+    };
+
+    $reason = trim((string)($_POST['reason'] ?? ''));
+    if ($reason === '') $fail('A reason is required.');
+    if (strlen($reason) > 255) $fail('Reason must be 255 characters or fewer.');
+
+    $rawItems = $_POST['items'] ?? [];
+    if (!is_array($rawItems) || count($rawItems) === 0) $fail('Select at least one item.');
+    if (count($rawItems) > 200) $fail('Too many items in one batch.');
+
+    // Validate input and merge duplicate item ids
+    $wanted = [];
+    foreach ($rawItems as $r) {
+        if (!is_array($r)) $fail('Invalid item data.');
+        $iid = $r['id'] ?? '';
+        $qty = $r['quantity'] ?? '';
+        if (!is_scalar($iid) || !is_scalar($qty) || !preg_match('/^[1-9][0-9]*$/', (string)$iid) || !preg_match('/^[1-9][0-9]{0,8}$/', (string)$qty)) {
+            $fail('Each item needs a valid selection and a whole-number quantity greater than 0.');
+        }
+        $iid = (int)$iid;
+        $wanted[$iid] = ($wanted[$iid] ?? 0) + (int)$qty;
+    }
+    ksort($wanted); // consistent lock order
+
+    $user = substr((string)($_SESSION['username'] ?? ($_SESSION['email'] ?? '')), 0, 100);
+    $batchId = sprintf('%08x-%04x-4%03x-%04x-%012x', random_int(0, 0xffffffff), random_int(0, 0xffff), random_int(0, 0xfff), random_int(0x8000, 0xbfff), random_int(0, 0xffffffffffff));
+
+    $conn->begin_transaction();
+    try {
+        $sel = $conn->prepare("SELECT item, description, classification, quantity FROM scilab_inventory WHERE id = ? AND classification != 'Removed' AND (status IS NULL OR status != 'Removed') FOR UPDATE");
+        $upd = $conn->prepare("UPDATE scilab_inventory SET quantity = quantity - ? WHERE id = ? AND quantity >= ?");
+        $log = $conn->prepare("INSERT INTO scilab_inventory_deductions (batch_id, inventory_id, item, description, classification, quantity_deducted, quantity_before, quantity_after, reason, deducted_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        if (!$sel || !$upd || !$log) throw new Exception('Database error. Has sql/inventory_deductions.sql been run?');
+
+        foreach ($wanted as $iid => $qty) {
+            $sel->bind_param("i", $iid);
+            $sel->execute();
+            $row = $sel->get_result()->fetch_assoc();
+            if (!$row) throw new Exception('An item was not found or has been removed.');
+            $before = (int)$row['quantity'];
+            if ($qty > $before) {
+                throw new Exception('Cannot deduct ' . $qty . ' from "' . $row['item'] . '": only ' . $before . ' in stock.');
+            }
+            $upd->bind_param("iii", $qty, $iid, $qty);
+            $upd->execute();
+            if ($upd->affected_rows !== 1) throw new Exception('Stock changed while deducting. Please try again.');
+            $after = $before - $qty;
+            $log->bind_param("sisssiiiss", $batchId, $iid, $row['item'], $row['description'], $row['classification'], $qty, $before, $after, $reason, $user);
+            if (!$log->execute()) throw new Exception('Could not write the deduction log. Nothing was deducted.');
+        }
+        $conn->commit();
+    } catch (Throwable $e) {
+        $conn->rollback();
+        $msg = $e instanceof mysqli_sql_exception ? 'Database error. Nothing was deducted.' : $e->getMessage();
+        $fail($msg);
+    }
+
+    foreach (array_keys($wanted) as $iid) {
+        checkInventoryThresholdAndNotify($conn, $iid);
+    }
+    echo json_encode(['status' => 'success', 'batch_id' => $batchId, 'count' => count($wanted)]);
+    $conn->close();
+    exit;
+}
+
+// DEDUCTION HISTORY (latest 300)
+if (isset($_POST['action']) && $_POST['action'] == 'list_deductions') {
+    header('Content-Type: application/json');
+    $res = $conn->query("SELECT batch_id, item, description, classification, quantity_deducted, quantity_before, quantity_after, reason, deducted_by, deducted_at FROM scilab_inventory_deductions ORDER BY deducted_at DESC, id DESC LIMIT 300");
+    $rows = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+    echo json_encode(['status' => $res ? 'success' : 'error', 'rows' => $rows]);
+    $conn->close();
+    exit;
+}
+
 // UPDATE INVENTORY ITEM
 if (isset($_POST['action']) && $_POST['action'] == 'update_inventory') {
     $id = $_POST['id'];

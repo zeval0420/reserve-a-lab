@@ -145,6 +145,8 @@
         <title>Request Form</title>
         <?php $pageAssets = ['multiselect']; ?>
         <?php include('helperFiles/headData.php'); ?>
+        <link rel="stylesheet" href="css/spinner.css?v=<?= filemtime(__DIR__ . '/css/spinner.css') ?>">
+        <script src="js/ral_spinner.js?v=<?= filemtime(__DIR__ . '/js/ral_spinner.js') ?>"></script>
         <!-- The .form-title background is the LCP element; it is only discovered after layout, so fetch it early. -->
         <link rel="preload" href="img/laboratoryBackground.jpg" as="image" fetchpriority="high">
 
@@ -535,21 +537,6 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
                         <button type="button" class="btn btn-primary" id="confirmSubmit">Confirm</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Progress Modal -->
-        <div class="modal fade" id="progressModal" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
-            <div class="modal-dialog modal-sm" role="document" style="margin-top: 30vh;">
-                <div class="modal-content">
-                    <div class="modal-body text-center">
-                        <h4 class="modal-title mb-3">Submitting Request...</h4>
-                        <div class="progress">
-                            <div id="submissionProgressBar" class="progress-bar progress-bar-striped active" role="progressbar" style="width: 0%">0%</div>
-                        </div>
-                        <small class="text-muted">Please wait while we process your request.</small>
                     </div>
                 </div>
             </div>
@@ -1183,16 +1170,8 @@
                 $('#summaryModal').modal('hide');
                 
                 /* Deploy blocking animated structures visually overriding base screens while server synchronizes. */
-                $('#progressModal').modal('show');
-                let progress = 0;
-                const $bar = $('#submissionProgressBar');
-                $bar.css('width', '0%').text('0%');
-                
-                const progressInterval = setInterval(() => {
-                    progress += Math.random() * 10;
-                    if (progress > 90) progress = 90;
-                    $bar.css('width', progress + '%').text(Math.round(progress) + '%');
-                }, 200);
+                if (RalSpinner.isActive()) return; // prevent double submit
+                RalSpinner.show('Submitting request...');
 
                 /* Iterate table content merging functionally identical properties logically prior to packaging API bodies. */
                 const itemsMap = {};
@@ -1261,16 +1240,16 @@
                     processData: false,
                     contentType: false,
                     success: function(res) {
-                        clearInterval(progressInterval);
-                        $bar.css('width', '100%').text('100%');
-                        
-                        setTimeout(() => {
-                            $('#progressModal').modal('hide');
+                        {
                             if (res.trim() === "success") {
+                                // keep the spinner up until the reload completes
                                 showToast("Request submitted successfully!", 'success');
                                 resetForm();
                                 location.reload();
-                            } else if (res === "invalid_scilab") {
+                                return;
+                            }
+                            RalSpinner.hide();
+                            if (res === "invalid_scilab") {
                                 console.log("Submission Error: Invalid laboratory selected");
                                 showToast("Invalid laboratory selected.", 'error');
                             } else if (res === "session_error") {
@@ -1280,12 +1259,10 @@
                                 console.log("Submission Error:", res);
                                 showToast("Error: " + res, 'error');
                             }
-                        }, 500);
+                        }
                     },
                     error: function(xhr, status, error) {
-                        clearInterval(progressInterval);
-                        $bar.css('width', '100%').text('100%');
-                        $('#progressModal').modal('hide');
+                        RalSpinner.hide();
                         
                         let errorMsg = "Failed to submit request due to server error.";
                         try {

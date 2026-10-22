@@ -795,7 +795,6 @@
                                 <th>Date of Use</th>
                                 <th>Requested Materials</th>
                                 <th>Teacher-in-Charge</th>
-                                <th>Approval Status</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
@@ -857,13 +856,6 @@
                                 ?>
                                 <td><?= $materialText ?></td>
                                 <td><?= !empty($row['teacherInCharge']) ? htmlspecialchars($row['teacherInCharge']) : '—' ?></td>
-
-                                <td>
-                                    <?php $as = $row['_approval_status']; ?>
-                                    <span class="badge badge-<?= $as === 'Approved' ? 'success' : ($as === 'Rejected' ? 'danger' : 'warning') ?>">
-                                        <?= htmlspecialchars($as) ?>
-                                    </span>
-                                </td>
 
                                 <td>
                                     <button

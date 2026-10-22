@@ -796,11 +796,13 @@ function ral_session_can_act_on_stage($conn, $stage, array $request)
             $formattedName = trim($user['lastname'] . ', ' . $user['firstname'] . ' ' . $user['middlename']);
             return $formattedName !== ',' && strpos((string)($request['teacherInCharge'] ?? ''), $formattedName) !== false;
         case 'subject_teacher':
-            return strpos(strtolower($position), 'teacher') !== false;
+            return strpos(strtolower($position), 'teacher') !== false
+                || scilab_user_holds_designation($conn, $employeeID, 'AUH-' . ($request['subjectAcademicUnit'] ?? ''));
         case 'lab_personnel':
             return in_array($position, $accepted_admin_roles, true);
         case 'cid_chief':
-            return strpos(strtolower($position), 'chief') !== false;
+            return strpos(strtolower($position), 'chief') !== false
+                || scilab_user_holds_designation($conn, $employeeID, 'CID Chief');
     }
     return false;
 }

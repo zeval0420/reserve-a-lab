@@ -324,30 +324,19 @@ function scilab_resolve_auh_emails($conn, $unit, $gradeLevel = null) {
     if (!$sy) return [];
 
     $emails = [];
-    $auhStmt = $conn->prepare("SELECT DISTINCT employeeID FROM designation WHERE sy = ? AND designation = ?");
-    if (!$auhStmt) return $emails;
-
-    $auhStmt->bind_param("ss", $sy, $designation);
-    $auhStmt->execute();
-    $auhRes = $auhStmt->get_result();
-
-    while ($auh = $auhRes->fetch_assoc()) {
-        $emp = $conn->prepare("SELECT email FROM accounts WHERE employeeID = ? AND status = 'active'");
-        if ($emp) {
-            $emp->bind_param("s", $auh['employeeID']);
-            $emp->execute();
-
-            if ($row = $emp->get_result()->fetch_assoc()) {
-                $emails[] = $row['email'];
-            }
-
-            $emp->close();
-        }
+    $stmt = $conn->prepare("SELECT DISTINCT a.email FROM designation d JOIN accounts a ON a.employeeID = d.employeeID WHERE d.sy = ? AND LOWER(TRIM(d.designation)) = LOWER(?) AND a.status = 'active'");
+    if (!$stmt) return $emails;
+    $designation = trim($designation);
+    $stmt->bind_param("ss", $sy, $designation);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    while ($row = $res->fetch_assoc()) {
+        $e = trim((string)($row['email'] ?? ''));
+        if ($e !== '' && filter_var($e, FILTER_VALIDATE_EMAIL)) $emails[] = $e;
     }
+    $stmt->close();
 
-    $auhStmt->close();
-
-    return array_unique($emails);
+    return array_values(array_unique($emails));
 }
 
 function scilab_resolve_lab_personnel_emails($conn) {
@@ -370,16 +359,17 @@ function scilab_resolve_cid_chief_emails($conn) {
     $sy = ($syResult && $syResult->num_rows > 0) ? $syResult->fetch_assoc()['value'] : null;
     if (!$sy) return $emails;
 
-    $stmt = $conn->prepare("SELECT DISTINCT a.email FROM designation d JOIN accounts a ON a.employeeID = d.employeeID WHERE d.sy = ? AND d.designation = 'CID Chief' AND a.status = 'active'");
+    $stmt = $conn->prepare("SELECT DISTINCT a.email FROM designation d JOIN accounts a ON a.employeeID = d.employeeID WHERE d.sy = ? AND LOWER(TRIM(d.designation)) = 'cid chief' AND a.status = 'active'");
     if (!$stmt) return $emails;
     $stmt->bind_param("s", $sy);
     $stmt->execute();
     $res = $stmt->get_result();
     while ($row = $res->fetch_assoc()) {
-        if (!empty($row['email'])) $emails[] = $row['email'];
+        $e = trim((string)($row['email'] ?? ''));
+        if ($e !== '' && filter_var($e, FILTER_VALIDATE_EMAIL)) $emails[] = $e;
     }
     $stmt->close();
-    return array_unique($emails);
+    return array_values(array_unique($emails));
 }
 
 function scilab_send_submission_confirmation($conn, $requestId) {
@@ -688,20 +678,39 @@ function scilab_notify_stage_status($conn, $request, $currentStage, $event, $rea
 
     // Common body used for all recipients, in the same boxed layout as the submission confirmation.
     $heading = ($event === 'approve') ? 'Request Approved' : 'Request Rejected';
+    $decisionText = $stageLabel . ' ' . $verb . ' this request';
+    $pendingHtml = '';
+    $nextApprovers = [
+        'supervisor' => 'Area Unit Head (AUH)',
+        'subject_teacher' => 'Lab Personnel',
+        'lab_personnel' => 'CID Chief',
+    ];
+    $showDecisionRow = true;
+    if ($event === 'approve' && !$isForce && $currentStage !== 'cid_chief'
+        && isset($nextApprovers[$currentStage])
+        && strtolower($overall) !== 'approved') {
+        // Intermediate approval: the request is still moving through the chain.
+        $heading = $decisionText;
+        $showDecisionRow = false;
+        $pendingHtml = '<p><strong>Request Pending Approval by '
+            . htmlspecialchars($nextApprovers[$currentStage]) . '</strong></p>';
+    }
     $details = [
         'Request ID' => 'SLR-' . intval($id),
         'Requested By' => $requesterName,
         'Facility' => $request['scilabName'] ?? '',
         'Date of use' => $request['inclusiveDate'] ?? '',
         'Time of use' => $request['inclusiveTime'] ?? '',
-        'Decision' => $stageLabel . ' ' . $verb . ' this request',
     ];
+    if ($showDecisionRow) {
+        $details['Decision'] = $decisionText;
+    }
     if ($event === 'reject' && $reason) {
         $details['Reason'] = (string)$reason;
     }
     $body = scilab_render_email_card(
         $heading,
-        '<p>This is a status update regarding laboratory reservation request <strong>SLR-' . intval($id) . '</strong>.</p>',
+        '<p>This is a status update regarding laboratory reservation request <strong>SLR-' . intval($id) . '</strong>.</p>' . $pendingHtml,
         $details,
         'View Request Status',
         $trackerLink,

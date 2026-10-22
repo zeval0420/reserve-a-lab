@@ -35,11 +35,13 @@ $resUser = $stmtUser->get_result();
 
 $requesterEmail = 'N/A';
 $requesterDept = 'N/A';
+$requesterIsTeacher = false; // requester found in `accounts` => teacher/faculty (no CID Chief step)
 
 if ($userRow = $resUser->fetch_assoc()) {
     $name = $userRow['firstname'] . ' ' . (empty($userRow['middlename']) ? '' : $userRow['middlename'] . ' ') . $userRow['lastname'];
     $requesterEmail = $userRow['email'] ?? 'N/A';
     $requesterDept = $userRow['position'] ?? 'N/A';
+    $requesterIsTeacher = true;
 } else {
     // Try fetching from student
     $stmtUser = $conn->prepare("SELECT firstname, middlename, lastname FROM student WHERE LRN = ?");
@@ -119,6 +121,16 @@ if ($loggedInEmployeeID) {
 $isSubjectTeacher = (strpos(strtolower($userPosition), 'teacher') !== false);
 $isLabPersonnel = ($userPosition === 'Sci. Res. Assist.' || $userPosition === 'Sci. Research Specialist I');
 $isCIDChief = (strpos(strtolower($userPosition), 'chief') !== false);
+
+// Designation holders for the current school year may also act on these stages.
+if ($loggedInEmployeeID) {
+    if (!$isSubjectTeacher && scilab_user_holds_designation($conn, $loggedInEmployeeID, 'AUH-' . ($request['subjectAcademicUnit'] ?? ''))) {
+        $isSubjectTeacher = true;
+    }
+    if (!$isCIDChief && scilab_user_holds_designation($conn, $loggedInEmployeeID, 'CID Chief')) {
+        $isCIDChief = true;
+    }
+}
 
 // A request that already reached a terminal state has no actionable step, even if
 // some stage columns are still 'pending' from an older record.
@@ -249,6 +261,8 @@ function getStepIcon($class)
 
     <?php $pageAssets = []; ?>
     <?php include('helperFiles/headData.php'); ?>
+    <link rel="stylesheet" href="css/spinner.css?v=<?= filemtime(__DIR__ . '/css/spinner.css') ?>">
+    <script src="js/ral_spinner.js?v=<?= filemtime(__DIR__ . '/js/ral_spinner.js') ?>"></script>
 
     <style>
         /* ============================================================
@@ -352,6 +366,7 @@ function getStepIcon($class)
 
         /* ---- Step Tracker ---- */
         .tracker {
+            --tracker-inset: 12.5%; /* half of one step column: 100% / (2 * steps) */
             display: flex;
             align-items: flex-start;
             justify-content: space-between;
@@ -364,8 +379,8 @@ function getStepIcon($class)
             content: '';
             position: absolute;
             top: 22px;
-            left: calc(12.5% - 0px);
-            right: calc(12.5% - 0px);
+            left: var(--tracker-inset);
+            right: var(--tracker-inset);
             height: 3px;
             background: var(--border);
             border-radius: 3px;
@@ -376,13 +391,15 @@ function getStepIcon($class)
         .tracker-progress {
             position: absolute;
             top: 22px;
-            left: calc(12.5% - 0px);
+            left: var(--tracker-inset);
             height: 3px;
             background: linear-gradient(90deg, var(--success) 0%, var(--secondary) 100%);
             border-radius: 3px;
             z-index: 1;
             transition: width 0.8s cubic-bezier(.4, 0, .2, 1);
         }
+
+        .tracker.steps-3 { --tracker-inset: 16.6667%; }
 
         .step {
             flex: 1;
@@ -944,8 +961,8 @@ function getStepIcon($class)
             }
 
             .tracker::before {
-                top: calc(12.5% - 0px);
-                bottom: calc(12.5% - 0px);
+                top: var(--tracker-inset);
+                bottom: var(--tracker-inset);
                 left: 21px;
                 right: auto;
                 width: 3px;
@@ -953,7 +970,7 @@ function getStepIcon($class)
             }
 
             .tracker-progress {
-                top: calc(12.5% - 0px);
+                top: var(--tracker-inset);
                 left: 21px;
                 width: 3px !important;
                 height: 50% !important;
@@ -1057,7 +1074,7 @@ function getStepIcon($class)
             <div class="card-inner">
                 <p class="section-label">Approval Process</p>
 
-                <div class="tracker" id="stepTracker">
+                <div class="tracker<?= $requesterIsTeacher ? ' steps-3' : '' ?>" id="stepTracker">
 
                     <!-- Progress fill bar (width set by JS) -->
                     <div class="tracker-progress" id="trackerProgress"></div>
@@ -1094,7 +1111,8 @@ function getStepIcon($class)
                         </div>
                     </div>
 
-                    <!-- Step 4: CID Chief -->
+                    <?php if (!$requesterIsTeacher): ?>
+                    <!-- Step 4: CID Chief (not shown for teacher/faculty requesters) -->
                     <?php $s4Class = getStepClass($cid_chief_status, $lab_personnel_status); ?>
                     <div class="step <?= $s4Class ?>" data-step="4">
                         <div class="step-dot"><?= getStepIcon($s4Class) ?></div>
@@ -1104,6 +1122,7 @@ function getStepIcon($class)
                                 class="step-status"><?= getStepStatusText($cid_chief_status, $lab_personnel_status) ?></span>
                         </div>
                     </div>
+                    <?php endif; ?>
 
                 </div><!-- /tracker -->
             </div>
@@ -1389,9 +1408,13 @@ function getStepIcon($class)
             const totalSteps = steps.length;
             // Width spans from first step center to last step center
             // Each step center is at (index / (total-1)) * 100% of inner width
+            const bar = document.getElementById('trackerProgress');
+            if (!bar || totalSteps < 2) return;
             const progress = approvedCount / (totalSteps - 1); // 0 → 1
             const clampedPct = Math.min(Math.max(progress, 0), 1) * 100;
-            document.getElementById('trackerProgress').style.width = clampedPct + '%';
+            // The line spans (100% - 2 * inset) of the tracker: one step column minus half on each side
+            const spanPct = 100 - (100 / totalSteps);
+            bar.style.width = (clampedPct * spanPct / 100) + '%';
         })();
 
         /* ============================================================
@@ -1556,7 +1579,16 @@ function getStepIcon($class)
             window.location.href = url.toString();
         }
 
+        let actionInFlight = false;
+        const actionButtons = () => [pageApproveBtn, pageRejectBtn, document.getElementById('approveBtn'),
+            document.getElementById('confirmRejectBtn'), document.getElementById('cancelRejectBtn')].filter(Boolean);
+
         async function executeAction(action, reason = null) {
+            if (actionInFlight) return; // prevent double submit
+            actionInFlight = true;
+            actionButtons().forEach(b => b.disabled = true);
+            RalSpinner.show(action === 'reject' ? 'Rejecting request...' : 'Approving request...');
+            let succeeded = false;
             try {
                 const response = await fetch('ajax/ajax_supervisor_action.php', {
                     method: 'POST',
@@ -1565,6 +1597,7 @@ function getStepIcon($class)
                 });
                 const data = await response.json();
                 if (data.success) {
+                    succeeded = true; // keep UI blocked until reload
                     closeModal();
                     showApprovalToast('✓ ' + (data.message || 'Action completed successfully.'), 'success');
                     setTimeout(reloadPage, 800);
@@ -1573,6 +1606,12 @@ function getStepIcon($class)
                 }
             } catch (error) {
                 showApprovalToast('✗ Network error occurred.', 'error');
+            } finally {
+                if (!succeeded) {
+                    RalSpinner.hide();
+                    actionInFlight = false;
+                    actionButtons().forEach(b => b.disabled = false);
+                }
             }
         }
 

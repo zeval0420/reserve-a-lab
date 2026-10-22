@@ -193,6 +193,13 @@
                                 <button id="bulkImportBtn" class="btn-liquid-info">Bulk Import</button>
                             </div>
                         </div>
+                        <div class="inv-group" role="group" aria-labelledby="invGroupDeduct">
+                            <span class="inv-group-label" id="invGroupDeduct">Deduct stock</span>
+                            <div class="inv-group-buttons">
+                                <button id="deductBtn" class="btn-liquid-danger">Deduct Stock</button>
+                                <button id="deductHistoryBtn" class="btn-liquid">Deduction History</button>
+                            </div>
+                        </div>
                         <div class="inv-group" role="group" aria-labelledby="invGroupTools">
                             <span class="inv-group-label" id="invGroupTools">Tools</span>
                             <div class="inv-group-buttons">
@@ -340,6 +347,58 @@
                                     <button type="button" class="btn-liquid-info" id="processStockInCsvBtn">Start CSV Stock In</button>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-liquid-secondary" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Deduct Stock Modal -->
+        <div class="modal fade" id="deductModal" tabindex="-1" role="dialog">
+            <div class="modal-dialog modal-lg" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Deduct Stock</h5>
+                        <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="deductRowsContainer"></div>
+                        <div class="mt-2" style="margin-bottom:15px;">
+                            <button type="button" class="btn-liquid-info" id="addDeductRowBtn"><i class="bi bi-plus-circle"></i> Add Row</button>
+                        </div>
+                        <div class="form-group">
+                            <label for="deductReason">Reason (applies to all items above) <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control liquid-input" id="deductReason" maxlength="255" placeholder="e.g. Broken, expired, used for class demo">
+                        </div>
+                        <p class="text-muted small">All rows are deducted together; if any row fails, nothing is deducted. The date and time are recorded automatically.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-liquid-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn-liquid-danger" id="saveDeductBtn">Deduct</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Deduction History Modal -->
+        <div class="modal fade" id="deductHistoryModal" tabindex="-1" role="dialog">
+            <div class="modal-dialog modal-lg" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Deduction History (latest 300)</h5>
+                        <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                    </div>
+                    <div class="modal-body">
+                        <div style="max-height: 450px; overflow: auto;">
+                            <table class="table table-bordered table-striped" style="width:100%; font-size:13px;">
+                                <thead>
+                                    <tr><th>Date</th><th>Item</th><th>Deducted</th><th>Before &rarr; After</th><th>Reason</th><th>By</th></tr>
+                                </thead>
+                                <tbody id="deductHistoryBody"></tbody>
+                            </table>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -853,6 +912,135 @@
                 showToast(`Stock In Complete. Success: ${success}, Failed: ${failed}, Skipped/Not Found: ${skipped}`, 'info', 5000);
                 location.reload();
             }
+
+            // ================= DEDUCT STOCK =================
+            function addDeductRow() {
+                const flatItems = Object.values(allInventory).reduce((acc, val) => acc.concat(val), [])
+                    .filter(i => i.status !== 'Removed')
+                    .sort((a, b) => (a.item + a.description).localeCompare(b.item + b.description));
+
+                const $select = $('<select class="form-control liquid-input deduct-item-select"></select>');
+                $select.append($('<option></option>').val('').text('Select an Item...').css('color', '#333'));
+                flatItems.forEach(i => {
+                    const label = `${i.item}${i.description ? ' - ' + i.description : ''} [${i.classification}] (Qty: ${i.quantity} ${i.unit})`;
+                    $select.append($('<option></option>').val(i.id).text(label).css('color', '#333'));
+                });
+
+                const $row = $(`
+                    <div class="deduct-row" style="display:flex; gap:10px; margin-bottom:10px; align-items:flex-end;">
+                        <div style="flex:4;"><label style="font-size:12px;">Item</label></div>
+                        <div style="flex:1;">
+                            <label style="font-size:12px;">Quantity</label>
+                            <input type="number" class="form-control liquid-input deduct-qty" min="1" step="1">
+                        </div>
+                        <div>
+                            <button type="button" class="btn-liquid-danger remove-deduct-row-btn" style="padding:6px 12px; margin-bottom:2px;"><i class="bi bi-trash"></i></button>
+                        </div>
+                    </div>
+                `);
+                $row.children().eq(0).append($select);
+                $('#deductRowsContainer').append($row);
+            }
+
+            $('#deductBtn').click(function () {
+                $('#deductRowsContainer').empty();
+                $('#deductReason').val('');
+                $('#saveDeductBtn').prop('disabled', false).text('Deduct');
+                addDeductRow();
+                $('#deductModal').modal('show');
+            });
+
+            $('#addDeductRowBtn').click(addDeductRow);
+
+            $(document).on('click', '.remove-deduct-row-btn', function () {
+                if ($('.deduct-row').length > 1) {
+                    $(this).closest('.deduct-row').remove();
+                } else {
+                    showToast('You must have at least one row.', 'warning');
+                }
+            });
+
+            // Cap the quantity input at current stock of the chosen item
+            $(document).on('change', '.deduct-item-select', function () {
+                const flat = Object.values(allInventory).flat();
+                const it = flat.find(i => i.id == $(this).val());
+                const $qty = $(this).closest('.deduct-row').find('.deduct-qty');
+                if (it) $qty.attr('max', it.quantity); else $qty.removeAttr('max');
+            });
+
+            $('#saveDeductBtn').click(function () {
+                const reason = $('#deductReason').val().trim();
+                const items = [];
+                const seen = {};
+                let valid = true, dup = false;
+
+                $('.deduct-row').each(function () {
+                    const id = $(this).find('.deduct-item-select').val();
+                    const qtyStr = $(this).find('.deduct-qty').val();
+                    const qty = parseInt(qtyStr, 10);
+                    if (!id || !/^[1-9][0-9]*$/.test(qtyStr) || qty <= 0) { valid = false; return false; }
+                    if (seen[id]) { valid = false; dup = true; showToast('Each item can only appear once per batch.', 'warning'); return false; }
+                    seen[id] = true;
+                    items.push({ id: id, quantity: qty });
+                });
+
+                if (!valid) {
+                    if (!dup) showToast('Please choose an item and a whole-number quantity greater than 0 for every row.', 'warning');
+                    return;
+                }
+                if (!reason) {
+                    showToast('A reason is required.', 'warning');
+                    $('#deductReason').focus();
+                    return;
+                }
+
+                const flat = Object.values(allInventory).flat();
+                for (const it of items) {
+                    const inv = flat.find(i => i.id == it.id);
+                    if (inv && it.quantity > parseInt(inv.quantity)) {
+                        showToast(`Cannot deduct ${it.quantity} from "${inv.item}": only ${inv.quantity} in stock.`, 'warning');
+                        return;
+                    }
+                }
+
+                $('#saveDeductBtn').prop('disabled', true).text('Processing...');
+                $.post('ajax/ajax_inventory.php', { action: 'deduct_inventory', reason: reason, items: items }, function (res) {
+                    if (res && res.status === 'success') {
+                        showToast('Stock deducted for ' + res.count + ' item(s).', 'success');
+                        setTimeout(() => location.reload(), 800);
+                    } else {
+                        showToast((res && res.message) || 'Failed to deduct stock.', 'error');
+                        $('#saveDeductBtn').prop('disabled', false).text('Deduct');
+                    }
+                }, 'json').fail(function () {
+                    showToast('Failed to deduct stock.', 'error');
+                    $('#saveDeductBtn').prop('disabled', false).text('Deduct');
+                });
+            });
+
+            $('#deductHistoryBtn').click(function () {
+                const $tb = $('#deductHistoryBody').html('<tr><td colspan="6" class="text-center">Loading...</td></tr>');
+                $('#deductHistoryModal').modal('show');
+                $.post('ajax/ajax_inventory.php', { action: 'list_deductions' }, function (res) {
+                    $tb.empty();
+                    if (!res || res.status !== 'success' || !res.rows.length) {
+                        $tb.append('<tr><td colspan="6" class="text-center">No deductions recorded.</td></tr>');
+                        return;
+                    }
+                    res.rows.forEach(r => {
+                        $tb.append(`<tr>
+                            <td>${ralEsc(r.deducted_at)}</td>
+                            <td><strong>${ralEsc(r.item)}</strong>${r.description ? '<br><small class="text-muted">' + ralEsc(r.description) + '</small>' : ''}</td>
+                            <td>${ralEsc(r.quantity_deducted)}</td>
+                            <td>${ralEsc(r.quantity_before)} &rarr; ${ralEsc(r.quantity_after)}</td>
+                            <td>${ralEsc(r.reason)}</td>
+                            <td>${ralEsc(r.deducted_by)}</td>
+                        </tr>`);
+                    });
+                }, 'json').fail(function () {
+                    $tb.html('<tr><td colspan="6" class="text-center text-danger">Failed to load history.</td></tr>');
+                });
+            });
 
             // Edit
             $(document).on('click', '.edit-btn', function () {
