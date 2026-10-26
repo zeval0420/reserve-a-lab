@@ -48,6 +48,7 @@ try {
     include('../../scilab/helperFiles/db_connection.php');
     include('../helperFiles/session_handler.php');
     include('../helperFiles/variableDeclarations.php');
+    require_once __DIR__ . '/../helperFiles/input.php';
     include_once('../helperFiles/scilab_email.php');
 } catch (\Throwable $e) {
     http_response_code(500);
