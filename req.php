@@ -1030,7 +1030,7 @@ body {
           <div class="stat-sub">Awaiting action</div>
         </div>
         <div class="stat-card stat-rejected">
-          <div class="stat-label">Disapproved</div>
+          <div class="stat-label">Rejected</div>
           <div class="stat-value" id="statRejected">—</div>
           <div class="stat-sub">Declined requests</div>
         </div>
@@ -1084,7 +1084,7 @@ body {
                   <th>Total Uses</th>
                   <th>Approved</th>
                   <th>Pending</th>
-                  <th>Disapproved</th>
+                  <th>Rejected</th>
                   <th>Utilisation</th>
                 </tr>
               </thead>

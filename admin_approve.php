@@ -972,7 +972,7 @@
                     <a href="?status=Approved&filterMode=<?= urlencode($filterMode) ?>&timeframe=<?= urlencode($timeFrame) ?>&fromDate=<?= urlencode($fromDate) ?>&toDate=<?= urlencode($toDate) ?>" class="btn-liquid-success <?= $statusFilter === 'Approved' ? 'active' : '' ?>"><span class="badge badge-pill badge-secondary"><?= $counts['Approved'] ?></span> Approved
                     </a>
                     <a href="?status=Rejected&filterMode=<?= urlencode($filterMode) ?>&timeframe=<?= urlencode($timeFrame) ?>&fromDate=<?= urlencode($fromDate) ?>&toDate=<?= urlencode($toDate) ?>" class="btn-liquid-danger <?= $statusFilter === 'Rejected' ? 'active' : '' ?>">
-                        <span class="badge badge-pill badge-secondary"><?= $counts['Rejected'] ?></span> Disapproved
+                        <span class="badge badge-pill badge-secondary"><?= $counts['Rejected'] ?></span> Rejected
                     </a>
                 </div>
                 <br/>
@@ -1758,7 +1758,7 @@
                 }
 
                 $.post('ajax/ajax_admin_action.php', { action: 'reject', id: id, feedback: feedback }, function (response) {
-                    showToast(response, response.toLowerCase().includes('disapproved') ? 'success' : 'error');
+                    showToast(response, response.toLowerCase().includes('rejected') ? 'success' : 'error');
                     location.reload();
                 });
             });

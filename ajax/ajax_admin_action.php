@@ -171,7 +171,7 @@
                 if ($request) {
                     scilab_notify_stage_status($conn, $request, 'force_approve', 'reject', $feedback);
                 }
-                echo "Request disapproved.";
+                echo "Request rejected.";
             } else {
                 echo "Update failed.";
             }
