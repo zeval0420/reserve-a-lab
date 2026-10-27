@@ -18,11 +18,11 @@
             var o = build();
             o.querySelector('.ral-spinner-text').textContent = text || 'Processing...';
             o.querySelector('.ral-spinner-sub').textContent = sub || 'Please wait. This may take a moment while emails are sent.';
-            o.classList.add('show');
+            o.classList.add('ral-spinner-open');
             active = true;
         },
         hide: function () {
-            if (el) el.classList.remove('show');
+            if (el) el.classList.remove('ral-spinner-open');
             active = false;
         },
         isActive: function () { return active; }

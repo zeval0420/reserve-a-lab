@@ -2,6 +2,11 @@
 .ral-spinner-overlay {
     position: fixed;
     inset: 0;
+    top: 0; left: 0; right: 0; bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    margin: 0;
+    transform: none;
     z-index: 100000;
     display: none;
     align-items: center;
@@ -10,7 +15,7 @@
     backdrop-filter: blur(2px);
     -webkit-backdrop-filter: blur(2px);
 }
-.ral-spinner-overlay.show { display: flex; }
+.ral-spinner-overlay.ral-spinner-open { display: flex !important; }
 .ral-spinner-card {
     background: #fff;
     border-radius: 16px;
