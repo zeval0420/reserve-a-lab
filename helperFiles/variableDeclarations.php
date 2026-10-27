@@ -116,15 +116,7 @@ if (empty($scilab_secrets['approval_secret']) || empty($scilab_secrets['smtp_pas
     error_log('helperFiles/secrets.php is missing or incomplete; see secrets.example.php');
 }
 
-// EMAIL SETTINGS
-$email_sender = "pshsircscilab@gmail.com"; //edit to official
-$email_sender_name = "PSHS-IRC SciLab";
-$email_display_name = "PSHS-IRC SciLab";
-$email_smtp_host = "smtp.gmail.com";
-$email_smtp_port = 587;
-$email_smtp_user = "pshsircscilab@gmail.com"; //edit to official
-$email_smtp_password = $scilab_secrets['smtp_password'] ?? ""; // set in helperFiles/secrets.php
-$email_smtp_secure = "tls";
+include('email_credentials.php');
 
 // FRONTEND / SYSTEM PATHS
 $template_dir = __DIR__ . "/../emailTemplates/";

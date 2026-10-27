@@ -1,6 +1,6 @@
 # Database connection config
 helperFiles/db_connection.php
-
+helperFiles/email_credentials.php
 
 # HyperFrames skills (installed via npx skills)
 .agents/
