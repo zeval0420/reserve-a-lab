@@ -500,6 +500,13 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
         exit();
     }
 
+    // Refuse a slot an approved request already holds (approval checks again under a lock)
+    $slotConflict = scilab_find_slot_conflict($conn, $scilabName, $startDate, $formattedTime);
+    if ($slotConflict) {
+        echo $scilabName . " is already booked on " . date('F j, Y', strtotime($startDate)) . " from " . $slotConflict['inclusiveTime'] . ". Please choose another time or laboratory.";
+        exit();
+    }
+
     // Decode merged materials early so stock can be validated before a request row is created
     $mergedMaterials = [];
     if (isset($_POST['mergedMaterials'])) {
@@ -931,12 +938,36 @@ for ($i = 0; $i < count($params); $i++) {
 }
 call_user_func_array([$updateStmt, 'bind_param'], $bindParams);
 
-if ($updateStmt->execute()) {
+// For teachers, Lab Personnel is the second and last approval needed. CID Chief is bypassed.
+$isTeacherReq = ($fieldPrefix === 'lab_personnel' && $action === 'approve')
+    && scilab_is_faculty_requester($conn, $request['requesterEmployeeID'] ?? '');
+$isFinalApproval = $fieldPrefix === 'force_approve'
+    || ($action === 'approve' && ($fieldPrefix === 'cid_chief' || $isTeacherReq));
+
+if ($isFinalApproval) {
+    // Slot check, status update and inventory deduction in one transaction
+    $approval = scilab_approve_request($conn, $requestId, function ($conn) use ($updateStmt, $isTeacherReq, $requestId) {
+        if (!$updateStmt->execute()) {
+            return false;
+        }
+        if ($isTeacherReq) {
+            $finalStmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Approved', cid_chief_status = 'approved', cid_chief_approved_at = NOW(), cid_chief_approved_by = 'Auto-approved (Teacher request)' WHERE id = ?");
+            if ($finalStmt) {
+                $finalStmt->bind_param("i", $requestId);
+                $finalStmt->execute();
+                $finalStmt->close();
+            }
+        }
+        return true;
+    });
+    $updated = $approval['ok'];
+} else {
+    $updated = $updateStmt->execute();
+}
+
+if ($updated) {
     // Check if this is the final approval (CID Chief or Force Approve)
     if (($fieldPrefix === 'cid_chief' && $action === 'approve') || $fieldPrefix === 'force_approve') {
-        // Automatically deduct the requested materials from inventory
-        scilab_deduct_inventory($conn, $requestId);
-
         scilab_notify_stage_status($conn, $request, $fieldPrefix, 'approve');
     } elseif ($fieldPrefix === 'supervisor' && $action === 'approve') {
         scilab_notify_stage_status($conn, $request, 'supervisor', 'approve');
@@ -959,16 +990,7 @@ if ($updateStmt->execute()) {
         scilab_notify_stage_status($conn, $request, 'subject_teacher', 'approve');
         sendNotificationToAdmins($conn, $requestId);
     } elseif ($fieldPrefix === 'lab_personnel' && $action === 'approve') {
-        $isTeacherReq = scilab_is_faculty_requester($conn, $request['requesterEmployeeID'] ?? '');
         if ($isTeacherReq) {
-            // For teachers, Lab Personnel is the second and last approval needed. CID Chief is bypassed.
-            $finalStmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Approved', cid_chief_status = 'approved', cid_chief_approved_at = NOW(), cid_chief_approved_by = 'Auto-approved (Teacher request)' WHERE id = ?");
-            if ($finalStmt) {
-                $finalStmt->bind_param("i", $requestId);
-                $finalStmt->execute();
-                $finalStmt->close();
-            }
-            scilab_deduct_inventory($conn, $requestId);
             scilab_notify_stage_status($conn, $request, 'lab_personnel', 'approve');
         } else {
             scilab_notify_stage_status($conn, $request, 'lab_personnel', 'approve');
@@ -979,6 +1001,8 @@ if ($updateStmt->execute()) {
     }
 
     echo json_encode(['success' => true]);
+} elseif ($isFinalApproval && $approval['reason'] !== 'update_failed') {
+    echo json_encode(['success' => false, 'message' => $approval['message']]);
 } else {
     echo json_encode(['success' => false, 'message' => 'Database update failed: ' . $updateStmt->error]);
 }

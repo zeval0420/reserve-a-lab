@@ -97,21 +97,25 @@
             $controlPrimary = $controlEquipment ?: ($controlReagent ?: ($controlPermit ?: $controlReservation));
             $legacyControl = is_numeric($controlPrimary) ? (int)$controlPrimary : 0;
 
-            $stmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Approved', supervisor_status = 'approved', subject_teacher_status = 'approved', lab_personnel_status = 'approved', cid_chief_status = 'approved', supervisor_approved_at = NOW(), subject_teacher_approved_at = NOW(), lab_personnel_approved_at = NOW(), cid_chief_approved_at = NOW(), supervisor_approved_by = ?, subject_teacher_approved_by = ?, lab_personnel_approved_by = ?, cid_chief_approved_by = ?, controlNumber = ?, control_equipment = ?, control_reagent = ?, control_permit = ?, control_reservation = ?, feedback = ? WHERE id = ?");
-            $stmt->bind_param("ssssisssssi", $adminName, $adminName, $adminName, $adminName, $legacyControl, $controlEquipment, $controlReagent, $controlPermit, $controlReservation, $remarks, $id);
-            $stmt->execute();
+            // Slot check, status update and inventory deduction in one transaction
+            $approval = scilab_approve_request($conn, $id, function ($conn) use ($adminName, $legacyControl, $controlEquipment, $controlReagent, $controlPermit, $controlReservation, $remarks, $id) {
+                $stmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Approved', supervisor_status = 'approved', subject_teacher_status = 'approved', lab_personnel_status = 'approved', cid_chief_status = 'approved', supervisor_approved_at = NOW(), subject_teacher_approved_at = NOW(), lab_personnel_approved_at = NOW(), cid_chief_approved_at = NOW(), supervisor_approved_by = ?, subject_teacher_approved_by = ?, lab_personnel_approved_by = ?, cid_chief_approved_by = ?, controlNumber = ?, control_equipment = ?, control_reagent = ?, control_permit = ?, control_reservation = ?, feedback = ? WHERE id = ?");
+                $stmt->bind_param("ssssisssssi", $adminName, $adminName, $adminName, $adminName, $legacyControl, $controlEquipment, $controlReagent, $controlPermit, $controlReservation, $remarks, $id);
+                $stmt->execute();
+                $updated = $stmt->affected_rows > 0;
+                $stmt->close();
+                return $updated;
+            });
 
-            if ($stmt->affected_rows > 0) {
+            if ($approval['ok']) {
                 $request = scilab_fetch_request($conn, $id);
                 if ($request) {
                     scilab_notify_stage_status($conn, $request, 'force_approve', 'approve');
                 }
-                scilab_deduct_inventory($conn, $id);
                 echo "Request approved.";
             } else {
-                echo "Update failed.";
+                echo $approval['message'];
             }
-            $stmt->close();
             exit();
         }
         elseif ($_POST['action'] === 'force_approve') {
@@ -124,21 +128,25 @@
             $controlPrimary = $controlEquipment ?: ($controlReagent ?: ($controlPermit ?: $controlReservation));
             $legacyControl = is_numeric($controlPrimary) ? (int)$controlPrimary : 0;
 
-            $stmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Approved', supervisor_status = 'approved', subject_teacher_status = 'approved', lab_personnel_status = 'approved', cid_chief_status = 'approved', supervisor_approved_at = NOW(), subject_teacher_approved_at = NOW(), lab_personnel_approved_at = NOW(), cid_chief_approved_at = NOW(), supervisor_approved_by = ?, subject_teacher_approved_by = ?, lab_personnel_approved_by = ?, cid_chief_approved_by = ?, controlNumber = ?, control_equipment = ?, control_reagent = ?, control_permit = ?, control_reservation = ?, feedback = ? WHERE id = ?");
-            $stmt->bind_param("ssssisssssi", $adminName, $adminName, $adminName, $adminName, $legacyControl, $controlEquipment, $controlReagent, $controlPermit, $controlReservation, $remarks, $id);
-            $stmt->execute();
+            // Slot check, status update and inventory deduction in one transaction
+            $approval = scilab_approve_request($conn, $id, function ($conn) use ($adminName, $legacyControl, $controlEquipment, $controlReagent, $controlPermit, $controlReservation, $remarks, $id) {
+                $stmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Approved', supervisor_status = 'approved', subject_teacher_status = 'approved', lab_personnel_status = 'approved', cid_chief_status = 'approved', supervisor_approved_at = NOW(), subject_teacher_approved_at = NOW(), lab_personnel_approved_at = NOW(), cid_chief_approved_at = NOW(), supervisor_approved_by = ?, subject_teacher_approved_by = ?, lab_personnel_approved_by = ?, cid_chief_approved_by = ?, controlNumber = ?, control_equipment = ?, control_reagent = ?, control_permit = ?, control_reservation = ?, feedback = ? WHERE id = ?");
+                $stmt->bind_param("ssssisssssi", $adminName, $adminName, $adminName, $adminName, $legacyControl, $controlEquipment, $controlReagent, $controlPermit, $controlReservation, $remarks, $id);
+                $stmt->execute();
+                $updated = $stmt->affected_rows > 0;
+                $stmt->close();
+                return $updated;
+            });
 
-            if ($stmt->affected_rows > 0) {
+            if ($approval['ok']) {
                 $request = scilab_fetch_request($conn, $id);
                 if ($request) {
                     scilab_notify_stage_status($conn, $request, 'force_approve', 'approve');
                 }
-                scilab_deduct_inventory($conn, $id);
                 echo "Request approved.";
             } else {
-                echo "Update failed.";
+                echo $approval['message'];
             }
-            $stmt->close();
             exit();
         }
         elseif ($_POST['action'] === 'update_control_numbers') {

@@ -7,9 +7,10 @@
 // MODE=race (default): each admin first runs the conflict check the way a correct
 //   client would (with the csrf_token field) and does not approve if it reports an
 //   approved conflict; i.e. the most favourable client behaviour.
-// MODE=sequential: control run. Admins approve one after another, 3 s apart, using
-//   the browser's actual path (check without csrf_token, as admin_approve.php:1604 sends it),
-//   and the correct check is also recorded to show what the page should have warned.
+// MODE=sequential: control run. Admins approve one after another, 3 s apart, and approve
+//   even when the check reports an approved conflict (a stale page or a direct POST), so the
+//   server-side check is what decides. Before the fix admin_approve.php sent the check without
+//   csrf_token (HTTP 403, no warning); BROWSER_CHECK=no_csrf replays that old request.
 // The database is checked by tools/concurrency.ps1 after the run.
 import http from 'k6/http';
 import { sleep } from 'k6';
@@ -76,8 +77,8 @@ export default function (data) {
     skew.add(Date.now() - at, { phase: 'approve' });
 
     const check = { scilabName: LAB, date: DATE, startTime: START, endTime: END, exclude_id: req.id };
-    if (MODE === 'sequential') {
-        // What the page actually sends: no csrf_token field, so 403 and no warning is shown
+    if (MODE === 'sequential' && __ENV.BROWSER_CHECK === 'no_csrf') {
+        // What the page sent before the fix: no csrf_token field, so 403 and no warning was shown
         const b = ajax('POST', 'ajax/ajax_forms.php', 'check_conflict', check, aCsrf, aJar, { expect: [403], ok: () => true });
         outcome.add(1, { browser_check_status: String(b.status) });
     }
@@ -89,8 +90,8 @@ export default function (data) {
 
     const r = ajax('POST', 'ajax/ajax_admin_action.php', 'force_approve',
         { id: req.id, control_equipment: `LT-${req.id}`, control_reagent: '', control_permit: '', control_reservation: '', remarks: '' },
-        aCsrf, aJar, { ok: (x) => /approved|Update failed/.test(x.body) });
-    outcome.add(1, { result: /approved/.test(r.body) ? 'approved' : `approve_response:${r.body.trim().slice(0, 40)}` });
+        aCsrf, aJar, { ok: (x) => /approved|Update failed|Cannot approve/.test(x.body) });
+    outcome.add(1, { result: /approved/.test(r.body) ? 'approved' : /Cannot approve/.test(r.body) ? 'refused_by_server' : `approve_response:${r.body.trim().slice(0, 40)}` });
 }
 
 export const handleSummary = summary;

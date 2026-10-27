@@ -35,6 +35,7 @@ export const stepOk = new Rate('step_ok');                  // every journey ste
 export const journeyOk = new Rate('journey_ok');            // whole journey completed
 export const journeyTime = new Trend('journey_duration', true);
 export const approvalOutcome = new Counter('approval_outcome'); // tagged result
+export const submissionOutcome = new Counter('submission_outcome'); // tagged result
 
 const AJAX = { 'X-Requested-With': 'XMLHttpRequest' };
 const FORM = { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' };
@@ -197,10 +198,10 @@ export function requesterJourney() {
     ajax('POST', 'ajax/ajax_forms.php', 'get_disabled_dates', { scilabName: lab }, csrf);
     ajax('POST', 'ajax/ajax_forms.php', 'get_subjects_by_grade', { grade: 9 }, csrf);
     ajax('GET', 'ajax/ajax_forms.php', 'get_sections', { grade: 9 }, csrf);
-    // Live warning on date/time change (forms.php:1327). The page omits the csrf_token field
-    // this endpoint requires, so the browser gets 403 here; replicated as-is.
-    ajax('POST', 'ajax/ajax_forms.php', 'check_conflict', { scilabName: lab, date: slot.date, startTime: slot.start, endTime: slot.end },
-        csrf, undefined, { expect: [403], ok: (x) => x.status === 403 });
+    // Live warning on date/time change (forms.php:1327), which sends csrf_token since the
+    // concurrency fixes (before them the page omitted it and got 403).
+    ajax('POST', 'ajax/ajax_forms.php', 'check_conflict', { csrf_token: csrf, scilabName: lab, date: slot.date, startTime: slot.start, endTime: slot.end },
+        csrf, undefined, { ok: (x) => x.json('status') === 'success' });
     think(5, 10);
 
     // Confirmation step (forms.php:1003) sends the token and gets an answer.
@@ -211,7 +212,9 @@ export function requesterJourney() {
     const body = submissionBody(form.body, csrf, { lab, ...slot, materials: randomMaterials(), teacher: teacherOption(form.body || '') });
     const sub = http.post(`${BASE}/ajax/ajax_supervisor_action.php`, body,
         { tags: { name: 'POST ajax_supervisor_action.php request_submission' }, headers: { ...AJAX, ...FORM, 'X-CSRF-Token': csrf } });
-    const submitted = track(sub, 'POST ajax_supervisor_action.php request_submission', (x) => x.body.trim() === 'success');
+    // A slot an approved request already holds is refused by design (random slots can collide)
+    const submitted = track(sub, 'POST ajax_supervisor_action.php request_submission', (x) => x.body.trim() === 'success' || /is already booked/.test(x.body));
+    submissionOutcome.add(1, { result: /is already booked/.test(sub.body || '') ? 'slot_taken' : (submitted ? 'submitted' : 'failed') });
     think(2, 4);
 
     getPage('requests.php');
@@ -240,15 +243,17 @@ export function adminJourney() {
     if (pending.length) {
         const req = pending[Math.floor(Math.random() * pending.length)];
         const [s, e] = String(req.inclusiveTime).split(' to ');
-        // admin_approve.php:1604 also omits csrf_token, so the browser gets 403; replicated as-is.
-        ajax('POST', 'ajax/ajax_forms.php', 'check_conflict', { scilabName: req.scilabName, date: req.inclusiveDate, startTime: s, endTime: e, exclude_id: req.id },
-            csrf, undefined, { expect: [403], ok: (x) => x.status === 403 });
+        // admin_approve.php:1604 sends csrf_token since the concurrency fixes (403 before them).
+        ajax('POST', 'ajax/ajax_forms.php', 'check_conflict', { csrf_token: csrf, scilabName: req.scilabName, date: req.inclusiveDate, startTime: s, endTime: e, exclude_id: req.id },
+            csrf, undefined, { ok: (x) => x.json('status') === 'success' });
         think(3, 6);
         const r = ajax('POST', 'ajax/ajax_admin_action.php', 'force_approve',
             { id: req.id, control_equipment: `LT-${req.id}`, control_reagent: '', control_permit: '', control_reservation: '', remarks: '' }, csrf, undefined,
-            { ok: (x) => /approved|Update failed/.test(x.body) });
-        approvalOutcome.add(1, { result: /approved/.test(r.body) ? 'approved' : 'update_failed' });
-        approved = /approved/.test(r.body);
+            { ok: (x) => /approved|Update failed|Cannot approve/.test(x.body) });
+        // A refusal (slot already booked, not enough stock) is a correct outcome, not an error
+        const refused = /Cannot approve/.test(r.body);
+        approvalOutcome.add(1, { result: /approved/.test(r.body) ? 'approved' : (refused ? 'refused_by_server' : 'update_failed') });
+        approved = /approved/.test(r.body) || refused;
     }
     think(2, 4);
     getPage('inventory.php');

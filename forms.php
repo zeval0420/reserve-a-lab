@@ -1326,6 +1326,7 @@
                 if (venue && date && start && end && start < end) {
                     $.post('ajax/ajax_forms.php', {
                         action: 'check_conflict',
+                        csrf_token: $('input[name="csrf_token"]', '#reservationForm').val(),
                         scilabName: venue,
                         date: date,
                         startTime: start,

@@ -1603,6 +1603,7 @@
                 ) {
                     $.post('ajax/ajax_forms.php', {
                         action: 'check_conflict',
+                        csrf_token: $('meta[name="csrf-token"]').attr('content'),
                         scilabName: data.scilabName,
                         date: data.inclusiveDate,
                         startTime: timeParts[0].trim(),

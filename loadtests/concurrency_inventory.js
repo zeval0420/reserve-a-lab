@@ -69,8 +69,8 @@ export default function (data) {
     skew.add(Date.now() - at, { phase: 'approve' });
     const r = ajax('POST', 'ajax/ajax_admin_action.php', 'force_approve',
         { id: req.id, control_equipment: `LT-${req.id}`, control_reagent: '', control_permit: '', control_reservation: '', remarks: '' },
-        aCsrf, aJar, { ok: (x) => /approved|Update failed/.test(x.body) });
-    outcome.add(1, { result: /approved/.test(r.body) ? 'approved' : `approve_response:${r.body.trim().slice(0, 40)}` });
+        aCsrf, aJar, { ok: (x) => /approved|Update failed|Cannot approve/.test(x.body) });
+    outcome.add(1, { result: /approved/.test(r.body) ? 'approved' : /Cannot approve/.test(r.body) ? 'refused_by_server' : `approve_response:${r.body.trim().slice(0, 40)}` });
 }
 
 export const handleSummary = summary;

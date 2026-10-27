@@ -383,61 +383,217 @@ if (!function_exists('scilab_deduct_inventory')) {
      * Deduct requested material quantities from scilab_inventory once a
      * reservation is fully approved. Matches inventory by item name and
      * prefers an exact description match when several rows share a name.
-     * Quantities can never be driven below zero.
      *
-     * Returns an array map of inventory id => quantity deducted.
+     * Runs inside the approval transaction (scilab_approve_request): the item
+     * rows are locked with SELECT ... FOR UPDATE, and if any item has less
+     * stock than requested nothing is deducted and the approval is refused,
+     * so stock is never over-allocated or driven below zero. Same approach as
+     * the manual deduction in ajax/ajax_inventory.php.
+     *
+     * Returns ['ok' => true, 'deducted' => [inventory id => quantity deducted]]
+     * or ['ok' => false, 'message' => reason].
      */
     function scilab_deduct_inventory($conn, $formID)
     {
-        $updated = [];
-
         $stmt = $conn->prepare("SELECT item, quantity, description FROM scilab_material_requests WHERE formID = ?");
-        if (!$stmt) return $updated;
+        if (!$stmt) return ['ok' => false, 'message' => 'Could not read the requested materials.'];
         $stmt->bind_param("i", $formID);
         $stmt->execute();
         $result = $stmt->get_result();
 
+        $materials = [];
         while ($mat = $result->fetch_assoc()) {
             $item = trim($mat['item'] ?? '');
-            if ($item === '') continue;
             $qty = intval($mat['quantity'] ?? 0);
-            if ($qty <= 0) continue;
+            if ($item === '' || $qty <= 0) continue;
+            $materials[] = ['item' => $item, 'qty' => $qty, 'description' => trim((string)($mat['description'] ?? ''))];
+        }
+        $stmt->close();
 
-            $invStmt = $conn->prepare("SELECT id, item, description, quantity FROM scilab_inventory WHERE item = ? AND (status IS NULL OR status != 'Removed') ORDER BY quantity DESC, id ASC");
-            if (!$invStmt) continue;
-            $invStmt->bind_param("s", $item);
-            $invStmt->execute();
-            $invRes = $invStmt->get_result();
+        if (!$materials) return ['ok' => true, 'deducted' => []];
 
-            $candidates = [];
-            $descMatch = null;
-            $requestedDesc = trim((string)($mat['description'] ?? ''));
-            while ($inv = $invRes->fetch_assoc()) {
-                $candidates[] = $inv;
-                if ($descMatch === null && $requestedDesc !== '' && strcasecmp(trim((string)$inv['description']), $requestedDesc) === 0) {
-                    $descMatch = $inv;
+        // Find the candidate rows, then lock them by primary key in id order so
+        // concurrent approvals that share items always lock in the same order.
+        $names = array_values(array_unique(array_column($materials, 'item')));
+        $placeholders = implode(',', array_fill(0, count($names), '?'));
+        $idStmt = $conn->prepare("SELECT id FROM scilab_inventory WHERE item IN ($placeholders) AND (status IS NULL OR status != 'Removed')");
+        if (!$idStmt) return ['ok' => false, 'message' => 'Could not read the inventory.'];
+        $idStmt->bind_param(str_repeat('s', count($names)), ...$names);
+        $idStmt->execute();
+        $ids = array_map('intval', array_column($idStmt->get_result()->fetch_all(MYSQLI_ASSOC), 'id'));
+        $idStmt->close();
+
+        if (!$ids) return ['ok' => true, 'deducted' => []];
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $lockStmt = $conn->prepare("SELECT id, item, description, quantity, unit FROM scilab_inventory WHERE id IN ($placeholders) AND (status IS NULL OR status != 'Removed') ORDER BY id FOR UPDATE");
+        if (!$lockStmt) return ['ok' => false, 'message' => 'Could not read the inventory.'];
+        $lockStmt->bind_param(str_repeat('i', count($ids)), ...$ids);
+        $lockStmt->execute();
+        $rows = $lockStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $lockStmt->close();
+
+        $upd = $conn->prepare("UPDATE scilab_inventory SET quantity = quantity - ? WHERE id = ? AND quantity >= ?");
+        if (!$upd) return ['ok' => false, 'message' => 'Could not update the inventory.'];
+
+        $deducted = [];
+        foreach ($materials as $mat) {
+            // Same choice as before: the exact description match, else the row with the most stock
+            $candidates = array_values(array_filter($rows, function ($inv) use ($mat) {
+                return strcasecmp(trim((string)$inv['item']), $mat['item']) === 0;
+            }));
+            usort($candidates, function ($a, $b) {
+                return [intval($b['quantity']), intval($a['id'])] <=> [intval($a['quantity']), intval($b['id'])];
+            });
+
+            $target = null;
+            foreach ($candidates as $inv) {
+                if ($mat['description'] !== '' && strcasecmp(trim((string)$inv['description']), $mat['description']) === 0) {
+                    $target = $inv;
+                    break;
                 }
             }
-            $invStmt->close();
-
-            $target = $descMatch ?: ($candidates[0] ?? null);
+            $target = $target ?: ($candidates[0] ?? null);
             if (!$target) continue;
 
-            $deduct = min($qty, intval($target['quantity']));
-            if ($deduct <= 0) continue;
-
-            $upd = $conn->prepare("UPDATE scilab_inventory SET quantity = quantity - ? WHERE id = ? AND quantity > 0");
-            if (!$upd) continue;
-            $upd->bind_param("ii", $deduct, $target['id']);
-            if ($upd->execute() && $upd->affected_rows > 0) {
-                $updated[$target['id']] = ($updated[$target['id']] ?? 0) + $deduct;
-                checkInventoryThresholdAndNotify($conn, $target['id']);
+            $available = intval($target['quantity']);
+            if ($mat['qty'] > $available) {
+                $upd->close();
+                return ['ok' => false, 'message' => 'Cannot approve: not enough stock for "' . $target['item'] . '" (' . $mat['qty'] . ' requested, only ' . $available . ' ' . $target['unit'] . ' left). Nothing was deducted.'];
             }
-            $upd->close();
+
+            $upd->bind_param("iii", $mat['qty'], $target['id'], $mat['qty']);
+            $upd->execute();
+            if ($upd->affected_rows !== 1) {
+                $upd->close();
+                return ['ok' => false, 'message' => 'Stock changed while deducting. Please try again.'];
+            }
+
+            // Later materials in this request see the reduced quantity
+            foreach ($rows as &$row) {
+                if ($row['id'] === $target['id']) $row['quantity'] = $available - $mat['qty'];
+            }
+            unset($row);
+            $deducted[$target['id']] = ($deducted[$target['id']] ?? 0) + $mat['qty'];
         }
 
+        $upd->close();
+        return ['ok' => true, 'deducted' => $deducted];
+    }
+}
+
+if (!function_exists('scilab_find_slot_conflict')) {
+    /**
+     * Find an approved request for the same lab and date whose time range
+     * ("9:00 AM to 11:00 AM") overlaps the given one. Touching boundaries do
+     * not overlap, as in the check_conflict action of ajax/ajax_forms.php.
+     * Returns the conflicting row (id, inclusiveTime) or null.
+     */
+    function scilab_find_slot_conflict($conn, $scilabName, $date, $timeRange, $excludeId = 0)
+    {
+        $range = explode(' to ', (string)$timeRange);
+        if (count($range) !== 2) return null;
+        $start = strtotime($range[0]);
+        $end = strtotime($range[1]);
+        if ($start === false || $end === false) return null;
+
+        $excludeId = intval($excludeId);
+        $stmt = $conn->prepare("SELECT id, inclusiveTime FROM scilab_form_requests WHERE scilabName = ? AND inclusiveDate = ? AND statusScilabPersonnel = 'Approved' AND id != ?");
+        if (!$stmt) return null;
+        $stmt->bind_param("ssi", $scilabName, $date, $excludeId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        $conflict = null;
+        while ($row = $result->fetch_assoc()) {
+            $other = explode(' to ', $row['inclusiveTime']);
+            if (count($other) !== 2) continue;
+            if ($start < strtotime($other[1]) && $end > strtotime($other[0])) {
+                $conflict = $row;
+                break;
+            }
+        }
         $stmt->close();
-        return $updated;
+        return $conflict;
+    }
+}
+
+if (!function_exists('scilab_approve_request')) {
+    /**
+     * Final approval of a request, in one transaction:
+     *  1. lock the lab's scilab_availability row (SELECT ... FOR UPDATE), so
+     *     approvals for the same lab run one at a time;
+     *  2. refuse if an approved request for the same lab and date overlaps;
+     *  3. run $markApproved($conn), the caller's status UPDATE (returns bool);
+     *  4. deduct the materials (scilab_deduct_inventory), refusing if stock is short.
+     * A refusal rolls everything back. Low-stock alerts are sent after the commit.
+     * Refusal messages avoid the word "approved": admin_approve.php treats a
+     * response containing it as success.
+     *
+     * Returns ['ok' => bool, 'reason' => null|'not_found'|'slot_conflict'|'update_failed'|'insufficient_stock',
+     *          'message' => string].
+     */
+    function scilab_approve_request($conn, $formID, callable $markApproved)
+    {
+        $formID = intval($formID);
+
+        // Read before the transaction starts: under REPEATABLE READ the first plain
+        // read fixes the snapshot, and that has to happen after the lab lock is held.
+        $stmt = $conn->prepare("SELECT scilabName, inclusiveDate, inclusiveTime FROM scilab_form_requests WHERE id = ?");
+        $stmt->bind_param("i", $formID);
+        $stmt->execute();
+        $request = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        if (!$request) {
+            return ['ok' => false, 'reason' => 'not_found', 'message' => 'Request not found.'];
+        }
+
+        $stmt = $conn->prepare("SELECT id FROM scilab_availability WHERE scilabName = ?");
+        $stmt->bind_param("s", $request['scilabName']);
+        $stmt->execute();
+        $lab = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        $conn->begin_transaction();
+        try {
+            if ($lab) {
+                // Lock by primary key so only this lab's row is locked
+                $lock = $conn->prepare("SELECT id FROM scilab_availability WHERE id = ? FOR UPDATE");
+                $lock->bind_param("i", $lab['id']);
+                $lock->execute();
+                $lock->get_result();
+                $lock->close();
+            }
+
+            $conflict = scilab_find_slot_conflict($conn, $request['scilabName'], $request['inclusiveDate'], $request['inclusiveTime'], $formID);
+            if ($conflict) {
+                $conn->rollback();
+                return ['ok' => false, 'reason' => 'slot_conflict', 'message' => 'Cannot approve: ' . $request['scilabName']
+                    . ' is already booked on ' . date('F j, Y', strtotime($request['inclusiveDate']))
+                    . ' from ' . $conflict['inclusiveTime'] . ' (request #' . $conflict['id'] . ').'];
+            }
+
+            if (!$markApproved($conn)) {
+                $conn->rollback();
+                return ['ok' => false, 'reason' => 'update_failed', 'message' => 'Update failed.'];
+            }
+
+            $deduction = scilab_deduct_inventory($conn, $formID);
+            if (!$deduction['ok']) {
+                $conn->rollback();
+                return ['ok' => false, 'reason' => 'insufficient_stock', 'message' => $deduction['message']];
+            }
+
+            $conn->commit();
+        } catch (Throwable $e) {
+            $conn->rollback();
+            throw $e;
+        }
+
+        foreach (array_keys($deduction['deducted']) as $itemId) {
+            checkInventoryThresholdAndNotify($conn, $itemId);
+        }
+        return ['ok' => true, 'reason' => null, 'message' => ''];
     }
 }
 ?>

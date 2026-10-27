@@ -3,13 +3,16 @@
 # after it, the database is queried directly and the raw output saved as evidence in
 # results\<name>_db.txt, plus a machine-readable results\<name>_db.json.
 # Example: tools\concurrency.ps1 -Test slot -Reps 5
+# -Tag after: results are named conc_<test>_<mode>_after_r<n> and marked phase=after,
+# so a re-run after code changes keeps the earlier results.
 param(
     [Parameter(Mandatory)][ValidateSet('slot', 'inventory', 'manual')][string]$Test,
     [ValidateSet('race', 'sequential')][string]$Mode = 'race',
     [int]$Reps = 5,
     [int]$N = 20,
     [int]$Stock = 5,
-    [int]$Qty = 2
+    [int]$Qty = 2,
+    [string]$Tag = ''
 )
 $root = Split-Path $PSScriptRoot -Parent
 Set-Location $root
@@ -19,7 +22,8 @@ function Sql($q) { & $mysql -uroot dbadmin --table -e $q }
 function SqlScalar($q) { (& $mysql -uroot dbadmin -N -e $q) -join '' }
 
 for ($rep = 1; $rep -le $Reps; $rep++) {
-    $name = "conc_${Test}_${Mode}_r$rep"
+    $suffix = if ($Tag) { "_$Tag" } else { '' }
+    $name = "conc_${Test}_${Mode}${suffix}_r$rep"
     & "$PSScriptRoot\db_restore.ps1" -File $baseline
     $lastId = SqlScalar "SELECT id FROM scilab_inventory WHERE productID='LT-LAST'"
     $manualId = SqlScalar "SELECT id FROM scilab_inventory WHERE productID='LT-MANUAL'"
@@ -69,6 +73,7 @@ for ($rep = 1; $rep -le $Reps; $rep++) {
                 pass = (($qtyNow -ge 0) -and ([int]$r2[1] -le $Stock) -and ([int]$r2[1] + $qtyNow -eq $Stock)) }
         }
     }
+    if ($Tag) { $json['phase'] = $Tag }
     $evidence | Set-Content "results\${name}_db.txt" -Encoding utf8
     $json | ConvertTo-Json | Set-Content "results\${name}_db.json" -Encoding utf8
     "== $name : " + ($json | ConvertTo-Json -Compress)
