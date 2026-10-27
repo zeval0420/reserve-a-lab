@@ -3,10 +3,14 @@ from the analysed results (run analysis/analyze.py and analysis/lighthouse_stats
 
 Usage: python analysis/build_report.py
 """
+import csv
+import gzip
 import html
 import json
 import pathlib
 import re
+import urllib.parse
+from collections import Counter
 
 from charts import HOVER_JS, bar_chart, line_chart
 
@@ -36,13 +40,35 @@ SPIKE = load("spike_200")
 SOAK = load("soak_100")
 CAP = jload(RES / "stress_capacity.json")
 LH = jload(RES / "lighthouse_stats.json")
+# Concurrency results: the original runs (before the fixes) and the re-runs after them
+# (tools/concurrency.ps1 -Tag after writes phase = "after" and "_after" in the name).
 CONC = {}
+AFTER = {}
 for p in sorted(RES.glob("conc_*_db.json")):
     d = jload(p)
-    CONC.setdefault(f"{d['test']}_{d.get('mode', 'race')}", []).append(d)
-for v in CONC.values():
+    (AFTER if d.get("phase") == "after" else CONC).setdefault(f"{d['test']}_{d.get('mode', 'race')}", []).append(d)
+for v in list(CONC.values()) + list(AFTER.values()):
     v.sort(key=lambda d: d["rep"])
-EVIDENCE = {p.name[:-7]: p.read_text(encoding="utf-8-sig") for p in RES.glob("conc_*_db.txt")}
+EVIDENCE = {p.name[:-7]: p.read_text(encoding="utf-8-sig") for p in RES.glob("conc_*_db.txt") if "_after_" not in p.name}
+AFTER_EVIDENCE = {p.name[:-7]: p.read_text(encoding="utf-8-sig") for p in RES.glob("conc_*_after_*_db.txt")}
+
+
+def outcome_tally(run, metric="outcome"):
+    """Count the tagged outcome counters (result=approved / refused_by_server / ...) in a run's raw k6 CSV."""
+    c = Counter()
+    path = RES / "raw" / f"{run}.csv.gz"
+    if not path.exists():
+        return c
+    for r in csv.DictReader(gzip.open(path, "rt", newline="")):
+        if r["metric_name"] == metric:
+            tags = urllib.parse.parse_qs(r["extra_tags"])
+            if "result" in tags:
+                c[tags["result"][0]] += float(r["metric_value"])
+    return c
+
+
+LOAD_AFTER_PATH = AN / "load_50_after.json"
+LOAD_AFTER = load("load_50_after") if LOAD_AFTER_PATH.exists() else None
 
 ENDPOINT_LABELS = {
     "GET index.php": "Login page",

@@ -1,0 +1,25 @@
+﻿# conc_manual_race_after_r3  (2026-10-27T20:59:36.0592113+08:00)
+# k6 env: N=20 ITEM_ID=1247
+
+mysql> SELECT id, item, quantity AS quantity_now FROM scilab_inventory WHERE id=1247;
++------+------------------+--------------+
+| id   | item             | quantity_now |
++------+------------------+--------------+
+| 1247 | LT Manual Deduct |            0 |
++------+------------------+--------------+
+mysql> SELECT COUNT(*) AS deductions_logged, COALESCE(SUM(quantity_deducted),0) AS units_deducted, MIN(quantity_after) AS lowest_quantity_after FROM scilab_inventory_deductions WHERE inventory_id=1247;
++-------------------+----------------+-----------------------+
+| deductions_logged | units_deducted | lowest_quantity_after |
++-------------------+----------------+-----------------------+
+|                 5 |              5 |                     0 |
++-------------------+----------------+-----------------------+
+mysql> SELECT quantity_before, quantity_after, deducted_by, deducted_at FROM scilab_inventory_deductions WHERE inventory_id=1247 ORDER BY id;
++-----------------+----------------+---------------+---------------------+
+| quantity_before | quantity_after | deducted_by   | deducted_at         |
++-----------------+----------------+---------------+---------------------+
+|               5 |              4 | Load A. Admin | 2026-10-27 20:59:28 |
+|               4 |              3 | Load A. Admin | 2026-10-27 20:59:28 |
+|               3 |              2 | Load A. Admin | 2026-10-27 20:59:28 |
+|               2 |              1 | Load A. Admin | 2026-10-27 20:59:28 |
+|               1 |              0 | Load A. Admin | 2026-10-27 20:59:28 |
++-----------------+----------------+---------------+---------------------+

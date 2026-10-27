@@ -1,0 +1,11 @@
+﻿{
+    "test":  "slot",
+    "mode":  "sequential",
+    "rep":  1,
+    "date":  "2027-03-15",
+    "requests":  3,
+    "approved":  1,
+    "pending":  2,
+    "pass":  true,
+    "phase":  "after"
+}

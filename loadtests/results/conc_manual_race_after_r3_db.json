@@ -1,0 +1,11 @@
+﻿{
+    "test":  "manual",
+    "rep":  3,
+    "starting_stock":  5,
+    "requests":  20,
+    "quantity_now":  0,
+    "deductions":  5,
+    "units_deducted":  5,
+    "pass":  true,
+    "phase":  "after"
+}

@@ -1,0 +1,4 @@
+run conc_manual_race_after_r2
+http_reqs 80 (5.32/s)
+duration avg 36 ms med 36 ms p90 49 ms p95 55 ms max 60 ms
+http_req_failed 0.00%  step_ok 100.00%  journey_ok 0.00%

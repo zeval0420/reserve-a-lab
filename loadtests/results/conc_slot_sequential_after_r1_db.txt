@@ -1,0 +1,17 @@
+﻿# conc_slot_sequential_after_r1  (2026-10-27T20:52:25.1021899+08:00)
+# k6 env: N=3 MODE=sequential DATE=2027-03-15 LAB=Science Laboratory 3
+
+mysql> SELECT id, requesterEmployeeID, scilabName, inclusiveDate, inclusiveTime, statusScilabPersonnel, lab_personnel_approved_at FROM scilab_form_requests WHERE scilabName='Science Laboratory 3' AND inclusiveDate='2027-03-15' ORDER BY id;
++----+---------------------+----------------------+---------------+---------------------+-----------------------+---------------------------+
+| id | requesterEmployeeID | scilabName           | inclusiveDate | inclusiveTime       | statusScilabPersonnel | lab_personnel_approved_at |
++----+---------------------+----------------------+---------------+---------------------+-----------------------+---------------------------+
+| 49 | LT-T0001            | Science Laboratory 3 | 2027-03-15    | 9:00 AM to 11:00 AM | Approved              | 2026-10-27 20:52:11       |
+| 50 | LT-T0003            | Science Laboratory 3 | 2027-03-15    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 51 | LT-T0002            | Science Laboratory 3 | 2027-03-15    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
++----+---------------------+----------------------+---------------+---------------------+-----------------------+---------------------------+
+mysql> SELECT COUNT(*) AS requests_for_slot, COALESCE(SUM(statusScilabPersonnel='Approved'),0) AS approved_for_slot, COALESCE(SUM(statusScilabPersonnel='Pending'),0) AS still_pending FROM scilab_form_requests WHERE scilabName='Science Laboratory 3' AND inclusiveDate='2027-03-15' AND inclusiveTime='9:00 AM to 11:00 AM';
++-------------------+-------------------+---------------+
+| requests_for_slot | approved_for_slot | still_pending |
++-------------------+-------------------+---------------+
+|                 3 |                 1 |             2 |
++-------------------+-------------------+---------------+

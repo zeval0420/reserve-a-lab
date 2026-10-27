@@ -89,7 +89,7 @@ svg .ref{stroke:var(--muted);stroke-dasharray:4 4}svg .hit{fill:transparent}svg 
 <p class="note">Host interference. From about minute 15, other programmes on the laptop competed for the machine: mean machine CPU rose from 21% (minutes 0–15) to 53%, while Apache, MariaDB and k6 together used about 32%, and available memory fell below 1 GB at minute 23 and as low as 22 MB. At about minute 21, with the machine's CPU at 92–97%, every request in flight stalled for about 2 minutes (maximum 130.8 s; 4 timeouts and 9 connection errors). The p95 outliers at minutes 20 and 25, the rise of the overall median after minute 15 and the errors coincide with these episodes. They are a property of the test machine, not of Reserve-a-Lab, and they produce the full-run p95 trend in the table. The admin-page growth started before them.</p>
 <div class="card"><div class="tablewrap"><table class=""><thead><tr><th>Run</th><th>Apache CPU (mean / max)</th><th>Apache memory</th><th>MariaDB CPU</th><th>MariaDB memory</th><th>k6 CPU</th><th>Whole machine CPU</th></tr></thead><tbody><tr><th scope="row">Soak, 100 users</th><td>9.5% / 34.8%</td><td>465 / 591 MB</td><td>4.3% / 16.6%</td><td>53 / 65 MB</td><td>6.2% / 34.5%</td><td>35.0% / 99.9%</td></tr><tr><th scope="row">Spike, 5→200</th><td>1.7% / 10.5%</td><td>469 / 470 MB</td><td>0.3% / 2.3%</td><td>63 / 63 MB</td><td>0.6% / 5.2%</td><td>10.2% / 31.5%</td></tr><tr><th scope="row">Stress, 10 users</th><td>0.4% / 0.9%</td><td>173 / 173 MB</td><td>0.1% / 0.2%</td><td>63 / 63 MB</td><td>0.2% / 0.6%</td><td>7.0% / 14.6%</td></tr><tr><th scope="row">Stress, 25 users</th><td>1.1% / 2.4%</td><td>173 / 173 MB</td><td>0.2% / 0.5%</td><td>64 / 64 MB</td><td>0.3% / 1.0%</td><td>9.0% / 16.2%</td></tr><tr><th scope="row">Stress, 50 users</th><td>2.1% / 3.5%</td><td>173 / 173 MB</td><td>0.4% / 0.8%</td><td>60 / 62 MB</td><td>0.8% / 1.8%</td><td>11.1% / 21.7%</td></tr><tr><th scope="row">Stress, 100 users</th><td>4.3% / 6.7%</td><td>315 / 318 MB</td><td>0.9% / 2.0%</td><td>65 / 65 MB</td><td>1.8% / 4.3%</td><td>17.0% / 24.9%</td></tr><tr><th scope="row">Stress, 200 users</th><td>10.8% / 29.4%</td><td>467 / 473 MB</td><td>2.5% / 13.4%</td><td>64 / 64 MB</td><td>5.0% / 13.9%</td><td>33.5% / 88.3%</td></tr></tbody></table></div></div>
 <h2>Test 5. Concurrency and double booking</h2>
-<p>Each repetition starts from the restored baseline. All virtual users log in and load their pages first, then wait for the same wall-clock instant (a barrier set in k6 <code>setup()</code>) before sending the critical request. The largest gap between the first and last request at a barrier was 4 ms. After each run the database was queried directly; the query output is reproduced below as evidence.</p>
+<p>Each repetition starts from the restored baseline. All virtual users log in and load their pages first, then wait for the same wall-clock instant (a barrier set in k6 <code>setup()</code>) before sending the critical request. The largest gap between the first and last request at a barrier was 4 ms. After each run the database was queried directly; the query output is reproduced below as evidence. These are the results <b>before</b> the fixes; the re-runs after them are in <a href="#after-fixes">After fixes</a>.</p>
 <h3>5a. Same lab, date and time slot</h3>
 <div class="verdict"><b>FAIL.</b> 20 teachers requested Science Laboratory 3, 9:00–11:00, on the same date at the same instant, and 20 admin sessions then approved them at the same instant. The number of approved requests for that one slot was 20, 20, 19, 18, 17 in the five repetitions. A correct system approves at most 1.</div>
 <div class="card"><div class="tablewrap"><table class=""><thead><tr><th>Run</th><th>Date</th><th>Requests for the slot</th><th>Approved</th><th>Still pending</th><th>Result</th></tr></thead><tbody><tr><th scope="row">Repetition 1</th><td>2027-03-15</td><td>20</td><td><b>20</b></td><td>0</td><td><span class="pill bad">FAIL</span></td></tr><tr><th scope="row">Repetition 2</th><td>2027-03-16</td><td>20</td><td><b>20</b></td><td>0</td><td><span class="pill bad">FAIL</span></td></tr><tr><th scope="row">Repetition 3</th><td>2027-03-17</td><td>20</td><td><b>19</b></td><td>1</td><td><span class="pill bad">FAIL</span></td></tr><tr><th scope="row">Repetition 4</th><td>2027-03-18</td><td>20</td><td><b>18</b></td><td>2</td><td><span class="pill bad">FAIL</span></td></tr><tr><th scope="row">Repetition 5</th><td>2027-03-19</td><td>20</td><td><b>17</b></td><td>3</td><td><span class="pill bad">FAIL</span></td></tr><tr><th scope="row">Control: one by one, 3 s apart</th><td>2027-03-15</td><td>3</td><td><b>3</b></td><td>0</td><td><span class="pill bad">FAIL</span></td></tr></tbody></table></div></div>
@@ -654,6 +654,581 @@ mysql&gt; SELECT COUNT(*) AS requests_for_slot, COALESCE(SUM(statusScilabPersonn
 | requests_for_slot | approved_for_slot | still_pending |
 +-------------------+-------------------+---------------+
 |                 3 |                 3 |             0 |
++-------------------+-------------------+---------------+
+</pre></details>
+<h2 id="after-fixes">After fixes</h2>
+<p>The three concurrency failures above were fixed on the server side (branch <code>fix/concurrency</code>) and tests 5a, 5b and 5c were re-run with the same scripts, the same 20 simultaneous teachers and admins, the same baseline restored before every repetition and the same database queries. The <b>Before</b> columns below are the original runs, unchanged and still shown in full above; the <b>After</b> columns are the re-runs. The database was backed up before the re-runs and restored afterwards; outbound SMTP was blocked again for the duration.</p>
+<div class="card"><b>What changed</b><ul><li><b>Approval is one transaction</b> (<code>scilab_approve_request()</code> in <code>helperFiles/variableDeclarations.php</code>), used by <code>force_approve</code> and <code>approve</code> in <code>ajax/ajax_admin_action.php</code> and by the final stage of the multi-stage path in <code>ajax/ajax_supervisor_action.php</code>. It locks the lab's <code>scilab_availability</code> row (<code>SELECT … FOR UPDATE</code>), refuses if an approved request for the same lab and date overlaps, then updates the status and deducts stock. A refusal rolls everything back.</li><li><b>Stock</b>: <code>scilab_deduct_inventory()</code> locks the item rows (<code>SELECT … FOR UPDATE</code>, in id order), refuses the approval with a message if any item has too little stock, and deducts with <code>WHERE quantity &gt;= ?</code>, the same pattern as the inventory page's manual deduction. No schema change.</li><li><b>Submission</b> (<code>request_submission</code>) refuses a slot that an approved request already holds.</li><li><b>Conflict warning</b>: <code>admin_approve.php</code> and <code>forms.php</code> now send the <code>csrf_token</code> field with <code>check_conflict</code>, so the "Severe Conflict" warning can show again.</li></ul></div>
+<h3>5a after the fix: same lab, date and time slot</h3>
+<div class="verdict good"><b>PASS.</b> Approved requests for the one slot in the five repetitions: 1, 1, 1, 1, 1 (before: 20, 20, 19, 18, 17). The correct number is at most 1.</div>
+<div class="card"><div class="tablewrap"><table class=""><thead><tr><th>Run</th><th>Date</th><th>Approved, before</th><th>Approved, after</th><th>Stopped by their own check</th><th>Refused by the server</th><th>Still pending</th><th>Result</th></tr></thead><tbody><tr><th scope="row">Repetition 1</th><td>2027-03-15</td><td>20</td><td><b>1</b></td><td>0</td><td>19</td><td>19</td><td><span class="pill good">PASS</span></td></tr><tr><th scope="row">Repetition 2</th><td>2027-03-16</td><td>20</td><td><b>1</b></td><td>0</td><td>19</td><td>19</td><td><span class="pill good">PASS</span></td></tr><tr><th scope="row">Repetition 3</th><td>2027-03-17</td><td>19</td><td><b>1</b></td><td>0</td><td>19</td><td>19</td><td><span class="pill good">PASS</span></td></tr><tr><th scope="row">Repetition 4</th><td>2027-03-18</td><td>18</td><td><b>1</b></td><td>0</td><td>19</td><td>19</td><td><span class="pill good">PASS</span></td></tr><tr><th scope="row">Repetition 5</th><td>2027-03-19</td><td>17</td><td><b>1</b></td><td>2</td><td>17</td><td>19</td><td><span class="pill good">PASS</span></td></tr><tr><th scope="row">Control: one by one, 3 s apart</th><td>2027-03-15</td><td>3 of 3</td><td><b>1 of 3</b></td><td>–</td><td>2</td><td>2</td><td><span class="pill good">PASS</span></td></tr></tbody></table></div></div>
+<div class="card"><svg viewBox="0 0 760 260" role="img" aria-label="Approved requests for one slot, after the fix" class="chart"><line class="grid" x1="64" x2="640" y1="220.0" y2="220.0"/><text class="axis" x="56" y="224.0" text-anchor="end">0</text><line class="grid" x1="64" x2="640" y1="169.0" y2="169.0"/><text class="axis" x="56" y="173.0" text-anchor="end">5</text><line class="grid" x1="64" x2="640" y1="118.0" y2="118.0"/><text class="axis" x="56" y="122.0" text-anchor="end">10</text><line class="grid" x1="64" x2="640" y1="67.0" y2="67.0"/><text class="axis" x="56" y="71.0" text-anchor="end">15</text><line class="grid" x1="64" x2="640" y1="16.0" y2="16.0"/><text class="axis" x="56" y="20.0" text-anchor="end">20</text><path class="bar good" d="M89.3,220.0 V213.8 Q89.3,209.8 93.3,209.8 H149.9 Q153.9,209.8 153.9,213.8 V220.0 Z"><title>Repetition 1: 1 approved</title></path><text class="val strong" x="121.6" y="203.8" text-anchor="middle">1</text><text class="axis" x="121.6" y="238" text-anchor="middle">Rep 1</text><path class="bar good" d="M204.5,220.0 V213.8 Q204.5,209.8 208.5,209.8 H265.1 Q269.1,209.8 269.1,213.8 V220.0 Z"><title>Repetition 2: 1 approved</title></path><text class="val strong" x="236.8" y="203.8" text-anchor="middle">1</text><text class="axis" x="236.8" y="238" text-anchor="middle">Rep 2</text><path class="bar good" d="M319.7,220.0 V213.8 Q319.7,209.8 323.7,209.8 H380.3 Q384.3,209.8 384.3,213.8 V220.0 Z"><title>Repetition 3: 1 approved</title></path><text class="val strong" x="352.0" y="203.8" text-anchor="middle">1</text><text class="axis" x="352.0" y="238" text-anchor="middle">Rep 3</text><path class="bar good" d="M434.9,220.0 V213.8 Q434.9,209.8 438.9,209.8 H495.5 Q499.5,209.8 499.5,213.8 V220.0 Z"><title>Repetition 4: 1 approved</title></path><text class="val strong" x="467.2" y="203.8" text-anchor="middle">1</text><text class="axis" x="467.2" y="238" text-anchor="middle">Rep 4</text><path class="bar good" d="M550.1,220.0 V213.8 Q550.1,209.8 554.1,209.8 H610.7 Q614.7,209.8 614.7,213.8 V220.0 Z"><title>Repetition 5: 1 approved</title></path><text class="val strong" x="582.4" y="203.8" text-anchor="middle">1</text><text class="axis" x="582.4" y="238" text-anchor="middle">Rep 5</text><line class="ref" x1="64" x2="640" y1="209.8" y2="209.8"/><text class="axis" x="646" y="213.8">correct: 1</text></svg><p class="note">Drawn on the same 0–20 axis as the Before chart in 5a. The dashed line is the correct maximum.</p></div>
+<p>The admins' correct conflict checks still race: in repetitions 1 to 4 all 20 checks reported only "pending" because they ran before any approval was written, and in repetition 5 two admins' checks happened to see the approval and skipped it (before the fix this stopped 0 to 3 admins per repetition). What changed is that the server now decides: the first approval to take the lab lock was approved and every other admin who sent an approval was refused with "Cannot approve: Science Laboratory 3 is already booked …" (19 in repetitions 1 to 4 and 17 in repetition 5, where two had already stopped themselves). In the one-by-one control the second and third approvals were refused as well, so the sequential failure is fixed too.</p>
+<h3>5b after the fix: last units of one inventory item</h3>
+<div class="verdict good"><b>PASS.</b> Starting from 5 units and 20 simultaneous approvals of 2 units each, 2, 2, 2, 2, 2 requests were approved per repetition (4, 4, 4, 4, 4 units allocated) and the stock ended at 1, 1, 1, 1, 1. Before: 20 approved, 40 units allocated, stock 0 or −1.</div>
+<div class="card"><div class="tablewrap"><table class=""><thead><tr><th>Run</th><th>Before: approved / units allocated / stock after</th><th>After: approved / units allocated / stock after</th><th>Refused by the server</th><th>Over-allocated</th><th>Below zero</th><th>Result</th></tr></thead><tbody><tr><th scope="row">Repetition 1</th><td>20 / 40 / 0</td><td><b>2</b> / 4 / <b>1</b></td><td>18</td><td>no</td><td>no</td><td><span class="pill good">PASS</span></td></tr><tr><th scope="row">Repetition 2</th><td>20 / 40 / -1</td><td><b>2</b> / 4 / <b>1</b></td><td>18</td><td>no</td><td>no</td><td><span class="pill good">PASS</span></td></tr><tr><th scope="row">Repetition 3</th><td>20 / 40 / 0</td><td><b>2</b> / 4 / <b>1</b></td><td>18</td><td>no</td><td>no</td><td><span class="pill good">PASS</span></td></tr><tr><th scope="row">Repetition 4</th><td>20 / 40 / 0</td><td><b>2</b> / 4 / <b>1</b></td><td>18</td><td>no</td><td>no</td><td><span class="pill good">PASS</span></td></tr><tr><th scope="row">Repetition 5</th><td>20 / 40 / -1</td><td><b>2</b> / 4 / <b>1</b></td><td>18</td><td>no</td><td>no</td><td><span class="pill good">PASS</span></td></tr><tr><th scope="row">Control: one by one, 3 s apart</th><td>3 / 6 / 0</td><td><b>2</b> / 4 / <b>1</b></td><td>1</td><td>no</td><td>no</td><td><span class="pill good">PASS</span></td></tr></tbody></table></div></div>
+<p>Two requests (4 units) fit in 5 units; the remaining 18 were refused with "Cannot approve: not enough stock for … (2 requested, only 1 … left). Nothing was deducted." and stayed pending. The stock never went below zero and no approval was written without its deduction. The one-by-one control, which used to allocate 6 units against 5, now approves two and refuses the third.</p>
+<h3>5c after the fix: manual deduction (control)</h3>
+<div class="verdict good"><b>PASS, 5 of 5.</b> The inventory page's manual deduction was not changed; re-running it confirms that the new approval code did not disturb it and that the test setup is unchanged.</div>
+<div class="card"><div class="tablewrap"><table class=""><thead><tr><th>Run</th><th>Before: deductions / units / stock after</th><th>After: deductions / units / stock after</th><th>Result</th></tr></thead><tbody><tr><th scope="row">Repetition 1</th><td>5 / 5 / 0</td><td>5 / 5 / 0</td><td><span class="pill good">PASS</span></td></tr><tr><th scope="row">Repetition 2</th><td>5 / 5 / 0</td><td>5 / 5 / 0</td><td><span class="pill good">PASS</span></td></tr><tr><th scope="row">Repetition 3</th><td>5 / 5 / 0</td><td>5 / 5 / 0</td><td><span class="pill good">PASS</span></td></tr><tr><th scope="row">Repetition 4</th><td>5 / 5 / 0</td><td>5 / 5 / 0</td><td><span class="pill good">PASS</span></td></tr><tr><th scope="row">Repetition 5</th><td>5 / 5 / 0</td><td>5 / 5 / 0</td><td><span class="pill good">PASS</span></td></tr></tbody></table></div></div>
+<h3>Did the locking slow things down? 50-user load test, before and after</h3>
+<p>The 10-minute, 50-user test (test 1) was repeated with the fixed code, on a freshly restored baseline and with the same scripts apart from the changes below. Approvals now take a per-lab lock, so a slowdown would show first in the approve and submit requests.</p>
+<div class="card"><div class="tablewrap"><table class=""><thead><tr><th>All requests, 10-minute hold</th><th>Before</th><th>After</th><th>Change</th></tr></thead><tbody><tr><th scope="row">Requests</th><td>17,182</td><td>17,290</td><td>+1%</td></tr><tr><th scope="row">Throughput (requests/s)</th><td>28.6</td><td>28.8</td><td>+1%</td></tr><tr><th scope="row">Median</th><td>25 ms</td><td>25 ms</td><td>-2%</td></tr><tr><th scope="row">p90</th><td>47 ms</td><td>47 ms</td><td>-1%</td></tr><tr><th scope="row">p95</th><td>187 ms</td><td>176 ms</td><td>-6%</td></tr><tr><th scope="row">p99</th><td>256 ms</td><td>250 ms</td><td>-2%</td></tr><tr><th scope="row">Max</th><td>457 ms</td><td>456 ms</td><td>0%</td></tr><tr><th scope="row">Errors</th><td>0</td><td>0</td><td>–</td></tr></tbody></table></div></div>
+<div class="card"><div class="tablewrap"><table class=""><thead><tr><th>Endpoint</th><th>Requests, before</th><th>Requests, after</th><th>Median, before</th><th>Median, after</th><th>p95, before</th><th>p95, after</th><th>p95 change</th><th>Errors, after</th></tr></thead><tbody><tr><th scope="row">Conflict check</th><td>2269</td><td>2291</td><td>29 ms</td><td>30 ms</td><td>40 ms</td><td>41 ms</td><td>+2%</td><td>0</td></tr><tr><th scope="row">Submit request</th><td>976</td><td>981</td><td>186 ms</td><td>174 ms</td><td>244 ms</td><td>236 ms</td><td>-3%</td><td>0</td></tr><tr><th scope="row">Approve request</th><td>318</td><td>320</td><td>211 ms</td><td>192 ms</td><td>264 ms</td><td>256 ms</td><td>-3%</td><td>0</td></tr><tr><th scope="row">Admin approvals</th><td>319</td><td>319</td><td>211 ms</td><td>224 ms</td><td>375 ms</td><td>372 ms</td><td>-1%</td><td>0</td></tr><tr><th scope="row">Request form</th><td>973</td><td>985</td><td>31 ms</td><td>30 ms</td><td>43 ms</td><td>42 ms</td><td>-1%</td><td>0</td></tr></tbody></table></div></div>
+<div class="card"><div class="tablewrap"><table class=""><thead><tr><th>Resource</th><th>Before</th><th>After</th></tr></thead><tbody><tr><th scope="row">Apache CPU (mean)</th><td>2.3%</td><td>2.4%</td></tr><tr><th scope="row">MariaDB CPU (mean)</th><td>0.6%</td><td>0.6%</td></tr><tr><th scope="row">Whole machine CPU (mean)</th><td>12.6%</td><td>13.7%</td></tr></tbody></table></div></div>
+<p class="note">Outcomes over the whole after run, including ramp-up and ramp-down: approvals 370 approved and 1 refused by the server; submissions 1126 accepted and 24 refused because an approved request held the slot. A refusal is a correct answer, not an error, and was not counted as one. The k6 journeys now send <code>csrf_token</code> with both conflict checks, as the fixed pages do, so those calls return 200 instead of 403 and run the conflict query; the before run replayed the pages as they were.</p>
+<h3>Limits of the after-fix results</h3><div class="card"><ul><li>Same laptop, same barrier technique, same 20 virtual users and 5 repetitions as before; a pass in five repetitions is evidence, not a proof. The lock and the transaction are what guarantee the result.</li><li>Only the paths exercised by these tests were run: <code>force_approve</code> from the admin approvals page. The multi-stage path (<code>ajax_supervisor_action.php</code>, final stage) uses the same helper but was not part of the race tests.</li><li>Not covered: two admins approving the <i>same</i> request at the same time (the request is not checked for being already approved), and <code>supervisor_approve.php</code>, whose conflict check still omits <code>csrf_token</code>.</li><li>Behaviour change: approval is now refused when stock is short, where it used to approve and deduct what was left. For reagents, submission checks the total across rows but the deduction takes from one row, so a request spread across rows can pass submission and be refused at approval.</li><li>The SMTP block was in place, so notification e-mail time is not included, as in the original runs.</li></ul></div>
+<h3>Database evidence after the fixes</h3><p class="note">Raw output of the same queries after each re-run (also saved in <code>loadtests/results/*_after_*_db.txt</code>).</p>
+<details><summary>conc_inventory_race_after_r1</summary><pre># conc_inventory_race_after_r1  (2026-10-27T20:53:20.6672372+08:00)
+# k6 env: N=20 MODE=race QTY=2
+
+mysql&gt; SELECT f.id, f.requesterEmployeeID, f.statusScilabPersonnel, m.item, m.quantity AS qty_requested FROM scilab_form_requests f JOIN scilab_material_requests m ON m.formID=f.id WHERE m.item=&#x27;LT Last Units&#x27; ORDER BY f.id;
++----+---------------------+-----------------------+---------------+---------------+
+| id | requesterEmployeeID | statusScilabPersonnel | item          | qty_requested |
++----+---------------------+-----------------------+---------------+---------------+
+| 49 | LT-T0017            | Pending               | LT Last Units |             2 |
+| 50 | LT-T0020            | Approved              | LT Last Units |             2 |
+| 51 | LT-T0001            | Pending               | LT Last Units |             2 |
+| 52 | LT-T0003            | Pending               | LT Last Units |             2 |
+| 53 | LT-T0012            | Pending               | LT Last Units |             2 |
+| 54 | LT-T0011            | Pending               | LT Last Units |             2 |
+| 55 | LT-T0002            | Pending               | LT Last Units |             2 |
+| 56 | LT-T0006            | Pending               | LT Last Units |             2 |
+| 57 | LT-T0009            | Pending               | LT Last Units |             2 |
+| 58 | LT-T0016            | Pending               | LT Last Units |             2 |
+| 59 | LT-T0018            | Pending               | LT Last Units |             2 |
+| 60 | LT-T0007            | Pending               | LT Last Units |             2 |
+| 61 | LT-T0008            | Pending               | LT Last Units |             2 |
+| 62 | LT-T0015            | Pending               | LT Last Units |             2 |
+| 63 | LT-T0004            | Pending               | LT Last Units |             2 |
+| 64 | LT-T0013            | Pending               | LT Last Units |             2 |
+| 65 | LT-T0019            | Pending               | LT Last Units |             2 |
+| 66 | LT-T0014            | Pending               | LT Last Units |             2 |
+| 67 | LT-T0010            | Pending               | LT Last Units |             2 |
+| 68 | LT-T0005            | Approved              | LT Last Units |             2 |
++----+---------------------+-----------------------+---------------+---------------+
+mysql&gt; SELECT id, item, quantity AS quantity_now FROM scilab_inventory WHERE id=1246;
++------+---------------+--------------+
+| id   | item          | quantity_now |
++------+---------------+--------------+
+| 1246 | LT Last Units |            1 |
++------+---------------+--------------+
+mysql&gt; SELECT COUNT(*) AS approved_requests, COALESCE(SUM(m.quantity),0) AS units_allocated_to_approved, 5 AS starting_stock FROM scilab_form_requests f JOIN scilab_material_requests m ON m.formID=f.id WHERE m.item=&#x27;LT Last Units&#x27; AND f.statusScilabPersonnel=&#x27;Approved&#x27;;
++-------------------+-----------------------------+----------------+
+| approved_requests | units_allocated_to_approved | starting_stock |
++-------------------+-----------------------------+----------------+
+|                 2 |                           4 |              5 |
++-------------------+-----------------------------+----------------+
+</pre></details>
+<details><summary>conc_inventory_race_after_r2</summary><pre># conc_inventory_race_after_r2  (2026-10-27T20:54:16.2944066+08:00)
+# k6 env: N=20 MODE=race QTY=2
+
+mysql&gt; SELECT f.id, f.requesterEmployeeID, f.statusScilabPersonnel, m.item, m.quantity AS qty_requested FROM scilab_form_requests f JOIN scilab_material_requests m ON m.formID=f.id WHERE m.item=&#x27;LT Last Units&#x27; ORDER BY f.id;
++----+---------------------+-----------------------+---------------+---------------+
+| id | requesterEmployeeID | statusScilabPersonnel | item          | qty_requested |
++----+---------------------+-----------------------+---------------+---------------+
+| 49 | LT-T0010            | Pending               | LT Last Units |             2 |
+| 50 | LT-T0007            | Pending               | LT Last Units |             2 |
+| 51 | LT-T0011            | Pending               | LT Last Units |             2 |
+| 52 | LT-T0014            | Pending               | LT Last Units |             2 |
+| 53 | LT-T0013            | Pending               | LT Last Units |             2 |
+| 54 | LT-T0020            | Pending               | LT Last Units |             2 |
+| 55 | LT-T0012            | Pending               | LT Last Units |             2 |
+| 56 | LT-T0006            | Pending               | LT Last Units |             2 |
+| 57 | LT-T0016            | Pending               | LT Last Units |             2 |
+| 58 | LT-T0003            | Pending               | LT Last Units |             2 |
+| 59 | LT-T0001            | Pending               | LT Last Units |             2 |
+| 60 | LT-T0018            | Pending               | LT Last Units |             2 |
+| 61 | LT-T0019            | Pending               | LT Last Units |             2 |
+| 62 | LT-T0015            | Pending               | LT Last Units |             2 |
+| 63 | LT-T0009            | Pending               | LT Last Units |             2 |
+| 64 | LT-T0017            | Approved              | LT Last Units |             2 |
+| 65 | LT-T0008            | Pending               | LT Last Units |             2 |
+| 66 | LT-T0005            | Approved              | LT Last Units |             2 |
+| 67 | LT-T0002            | Pending               | LT Last Units |             2 |
+| 68 | LT-T0004            | Pending               | LT Last Units |             2 |
++----+---------------------+-----------------------+---------------+---------------+
+mysql&gt; SELECT id, item, quantity AS quantity_now FROM scilab_inventory WHERE id=1246;
++------+---------------+--------------+
+| id   | item          | quantity_now |
++------+---------------+--------------+
+| 1246 | LT Last Units |            1 |
++------+---------------+--------------+
+mysql&gt; SELECT COUNT(*) AS approved_requests, COALESCE(SUM(m.quantity),0) AS units_allocated_to_approved, 5 AS starting_stock FROM scilab_form_requests f JOIN scilab_material_requests m ON m.formID=f.id WHERE m.item=&#x27;LT Last Units&#x27; AND f.statusScilabPersonnel=&#x27;Approved&#x27;;
++-------------------+-----------------------------+----------------+
+| approved_requests | units_allocated_to_approved | starting_stock |
++-------------------+-----------------------------+----------------+
+|                 2 |                           4 |              5 |
++-------------------+-----------------------------+----------------+
+</pre></details>
+<details><summary>conc_inventory_race_after_r3</summary><pre># conc_inventory_race_after_r3  (2026-10-27T20:55:11.9106252+08:00)
+# k6 env: N=20 MODE=race QTY=2
+
+mysql&gt; SELECT f.id, f.requesterEmployeeID, f.statusScilabPersonnel, m.item, m.quantity AS qty_requested FROM scilab_form_requests f JOIN scilab_material_requests m ON m.formID=f.id WHERE m.item=&#x27;LT Last Units&#x27; ORDER BY f.id;
++----+---------------------+-----------------------+---------------+---------------+
+| id | requesterEmployeeID | statusScilabPersonnel | item          | qty_requested |
++----+---------------------+-----------------------+---------------+---------------+
+| 49 | LT-T0020            | Pending               | LT Last Units |             2 |
+| 50 | LT-T0012            | Pending               | LT Last Units |             2 |
+| 51 | LT-T0005            | Pending               | LT Last Units |             2 |
+| 52 | LT-T0004            | Pending               | LT Last Units |             2 |
+| 53 | LT-T0007            | Pending               | LT Last Units |             2 |
+| 54 | LT-T0017            | Pending               | LT Last Units |             2 |
+| 55 | LT-T0006            | Pending               | LT Last Units |             2 |
+| 56 | LT-T0019            | Pending               | LT Last Units |             2 |
+| 57 | LT-T0013            | Approved              | LT Last Units |             2 |
+| 58 | LT-T0014            | Pending               | LT Last Units |             2 |
+| 59 | LT-T0011            | Pending               | LT Last Units |             2 |
+| 60 | LT-T0010            | Pending               | LT Last Units |             2 |
+| 61 | LT-T0002            | Pending               | LT Last Units |             2 |
+| 62 | LT-T0018            | Approved              | LT Last Units |             2 |
+| 63 | LT-T0001            | Pending               | LT Last Units |             2 |
+| 64 | LT-T0016            | Pending               | LT Last Units |             2 |
+| 65 | LT-T0009            | Pending               | LT Last Units |             2 |
+| 66 | LT-T0003            | Pending               | LT Last Units |             2 |
+| 67 | LT-T0015            | Pending               | LT Last Units |             2 |
+| 68 | LT-T0008            | Pending               | LT Last Units |             2 |
++----+---------------------+-----------------------+---------------+---------------+
+mysql&gt; SELECT id, item, quantity AS quantity_now FROM scilab_inventory WHERE id=1246;
++------+---------------+--------------+
+| id   | item          | quantity_now |
++------+---------------+--------------+
+| 1246 | LT Last Units |            1 |
++------+---------------+--------------+
+mysql&gt; SELECT COUNT(*) AS approved_requests, COALESCE(SUM(m.quantity),0) AS units_allocated_to_approved, 5 AS starting_stock FROM scilab_form_requests f JOIN scilab_material_requests m ON m.formID=f.id WHERE m.item=&#x27;LT Last Units&#x27; AND f.statusScilabPersonnel=&#x27;Approved&#x27;;
++-------------------+-----------------------------+----------------+
+| approved_requests | units_allocated_to_approved | starting_stock |
++-------------------+-----------------------------+----------------+
+|                 2 |                           4 |              5 |
++-------------------+-----------------------------+----------------+
+</pre></details>
+<details><summary>conc_inventory_race_after_r4</summary><pre># conc_inventory_race_after_r4  (2026-10-27T20:56:07.4393752+08:00)
+# k6 env: N=20 MODE=race QTY=2
+
+mysql&gt; SELECT f.id, f.requesterEmployeeID, f.statusScilabPersonnel, m.item, m.quantity AS qty_requested FROM scilab_form_requests f JOIN scilab_material_requests m ON m.formID=f.id WHERE m.item=&#x27;LT Last Units&#x27; ORDER BY f.id;
++----+---------------------+-----------------------+---------------+---------------+
+| id | requesterEmployeeID | statusScilabPersonnel | item          | qty_requested |
++----+---------------------+-----------------------+---------------+---------------+
+| 49 | LT-T0011            | Pending               | LT Last Units |             2 |
+| 50 | LT-T0006            | Pending               | LT Last Units |             2 |
+| 51 | LT-T0016            | Pending               | LT Last Units |             2 |
+| 52 | LT-T0005            | Pending               | LT Last Units |             2 |
+| 53 | LT-T0020            | Pending               | LT Last Units |             2 |
+| 54 | LT-T0017            | Pending               | LT Last Units |             2 |
+| 55 | LT-T0013            | Pending               | LT Last Units |             2 |
+| 56 | LT-T0007            | Pending               | LT Last Units |             2 |
+| 57 | LT-T0019            | Pending               | LT Last Units |             2 |
+| 58 | LT-T0009            | Pending               | LT Last Units |             2 |
+| 59 | LT-T0004            | Pending               | LT Last Units |             2 |
+| 60 | LT-T0003            | Pending               | LT Last Units |             2 |
+| 61 | LT-T0010            | Pending               | LT Last Units |             2 |
+| 62 | LT-T0001            | Pending               | LT Last Units |             2 |
+| 63 | LT-T0014            | Pending               | LT Last Units |             2 |
+| 64 | LT-T0018            | Pending               | LT Last Units |             2 |
+| 65 | LT-T0015            | Pending               | LT Last Units |             2 |
+| 66 | LT-T0008            | Approved              | LT Last Units |             2 |
+| 67 | LT-T0002            | Approved              | LT Last Units |             2 |
+| 68 | LT-T0012            | Pending               | LT Last Units |             2 |
++----+---------------------+-----------------------+---------------+---------------+
+mysql&gt; SELECT id, item, quantity AS quantity_now FROM scilab_inventory WHERE id=1246;
++------+---------------+--------------+
+| id   | item          | quantity_now |
++------+---------------+--------------+
+| 1246 | LT Last Units |            1 |
++------+---------------+--------------+
+mysql&gt; SELECT COUNT(*) AS approved_requests, COALESCE(SUM(m.quantity),0) AS units_allocated_to_approved, 5 AS starting_stock FROM scilab_form_requests f JOIN scilab_material_requests m ON m.formID=f.id WHERE m.item=&#x27;LT Last Units&#x27; AND f.statusScilabPersonnel=&#x27;Approved&#x27;;
++-------------------+-----------------------------+----------------+
+| approved_requests | units_allocated_to_approved | starting_stock |
++-------------------+-----------------------------+----------------+
+|                 2 |                           4 |              5 |
++-------------------+-----------------------------+----------------+
+</pre></details>
+<details><summary>conc_inventory_race_after_r5</summary><pre># conc_inventory_race_after_r5  (2026-10-27T20:57:03.0800406+08:00)
+# k6 env: N=20 MODE=race QTY=2
+
+mysql&gt; SELECT f.id, f.requesterEmployeeID, f.statusScilabPersonnel, m.item, m.quantity AS qty_requested FROM scilab_form_requests f JOIN scilab_material_requests m ON m.formID=f.id WHERE m.item=&#x27;LT Last Units&#x27; ORDER BY f.id;
++----+---------------------+-----------------------+---------------+---------------+
+| id | requesterEmployeeID | statusScilabPersonnel | item          | qty_requested |
++----+---------------------+-----------------------+---------------+---------------+
+| 49 | LT-T0010            | Pending               | LT Last Units |             2 |
+| 50 | LT-T0012            | Pending               | LT Last Units |             2 |
+| 51 | LT-T0008            | Pending               | LT Last Units |             2 |
+| 52 | LT-T0004            | Pending               | LT Last Units |             2 |
+| 53 | LT-T0019            | Pending               | LT Last Units |             2 |
+| 54 | LT-T0001            | Pending               | LT Last Units |             2 |
+| 55 | LT-T0014            | Pending               | LT Last Units |             2 |
+| 56 | LT-T0018            | Pending               | LT Last Units |             2 |
+| 57 | LT-T0006            | Pending               | LT Last Units |             2 |
+| 58 | LT-T0003            | Pending               | LT Last Units |             2 |
+| 59 | LT-T0009            | Pending               | LT Last Units |             2 |
+| 60 | LT-T0013            | Pending               | LT Last Units |             2 |
+| 61 | LT-T0017            | Pending               | LT Last Units |             2 |
+| 62 | LT-T0007            | Approved              | LT Last Units |             2 |
+| 63 | LT-T0011            | Pending               | LT Last Units |             2 |
+| 64 | LT-T0016            | Pending               | LT Last Units |             2 |
+| 65 | LT-T0005            | Approved              | LT Last Units |             2 |
+| 66 | LT-T0015            | Pending               | LT Last Units |             2 |
+| 67 | LT-T0020            | Pending               | LT Last Units |             2 |
+| 68 | LT-T0002            | Pending               | LT Last Units |             2 |
++----+---------------------+-----------------------+---------------+---------------+
+mysql&gt; SELECT id, item, quantity AS quantity_now FROM scilab_inventory WHERE id=1246;
++------+---------------+--------------+
+| id   | item          | quantity_now |
++------+---------------+--------------+
+| 1246 | LT Last Units |            1 |
++------+---------------+--------------+
+mysql&gt; SELECT COUNT(*) AS approved_requests, COALESCE(SUM(m.quantity),0) AS units_allocated_to_approved, 5 AS starting_stock FROM scilab_form_requests f JOIN scilab_material_requests m ON m.formID=f.id WHERE m.item=&#x27;LT Last Units&#x27; AND f.statusScilabPersonnel=&#x27;Approved&#x27;;
++-------------------+-----------------------------+----------------+
+| approved_requests | units_allocated_to_approved | starting_stock |
++-------------------+-----------------------------+----------------+
+|                 2 |                           4 |              5 |
++-------------------+-----------------------------+----------------+
+</pre></details>
+<details><summary>conc_inventory_sequential_after_r1</summary><pre># conc_inventory_sequential_after_r1  (2026-10-27T20:58:04.7420695+08:00)
+# k6 env: N=3 MODE=sequential QTY=2
+
+mysql&gt; SELECT f.id, f.requesterEmployeeID, f.statusScilabPersonnel, m.item, m.quantity AS qty_requested FROM scilab_form_requests f JOIN scilab_material_requests m ON m.formID=f.id WHERE m.item=&#x27;LT Last Units&#x27; ORDER BY f.id;
++----+---------------------+-----------------------+---------------+---------------+
+| id | requesterEmployeeID | statusScilabPersonnel | item          | qty_requested |
++----+---------------------+-----------------------+---------------+---------------+
+| 49 | LT-T0003            | Pending               | LT Last Units |             2 |
+| 50 | LT-T0001            | Approved              | LT Last Units |             2 |
+| 51 | LT-T0002            | Approved              | LT Last Units |             2 |
++----+---------------------+-----------------------+---------------+---------------+
+mysql&gt; SELECT id, item, quantity AS quantity_now FROM scilab_inventory WHERE id=1246;
++------+---------------+--------------+
+| id   | item          | quantity_now |
++------+---------------+--------------+
+| 1246 | LT Last Units |            1 |
++------+---------------+--------------+
+mysql&gt; SELECT COUNT(*) AS approved_requests, COALESCE(SUM(m.quantity),0) AS units_allocated_to_approved, 5 AS starting_stock FROM scilab_form_requests f JOIN scilab_material_requests m ON m.formID=f.id WHERE m.item=&#x27;LT Last Units&#x27; AND f.statusScilabPersonnel=&#x27;Approved&#x27;;
++-------------------+-----------------------------+----------------+
+| approved_requests | units_allocated_to_approved | starting_stock |
++-------------------+-----------------------------+----------------+
+|                 2 |                           4 |              5 |
++-------------------+-----------------------------+----------------+
+</pre></details>
+<details><summary>conc_manual_race_after_r1</summary><pre># conc_manual_race_after_r1  (2026-10-27T20:58:35.2719051+08:00)
+# k6 env: N=20 ITEM_ID=1247
+
+mysql&gt; SELECT id, item, quantity AS quantity_now FROM scilab_inventory WHERE id=1247;
++------+------------------+--------------+
+| id   | item             | quantity_now |
++------+------------------+--------------+
+| 1247 | LT Manual Deduct |            0 |
++------+------------------+--------------+
+mysql&gt; SELECT COUNT(*) AS deductions_logged, COALESCE(SUM(quantity_deducted),0) AS units_deducted, MIN(quantity_after) AS lowest_quantity_after FROM scilab_inventory_deductions WHERE inventory_id=1247;
++-------------------+----------------+-----------------------+
+| deductions_logged | units_deducted | lowest_quantity_after |
++-------------------+----------------+-----------------------+
+|                 5 |              5 |                     0 |
++-------------------+----------------+-----------------------+
+mysql&gt; SELECT quantity_before, quantity_after, deducted_by, deducted_at FROM scilab_inventory_deductions WHERE inventory_id=1247 ORDER BY id;
++-----------------+----------------+---------------+---------------------+
+| quantity_before | quantity_after | deducted_by   | deducted_at         |
++-----------------+----------------+---------------+---------------------+
+|               5 |              4 | Load A. Admin | 2026-10-27 20:58:28 |
+|               4 |              3 | Load A. Admin | 2026-10-27 20:58:28 |
+|               3 |              2 | Load A. Admin | 2026-10-27 20:58:28 |
+|               2 |              1 | Load A. Admin | 2026-10-27 20:58:28 |
+|               1 |              0 | Load A. Admin | 2026-10-27 20:58:28 |
++-----------------+----------------+---------------+---------------------+
+</pre></details>
+<details><summary>conc_manual_race_after_r2</summary><pre># conc_manual_race_after_r2  (2026-10-27T20:59:05.6628575+08:00)
+# k6 env: N=20 ITEM_ID=1247
+
+mysql&gt; SELECT id, item, quantity AS quantity_now FROM scilab_inventory WHERE id=1247;
++------+------------------+--------------+
+| id   | item             | quantity_now |
++------+------------------+--------------+
+| 1247 | LT Manual Deduct |            0 |
++------+------------------+--------------+
+mysql&gt; SELECT COUNT(*) AS deductions_logged, COALESCE(SUM(quantity_deducted),0) AS units_deducted, MIN(quantity_after) AS lowest_quantity_after FROM scilab_inventory_deductions WHERE inventory_id=1247;
++-------------------+----------------+-----------------------+
+| deductions_logged | units_deducted | lowest_quantity_after |
++-------------------+----------------+-----------------------+
+|                 5 |              5 |                     0 |
++-------------------+----------------+-----------------------+
+mysql&gt; SELECT quantity_before, quantity_after, deducted_by, deducted_at FROM scilab_inventory_deductions WHERE inventory_id=1247 ORDER BY id;
++-----------------+----------------+---------------+---------------------+
+| quantity_before | quantity_after | deducted_by   | deducted_at         |
++-----------------+----------------+---------------+---------------------+
+|               5 |              4 | Load A. Admin | 2026-10-27 20:58:58 |
+|               4 |              3 | Load A. Admin | 2026-10-27 20:58:58 |
+|               3 |              2 | Load A. Admin | 2026-10-27 20:58:58 |
+|               2 |              1 | Load A. Admin | 2026-10-27 20:58:58 |
+|               1 |              0 | Load A. Admin | 2026-10-27 20:58:58 |
++-----------------+----------------+---------------+---------------------+
+</pre></details>
+<details><summary>conc_manual_race_after_r3</summary><pre># conc_manual_race_after_r3  (2026-10-27T20:59:36.0592113+08:00)
+# k6 env: N=20 ITEM_ID=1247
+
+mysql&gt; SELECT id, item, quantity AS quantity_now FROM scilab_inventory WHERE id=1247;
++------+------------------+--------------+
+| id   | item             | quantity_now |
++------+------------------+--------------+
+| 1247 | LT Manual Deduct |            0 |
++------+------------------+--------------+
+mysql&gt; SELECT COUNT(*) AS deductions_logged, COALESCE(SUM(quantity_deducted),0) AS units_deducted, MIN(quantity_after) AS lowest_quantity_after FROM scilab_inventory_deductions WHERE inventory_id=1247;
++-------------------+----------------+-----------------------+
+| deductions_logged | units_deducted | lowest_quantity_after |
++-------------------+----------------+-----------------------+
+|                 5 |              5 |                     0 |
++-------------------+----------------+-----------------------+
+mysql&gt; SELECT quantity_before, quantity_after, deducted_by, deducted_at FROM scilab_inventory_deductions WHERE inventory_id=1247 ORDER BY id;
++-----------------+----------------+---------------+---------------------+
+| quantity_before | quantity_after | deducted_by   | deducted_at         |
++-----------------+----------------+---------------+---------------------+
+|               5 |              4 | Load A. Admin | 2026-10-27 20:59:28 |
+|               4 |              3 | Load A. Admin | 2026-10-27 20:59:28 |
+|               3 |              2 | Load A. Admin | 2026-10-27 20:59:28 |
+|               2 |              1 | Load A. Admin | 2026-10-27 20:59:28 |
+|               1 |              0 | Load A. Admin | 2026-10-27 20:59:28 |
++-----------------+----------------+---------------+---------------------+
+</pre></details>
+<details><summary>conc_manual_race_after_r4</summary><pre># conc_manual_race_after_r4  (2026-10-27T21:00:06.4760558+08:00)
+# k6 env: N=20 ITEM_ID=1247
+
+mysql&gt; SELECT id, item, quantity AS quantity_now FROM scilab_inventory WHERE id=1247;
++------+------------------+--------------+
+| id   | item             | quantity_now |
++------+------------------+--------------+
+| 1247 | LT Manual Deduct |            0 |
++------+------------------+--------------+
+mysql&gt; SELECT COUNT(*) AS deductions_logged, COALESCE(SUM(quantity_deducted),0) AS units_deducted, MIN(quantity_after) AS lowest_quantity_after FROM scilab_inventory_deductions WHERE inventory_id=1247;
++-------------------+----------------+-----------------------+
+| deductions_logged | units_deducted | lowest_quantity_after |
++-------------------+----------------+-----------------------+
+|                 5 |              5 |                     0 |
++-------------------+----------------+-----------------------+
+mysql&gt; SELECT quantity_before, quantity_after, deducted_by, deducted_at FROM scilab_inventory_deductions WHERE inventory_id=1247 ORDER BY id;
++-----------------+----------------+---------------+---------------------+
+| quantity_before | quantity_after | deducted_by   | deducted_at         |
++-----------------+----------------+---------------+---------------------+
+|               5 |              4 | Load A. Admin | 2026-10-27 20:59:59 |
+|               4 |              3 | Load A. Admin | 2026-10-27 20:59:59 |
+|               3 |              2 | Load A. Admin | 2026-10-27 20:59:59 |
+|               2 |              1 | Load A. Admin | 2026-10-27 20:59:59 |
+|               1 |              0 | Load A. Admin | 2026-10-27 20:59:59 |
++-----------------+----------------+---------------+---------------------+
+</pre></details>
+<details><summary>conc_manual_race_after_r5</summary><pre># conc_manual_race_after_r5  (2026-10-27T21:00:36.6809983+08:00)
+# k6 env: N=20 ITEM_ID=1247
+
+mysql&gt; SELECT id, item, quantity AS quantity_now FROM scilab_inventory WHERE id=1247;
++------+------------------+--------------+
+| id   | item             | quantity_now |
++------+------------------+--------------+
+| 1247 | LT Manual Deduct |            0 |
++------+------------------+--------------+
+mysql&gt; SELECT COUNT(*) AS deductions_logged, COALESCE(SUM(quantity_deducted),0) AS units_deducted, MIN(quantity_after) AS lowest_quantity_after FROM scilab_inventory_deductions WHERE inventory_id=1247;
++-------------------+----------------+-----------------------+
+| deductions_logged | units_deducted | lowest_quantity_after |
++-------------------+----------------+-----------------------+
+|                 5 |              5 |                     0 |
++-------------------+----------------+-----------------------+
+mysql&gt; SELECT quantity_before, quantity_after, deducted_by, deducted_at FROM scilab_inventory_deductions WHERE inventory_id=1247 ORDER BY id;
++-----------------+----------------+---------------+---------------------+
+| quantity_before | quantity_after | deducted_by   | deducted_at         |
++-----------------+----------------+---------------+---------------------+
+|               5 |              4 | Load A. Admin | 2026-10-27 21:00:29 |
+|               4 |              3 | Load A. Admin | 2026-10-27 21:00:29 |
+|               3 |              2 | Load A. Admin | 2026-10-27 21:00:29 |
+|               2 |              1 | Load A. Admin | 2026-10-27 21:00:29 |
+|               1 |              0 | Load A. Admin | 2026-10-27 21:00:29 |
++-----------------+----------------+---------------+---------------------+
+</pre></details>
+<details><summary>conc_slot_race_after_r1</summary><pre># conc_slot_race_after_r1  (2026-10-27T20:47:18.7598111+08:00)
+# k6 env: N=20 MODE=race DATE=2027-03-15 LAB=Science Laboratory 3
+
+mysql&gt; SELECT id, requesterEmployeeID, scilabName, inclusiveDate, inclusiveTime, statusScilabPersonnel, lab_personnel_approved_at FROM scilab_form_requests WHERE scilabName=&#x27;Science Laboratory 3&#x27; AND inclusiveDate=&#x27;2027-03-15&#x27; ORDER BY id;
++----+---------------------+----------------------+---------------+---------------------+-----------------------+---------------------------+
+| id | requesterEmployeeID | scilabName           | inclusiveDate | inclusiveTime       | statusScilabPersonnel | lab_personnel_approved_at |
++----+---------------------+----------------------+---------------+---------------------+-----------------------+---------------------------+
+| 49 | LT-T0015            | Science Laboratory 3 | 2027-03-15    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 50 | LT-T0016            | Science Laboratory 3 | 2027-03-15    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 51 | LT-T0014            | Science Laboratory 3 | 2027-03-15    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 52 | LT-T0006            | Science Laboratory 3 | 2027-03-15    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 53 | LT-T0012            | Science Laboratory 3 | 2027-03-15    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 54 | LT-T0003            | Science Laboratory 3 | 2027-03-15    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 55 | LT-T0001            | Science Laboratory 3 | 2027-03-15    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 56 | LT-T0019            | Science Laboratory 3 | 2027-03-15    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 57 | LT-T0007            | Science Laboratory 3 | 2027-03-15    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 58 | LT-T0005            | Science Laboratory 3 | 2027-03-15    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 59 | LT-T0013            | Science Laboratory 3 | 2027-03-15    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 60 | LT-T0020            | Science Laboratory 3 | 2027-03-15    | 9:00 AM to 11:00 AM | Approved              | 2026-10-27 20:47:11       |
+| 61 | LT-T0011            | Science Laboratory 3 | 2027-03-15    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 62 | LT-T0002            | Science Laboratory 3 | 2027-03-15    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 63 | LT-T0008            | Science Laboratory 3 | 2027-03-15    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 64 | LT-T0010            | Science Laboratory 3 | 2027-03-15    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 65 | LT-T0004            | Science Laboratory 3 | 2027-03-15    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 66 | LT-T0018            | Science Laboratory 3 | 2027-03-15    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 67 | LT-T0017            | Science Laboratory 3 | 2027-03-15    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 68 | LT-T0009            | Science Laboratory 3 | 2027-03-15    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
++----+---------------------+----------------------+---------------+---------------------+-----------------------+---------------------------+
+mysql&gt; SELECT COUNT(*) AS requests_for_slot, COALESCE(SUM(statusScilabPersonnel=&#x27;Approved&#x27;),0) AS approved_for_slot, COALESCE(SUM(statusScilabPersonnel=&#x27;Pending&#x27;),0) AS still_pending FROM scilab_form_requests WHERE scilabName=&#x27;Science Laboratory 3&#x27; AND inclusiveDate=&#x27;2027-03-15&#x27; AND inclusiveTime=&#x27;9:00 AM to 11:00 AM&#x27;;
++-------------------+-------------------+---------------+
+| requests_for_slot | approved_for_slot | still_pending |
++-------------------+-------------------+---------------+
+|                20 |                 1 |            19 |
++-------------------+-------------------+---------------+
+</pre></details>
+<details><summary>conc_slot_race_after_r2</summary><pre># conc_slot_race_after_r2  (2026-10-27T20:48:14.2131578+08:00)
+# k6 env: N=20 MODE=race DATE=2027-03-16 LAB=Science Laboratory 3
+
+mysql&gt; SELECT id, requesterEmployeeID, scilabName, inclusiveDate, inclusiveTime, statusScilabPersonnel, lab_personnel_approved_at FROM scilab_form_requests WHERE scilabName=&#x27;Science Laboratory 3&#x27; AND inclusiveDate=&#x27;2027-03-16&#x27; ORDER BY id;
++----+---------------------+----------------------+---------------+---------------------+-----------------------+---------------------------+
+| id | requesterEmployeeID | scilabName           | inclusiveDate | inclusiveTime       | statusScilabPersonnel | lab_personnel_approved_at |
++----+---------------------+----------------------+---------------+---------------------+-----------------------+---------------------------+
+| 49 | LT-T0014            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 50 | LT-T0007            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 51 | LT-T0009            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 52 | LT-T0008            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 53 | LT-T0003            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 54 | LT-T0005            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 55 | LT-T0017            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 56 | LT-T0006            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 57 | LT-T0010            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 58 | LT-T0004            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 59 | LT-T0018            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 60 | LT-T0013            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 61 | LT-T0016            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 62 | LT-T0019            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 63 | LT-T0015            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 64 | LT-T0001            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 65 | LT-T0012            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 66 | LT-T0011            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 67 | LT-T0020            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Approved              | 2026-10-27 20:48:06       |
+| 68 | LT-T0002            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
++----+---------------------+----------------------+---------------+---------------------+-----------------------+---------------------------+
+mysql&gt; SELECT COUNT(*) AS requests_for_slot, COALESCE(SUM(statusScilabPersonnel=&#x27;Approved&#x27;),0) AS approved_for_slot, COALESCE(SUM(statusScilabPersonnel=&#x27;Pending&#x27;),0) AS still_pending FROM scilab_form_requests WHERE scilabName=&#x27;Science Laboratory 3&#x27; AND inclusiveDate=&#x27;2027-03-16&#x27; AND inclusiveTime=&#x27;9:00 AM to 11:00 AM&#x27;;
++-------------------+-------------------+---------------+
+| requests_for_slot | approved_for_slot | still_pending |
++-------------------+-------------------+---------------+
+|                20 |                 1 |            19 |
++-------------------+-------------------+---------------+
+</pre></details>
+<details><summary>conc_slot_race_after_r3</summary><pre># conc_slot_race_after_r3  (2026-10-27T20:49:09.7037479+08:00)
+# k6 env: N=20 MODE=race DATE=2027-03-17 LAB=Science Laboratory 3
+
+mysql&gt; SELECT id, requesterEmployeeID, scilabName, inclusiveDate, inclusiveTime, statusScilabPersonnel, lab_personnel_approved_at FROM scilab_form_requests WHERE scilabName=&#x27;Science Laboratory 3&#x27; AND inclusiveDate=&#x27;2027-03-17&#x27; ORDER BY id;
++----+---------------------+----------------------+---------------+---------------------+-----------------------+---------------------------+
+| id | requesterEmployeeID | scilabName           | inclusiveDate | inclusiveTime       | statusScilabPersonnel | lab_personnel_approved_at |
++----+---------------------+----------------------+---------------+---------------------+-----------------------+---------------------------+
+| 49 | LT-T0005            | Science Laboratory 3 | 2027-03-17    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 50 | LT-T0019            | Science Laboratory 3 | 2027-03-17    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 51 | LT-T0004            | Science Laboratory 3 | 2027-03-17    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 52 | LT-T0018            | Science Laboratory 3 | 2027-03-17    | 9:00 AM to 11:00 AM | Approved              | 2026-10-27 20:49:02       |
+| 53 | LT-T0017            | Science Laboratory 3 | 2027-03-17    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 54 | LT-T0001            | Science Laboratory 3 | 2027-03-17    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 55 | LT-T0010            | Science Laboratory 3 | 2027-03-17    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 56 | LT-T0009            | Science Laboratory 3 | 2027-03-17    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 57 | LT-T0016            | Science Laboratory 3 | 2027-03-17    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 58 | LT-T0020            | Science Laboratory 3 | 2027-03-17    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 59 | LT-T0014            | Science Laboratory 3 | 2027-03-17    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 60 | LT-T0015            | Science Laboratory 3 | 2027-03-17    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 61 | LT-T0013            | Science Laboratory 3 | 2027-03-17    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 62 | LT-T0011            | Science Laboratory 3 | 2027-03-17    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 63 | LT-T0012            | Science Laboratory 3 | 2027-03-17    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 64 | LT-T0007            | Science Laboratory 3 | 2027-03-17    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 65 | LT-T0003            | Science Laboratory 3 | 2027-03-17    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 66 | LT-T0008            | Science Laboratory 3 | 2027-03-17    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 67 | LT-T0006            | Science Laboratory 3 | 2027-03-17    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 68 | LT-T0002            | Science Laboratory 3 | 2027-03-17    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
++----+---------------------+----------------------+---------------+---------------------+-----------------------+---------------------------+
+mysql&gt; SELECT COUNT(*) AS requests_for_slot, COALESCE(SUM(statusScilabPersonnel=&#x27;Approved&#x27;),0) AS approved_for_slot, COALESCE(SUM(statusScilabPersonnel=&#x27;Pending&#x27;),0) AS still_pending FROM scilab_form_requests WHERE scilabName=&#x27;Science Laboratory 3&#x27; AND inclusiveDate=&#x27;2027-03-17&#x27; AND inclusiveTime=&#x27;9:00 AM to 11:00 AM&#x27;;
++-------------------+-------------------+---------------+
+| requests_for_slot | approved_for_slot | still_pending |
++-------------------+-------------------+---------------+
+|                20 |                 1 |            19 |
++-------------------+-------------------+---------------+
+</pre></details>
+<details><summary>conc_slot_race_after_r4</summary><pre># conc_slot_race_after_r4  (2026-10-27T20:50:05.2512074+08:00)
+# k6 env: N=20 MODE=race DATE=2027-03-18 LAB=Science Laboratory 3
+
+mysql&gt; SELECT id, requesterEmployeeID, scilabName, inclusiveDate, inclusiveTime, statusScilabPersonnel, lab_personnel_approved_at FROM scilab_form_requests WHERE scilabName=&#x27;Science Laboratory 3&#x27; AND inclusiveDate=&#x27;2027-03-18&#x27; ORDER BY id;
++----+---------------------+----------------------+---------------+---------------------+-----------------------+---------------------------+
+| id | requesterEmployeeID | scilabName           | inclusiveDate | inclusiveTime       | statusScilabPersonnel | lab_personnel_approved_at |
++----+---------------------+----------------------+---------------+---------------------+-----------------------+---------------------------+
+| 49 | LT-T0005            | Science Laboratory 3 | 2027-03-18    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 50 | LT-T0014            | Science Laboratory 3 | 2027-03-18    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 51 | LT-T0004            | Science Laboratory 3 | 2027-03-18    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 52 | LT-T0010            | Science Laboratory 3 | 2027-03-18    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 53 | LT-T0003            | Science Laboratory 3 | 2027-03-18    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 54 | LT-T0008            | Science Laboratory 3 | 2027-03-18    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 55 | LT-T0015            | Science Laboratory 3 | 2027-03-18    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 56 | LT-T0020            | Science Laboratory 3 | 2027-03-18    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 57 | LT-T0007            | Science Laboratory 3 | 2027-03-18    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 58 | LT-T0006            | Science Laboratory 3 | 2027-03-18    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 59 | LT-T0009            | Science Laboratory 3 | 2027-03-18    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 60 | LT-T0019            | Science Laboratory 3 | 2027-03-18    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 61 | LT-T0016            | Science Laboratory 3 | 2027-03-18    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 62 | LT-T0012            | Science Laboratory 3 | 2027-03-18    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 63 | LT-T0017            | Science Laboratory 3 | 2027-03-18    | 9:00 AM to 11:00 AM | Approved              | 2026-10-27 20:49:57       |
+| 64 | LT-T0002            | Science Laboratory 3 | 2027-03-18    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 65 | LT-T0013            | Science Laboratory 3 | 2027-03-18    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 66 | LT-T0001            | Science Laboratory 3 | 2027-03-18    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 67 | LT-T0018            | Science Laboratory 3 | 2027-03-18    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 68 | LT-T0011            | Science Laboratory 3 | 2027-03-18    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
++----+---------------------+----------------------+---------------+---------------------+-----------------------+---------------------------+
+mysql&gt; SELECT COUNT(*) AS requests_for_slot, COALESCE(SUM(statusScilabPersonnel=&#x27;Approved&#x27;),0) AS approved_for_slot, COALESCE(SUM(statusScilabPersonnel=&#x27;Pending&#x27;),0) AS still_pending FROM scilab_form_requests WHERE scilabName=&#x27;Science Laboratory 3&#x27; AND inclusiveDate=&#x27;2027-03-18&#x27; AND inclusiveTime=&#x27;9:00 AM to 11:00 AM&#x27;;
++-------------------+-------------------+---------------+
+| requests_for_slot | approved_for_slot | still_pending |
++-------------------+-------------------+---------------+
+|                20 |                 1 |            19 |
++-------------------+-------------------+---------------+
+</pre></details>
+<details><summary>conc_slot_race_after_r5</summary><pre># conc_slot_race_after_r5  (2026-10-27T20:51:01.8119449+08:00)
+# k6 env: N=20 MODE=race DATE=2027-03-19 LAB=Science Laboratory 3
+
+mysql&gt; SELECT id, requesterEmployeeID, scilabName, inclusiveDate, inclusiveTime, statusScilabPersonnel, lab_personnel_approved_at FROM scilab_form_requests WHERE scilabName=&#x27;Science Laboratory 3&#x27; AND inclusiveDate=&#x27;2027-03-19&#x27; ORDER BY id;
++----+---------------------+----------------------+---------------+---------------------+-----------------------+---------------------------+
+| id | requesterEmployeeID | scilabName           | inclusiveDate | inclusiveTime       | statusScilabPersonnel | lab_personnel_approved_at |
++----+---------------------+----------------------+---------------+---------------------+-----------------------+---------------------------+
+| 49 | LT-T0017            | Science Laboratory 3 | 2027-03-19    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 50 | LT-T0015            | Science Laboratory 3 | 2027-03-19    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 51 | LT-T0005            | Science Laboratory 3 | 2027-03-19    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 52 | LT-T0004            | Science Laboratory 3 | 2027-03-19    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 53 | LT-T0013            | Science Laboratory 3 | 2027-03-19    | 9:00 AM to 11:00 AM | Approved              | 2026-10-27 20:50:53       |
+| 54 | LT-T0003            | Science Laboratory 3 | 2027-03-19    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 55 | LT-T0009            | Science Laboratory 3 | 2027-03-19    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 56 | LT-T0007            | Science Laboratory 3 | 2027-03-19    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 57 | LT-T0008            | Science Laboratory 3 | 2027-03-19    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 58 | LT-T0014            | Science Laboratory 3 | 2027-03-19    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 59 | LT-T0002            | Science Laboratory 3 | 2027-03-19    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 60 | LT-T0010            | Science Laboratory 3 | 2027-03-19    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 61 | LT-T0019            | Science Laboratory 3 | 2027-03-19    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 62 | LT-T0001            | Science Laboratory 3 | 2027-03-19    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 63 | LT-T0012            | Science Laboratory 3 | 2027-03-19    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 64 | LT-T0016            | Science Laboratory 3 | 2027-03-19    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 65 | LT-T0018            | Science Laboratory 3 | 2027-03-19    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 66 | LT-T0011            | Science Laboratory 3 | 2027-03-19    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 67 | LT-T0020            | Science Laboratory 3 | 2027-03-19    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 68 | LT-T0006            | Science Laboratory 3 | 2027-03-19    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
++----+---------------------+----------------------+---------------+---------------------+-----------------------+---------------------------+
+mysql&gt; SELECT COUNT(*) AS requests_for_slot, COALESCE(SUM(statusScilabPersonnel=&#x27;Approved&#x27;),0) AS approved_for_slot, COALESCE(SUM(statusScilabPersonnel=&#x27;Pending&#x27;),0) AS still_pending FROM scilab_form_requests WHERE scilabName=&#x27;Science Laboratory 3&#x27; AND inclusiveDate=&#x27;2027-03-19&#x27; AND inclusiveTime=&#x27;9:00 AM to 11:00 AM&#x27;;
++-------------------+-------------------+---------------+
+| requests_for_slot | approved_for_slot | still_pending |
++-------------------+-------------------+---------------+
+|                20 |                 1 |            19 |
++-------------------+-------------------+---------------+
+</pre></details>
+<details><summary>conc_slot_sequential_after_r1</summary><pre># conc_slot_sequential_after_r1  (2026-10-27T20:52:25.1021899+08:00)
+# k6 env: N=3 MODE=sequential DATE=2027-03-15 LAB=Science Laboratory 3
+
+mysql&gt; SELECT id, requesterEmployeeID, scilabName, inclusiveDate, inclusiveTime, statusScilabPersonnel, lab_personnel_approved_at FROM scilab_form_requests WHERE scilabName=&#x27;Science Laboratory 3&#x27; AND inclusiveDate=&#x27;2027-03-15&#x27; ORDER BY id;
++----+---------------------+----------------------+---------------+---------------------+-----------------------+---------------------------+
+| id | requesterEmployeeID | scilabName           | inclusiveDate | inclusiveTime       | statusScilabPersonnel | lab_personnel_approved_at |
++----+---------------------+----------------------+---------------+---------------------+-----------------------+---------------------------+
+| 49 | LT-T0001            | Science Laboratory 3 | 2027-03-15    | 9:00 AM to 11:00 AM | Approved              | 2026-10-27 20:52:11       |
+| 50 | LT-T0003            | Science Laboratory 3 | 2027-03-15    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
+| 51 | LT-T0002            | Science Laboratory 3 | 2027-03-15    | 9:00 AM to 11:00 AM | Pending               | NULL                      |
++----+---------------------+----------------------+---------------+---------------------+-----------------------+---------------------------+
+mysql&gt; SELECT COUNT(*) AS requests_for_slot, COALESCE(SUM(statusScilabPersonnel=&#x27;Approved&#x27;),0) AS approved_for_slot, COALESCE(SUM(statusScilabPersonnel=&#x27;Pending&#x27;),0) AS still_pending FROM scilab_form_requests WHERE scilabName=&#x27;Science Laboratory 3&#x27; AND inclusiveDate=&#x27;2027-03-15&#x27; AND inclusiveTime=&#x27;9:00 AM to 11:00 AM&#x27;;
++-------------------+-------------------+---------------+
+| requests_for_slot | approved_for_slot | still_pending |
++-------------------+-------------------+---------------+
+|                 3 |                 1 |             2 |
 +-------------------+-------------------+---------------+
 </pre></details>
 <h2>Statistics: Lighthouse before and after</h2>

@@ -1,0 +1,4 @@
+run conc_slot_sequential_after_r1
+http_reqs 27 (0.59/s)
+duration avg 40 ms med 27 ms p90 68 ms p95 134 ms max 248 ms
+http_req_failed 0.00%  step_ok 100.00%  journey_ok 0.00%

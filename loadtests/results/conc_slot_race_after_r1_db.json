@@ -1,0 +1,11 @@
+﻿{
+    "test":  "slot",
+    "mode":  "race",
+    "rep":  1,
+    "date":  "2027-03-15",
+    "requests":  20,
+    "approved":  1,
+    "pending":  19,
+    "pass":  true,
+    "phase":  "after"
+}

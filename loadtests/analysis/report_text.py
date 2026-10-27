@@ -177,7 +177,7 @@ def html_body(g):
     w('<h2>Test 5. Concurrency and double booking</h2>')
     w(f'<p>Each repetition starts from the restored baseline. All virtual users log in and load their pages first, then wait for the same wall-clock instant (a barrier set in k6 <code>setup()</code>) '
       f'before sending the critical request. The largest gap between the first and last request at a barrier was {max(skew.values()):.0f} ms. After each run the database was queried directly; '
-      'the query output is reproduced below as evidence.</p>')
+      'the query output is reproduced below as evidence. These are the results <b>before</b> the fixes; the re-runs after them are in <a href="#after-fixes">After fixes</a>.</p>')
 
     w('<h3>5a. Same lab, date and time slot</h3>')
     w(f'<div class="verdict"><b>FAIL.</b> 20 teachers requested Science Laboratory 3, 9:00–11:00, on the same date at the same instant, and 20 admin sessions then approved them at the same instant. '
@@ -221,6 +221,9 @@ def html_body(g):
     w('<h3>Database evidence</h3><p class="note">Raw output of the queries run after each repetition (also saved in <code>loadtests/results/*_db.txt</code>).</p>')
     for name in sorted(g["EVIDENCE"]):
         w(f'<details><summary>{E(name)}</summary><pre>{E(g["EVIDENCE"][name])}</pre></details>')
+
+    # ------------------------------------------------------------------ after the fixes
+    w(after_section(g))
 
     # ------------------------------------------------------------------ statistics
     w('<h2>Statistics: Lighthouse before and after</h2>')
@@ -288,6 +291,146 @@ def html_body(g):
       '</ul></div>')
 
     w('<h2>Reproducing</h2><div class="card"><p>Scripts are in <code>loadtests/</code>; see <code>loadtests/README.md</code>. Raw k6 output (CSV), resource samples, PHP/Apache log extracts and summaries are in <code>loadtests/results/</code>.</p></div>')
+    return "\n".join(out)
+
+
+def after_section(g):
+    """The 'After fixes' section: the concurrency tests re-run after the server-side fixes,
+    next to the original results (which stay in the report above), plus the 50-user load
+    re-run to check that the locking did not slow things down."""
+    E, ms, table, pf = g["E"], g["ms"], g["table"], g["pf"]
+    bar_chart = g["bar_chart"]
+    A = g["AFTER"]
+    slot_race, slot_seq, inv_race, inv_seq, manual = g["slot_race"], g["slot_seq"], g["inv_race"], g["inv_seq"], g["manual"]
+    a_slot, a_slot_seq = A.get("slot_race", []), A.get("slot_sequential", [])
+    a_inv, a_inv_seq, a_man = A.get("inventory_race", []), A.get("inventory_sequential", []), A.get("manual_race", [])
+    tally = g["outcome_tally"]
+    out = []
+    w = out.append
+    if not a_slot:
+        return ""
+
+    def refused(test, mode, rep):
+        return int(tally(f"conc_{test}_{mode}_after_r{rep}").get("refused_by_server", 0))
+
+    def own_check(rep):
+        return int(tally(f"conc_slot_race_after_r{rep}").get("blocked_by_check", 0))
+
+    all_pass = lambda rows: bool(rows) and all(d["pass"] for d in rows)
+    verdict = lambda ok: f'<span class="pill {"good" if ok else "bad"}">{"PASS" if ok else "FAIL"}</span>'
+
+    w('<h2 id="after-fixes">After fixes</h2>')
+    w('<p>The three concurrency failures above were fixed on the server side (branch <code>fix/concurrency</code>) and tests 5a, 5b and 5c were re-run with the same scripts, '
+      'the same 20 simultaneous teachers and admins, the same baseline restored before every repetition and the same database queries. '
+      'The <b>Before</b> columns below are the original runs, unchanged and still shown in full above; the <b>After</b> columns are the re-runs. '
+      'The database was backed up before the re-runs and restored afterwards; outbound SMTP was blocked again for the duration.</p>')
+    w('<div class="card"><b>What changed</b><ul>'
+      '<li><b>Approval is one transaction</b> (<code>scilab_approve_request()</code> in <code>helperFiles/variableDeclarations.php</code>), used by <code>force_approve</code> and <code>approve</code> in '
+      '<code>ajax/ajax_admin_action.php</code> and by the final stage of the multi-stage path in <code>ajax/ajax_supervisor_action.php</code>. It locks the lab\'s <code>scilab_availability</code> row '
+      '(<code>SELECT … FOR UPDATE</code>), refuses if an approved request for the same lab and date overlaps, then updates the status and deducts stock. A refusal rolls everything back.</li>'
+      '<li><b>Stock</b>: <code>scilab_deduct_inventory()</code> locks the item rows (<code>SELECT … FOR UPDATE</code>, in id order), refuses the approval with a message if any item has too little stock, '
+      'and deducts with <code>WHERE quantity &gt;= ?</code>, the same pattern as the inventory page\'s manual deduction. No schema change.</li>'
+      '<li><b>Submission</b> (<code>request_submission</code>) refuses a slot that an approved request already holds.</li>'
+      '<li><b>Conflict warning</b>: <code>admin_approve.php</code> and <code>forms.php</code> now send the <code>csrf_token</code> field with <code>check_conflict</code>, so the "Severe Conflict" warning can show again.</li>'
+      '</ul></div>')
+
+    # ---------------------------------------------------------------- 5a
+    w('<h3>5a after the fix: same lab, date and time slot</h3>')
+    w(f'<div class="verdict {"good" if all_pass(a_slot) else ""}"><b>{"PASS" if all_pass(a_slot) else "FAIL"}.</b> '
+      f'Approved requests for the one slot in the five repetitions: {", ".join(str(d["approved"]) for d in a_slot)} (before: {", ".join(str(d["approved"]) for d in slot_race)}). '
+      'The correct number is at most 1.</div>')
+    rows = []
+    for b, a in zip(slot_race, a_slot):
+        rows.append([f"Repetition {a['rep']}", a["date"], str(b["approved"]), f"<b>{a['approved']}</b>", str(own_check(a["rep"])), str(refused("slot", "race", a["rep"])), str(a["pending"]), verdict(a["pass"])])
+    for b, a in zip(slot_seq, a_slot_seq):
+        rows.append(["Control: one by one, 3 s apart", a["date"], f"{b['approved']} of {b['requests']}", f"<b>{a['approved']} of {a['requests']}</b>",
+                     "–", str(refused("slot", "sequential", a["rep"])), str(a["pending"]), verdict(a["pass"])])
+    w('<div class="card">' + table(["Run", "Date", "Approved, before", "Approved, after", "Stopped by their own check", "Refused by the server", "Still pending", "Result"], rows) + '</div>')
+    w('<div class="card">' + bar_chart([(f"Rep {d["rep"]}", d["approved"], "good" if d["pass"] else "bad", f"Repetition {d['rep']}: {d['approved']} approved") for d in a_slot],
+                                       y_unit="", title="Approved requests for one slot, after the fix", ref=(1, "correct: 1"), y_max=20) +
+      '<p class="note">Drawn on the same 0–20 axis as the Before chart in 5a. The dashed line is the correct maximum.</p></div>')
+    w('<p>The admins\' correct conflict checks still race: in repetitions 1 to 4 all 20 checks reported only "pending" because they ran before any approval was written, and in repetition 5 two admins\' checks '
+      'happened to see the approval and skipped it (before the fix this stopped 0 to 3 admins per repetition). What changed is that the server now decides: the first approval to take the lab lock was approved '
+      'and every other admin who sent an approval was refused with "Cannot approve: Science Laboratory 3 is already booked …" (19 in repetitions 1 to 4 and 17 in repetition 5, where two had already stopped themselves). '
+      'In the one-by-one control the second and third approvals were refused as well, so the sequential failure is fixed too.</p>')
+
+    # ---------------------------------------------------------------- 5b
+    w('<h3>5b after the fix: last units of one inventory item</h3>')
+    w(f'<div class="verdict {"good" if all_pass(a_inv) else ""}"><b>{"PASS" if all_pass(a_inv) else "FAIL"}.</b> '
+      f'Starting from 5 units and 20 simultaneous approvals of 2 units each, {", ".join(str(d["approved"]) for d in a_inv)} requests were approved per repetition '
+      f'({", ".join(str(d["units_allocated"]) for d in a_inv)} units allocated) and the stock ended at {", ".join(str(d["quantity_now"]) for d in a_inv)}. '
+      'Before: 20 approved, 40 units allocated, stock 0 or −1.</div>')
+    rows = []
+    for b, a in zip(inv_race, a_inv):
+        rows.append([f"Repetition {a['rep']}", f"{b['approved']} / {b['units_allocated']} / {b['quantity_now']}",
+                     f"<b>{a['approved']}</b> / {a['units_allocated']} / <b>{a['quantity_now']}</b>", str(refused("inventory", "race", a["rep"])),
+                     "yes" if a["over_allocated"] else "no", "yes" if a["went_negative"] else "no", verdict(a["pass"])])
+    for b, a in zip(inv_seq, a_inv_seq):
+        rows.append(["Control: one by one, 3 s apart", f"{b['approved']} / {b['units_allocated']} / {b['quantity_now']}",
+                     f"<b>{a['approved']}</b> / {a['units_allocated']} / <b>{a['quantity_now']}</b>", str(refused("inventory", "sequential", a["rep"])),
+                     "yes" if a["over_allocated"] else "no", "yes" if a["went_negative"] else "no", verdict(a["pass"])])
+    w('<div class="card">' + table(["Run", "Before: approved / units allocated / stock after", "After: approved / units allocated / stock after", "Refused by the server",
+                                     "Over-allocated", "Below zero", "Result"], rows) + '</div>')
+    w('<p>Two requests (4 units) fit in 5 units; the remaining 18 were refused with "Cannot approve: not enough stock for … (2 requested, only 1 … left). Nothing was deducted." and stayed pending. '
+      'The stock never went below zero and no approval was written without its deduction. The one-by-one control, which used to allocate 6 units against 5, now approves two and refuses the third.</p>')
+
+    # ---------------------------------------------------------------- 5c
+    w('<h3>5c after the fix: manual deduction (control)</h3>')
+    w(f'<div class="verdict {"good" if all_pass(a_man) else ""}"><b>{"PASS" if all_pass(a_man) else "FAIL"}, {sum(1 for d in a_man if d["pass"])} of {len(a_man)}.</b> '
+      'The inventory page\'s manual deduction was not changed; re-running it confirms that the new approval code did not disturb it and that the test setup is unchanged.</div>')
+    rows = [[f"Repetition {a['rep']}", f"{b['deductions']} / {b['units_deducted']} / {b['quantity_now']}", f"{a['deductions']} / {a['units_deducted']} / {a['quantity_now']}", verdict(a["pass"])]
+            for b, a in zip(manual, a_man)]
+    w('<div class="card">' + table(["Run", "Before: deductions / units / stock after", "After: deductions / units / stock after", "Result"], rows) + '</div>')
+
+    # ---------------------------------------------------------------- load
+    LA, LB = g.get("LOAD_AFTER"), g["LOAD"]
+    if LA:
+        lb, la = LB["overall"], LA["overall"]
+        w('<h3>Did the locking slow things down? 50-user load test, before and after</h3>')
+        w('<p>The 10-minute, 50-user test (test 1) was repeated with the fixed code, on a freshly restored baseline and with the same scripts apart from the changes below. '
+          'Approvals now take a per-lab lock, so a slowdown would show first in the approve and submit requests.</p>')
+        def chg(b, a):
+            if not b:
+                return "–"
+            pct = round((a - b) / b * 100)
+            return f"{pct:+d}%" if pct else "0%"
+        def row(label, b, a, fmt=lambda v: ms(v)):
+            return [label, fmt(b), fmt(a), chg(b, a)]
+        rows = [row("Requests", lb["n"], la["n"], lambda v: f"{v:,}"),
+                row("Throughput (requests/s)", lb["throughput_rps"], la["throughput_rps"], lambda v: f"{v:.1f}"),
+                row("Median", lb["med"], la["med"]), row("p90", lb["p90"], la["p90"]), row("p95", lb["p95"], la["p95"]),
+                row("p99", lb["p99"], la["p99"]), row("Max", lb["max"], la["max"]),
+                row("Errors", lb["errors"], la["errors"], lambda v: f"{v:,.0f}")]
+        w('<div class="card">' + table(["All requests, 10-minute hold", "Before", "After", "Change"], rows) + '</div>')
+        keys = ["POST ajax_forms.php check_conflict", "POST ajax_supervisor_action.php request_submission", "POST ajax_admin_action.php force_approve",
+                "GET admin_approve.php", "GET forms.php"]
+        rows = []
+        for k in keys:
+            if k in LB["endpoints"] and k in LA["endpoints"]:
+                e0, e1 = LB["endpoints"][k], LA["endpoints"][k]
+                rows.append([g["ENDPOINT_LABELS"].get(k, k), str(e0["n"]), str(e1["n"]), ms(e0["med"]), ms(e1["med"]), ms(e0["p95"]), ms(e1["p95"]), chg(e0["p95"], e1["p95"]), str(e1["errors"])])
+        w('<div class="card">' + table(["Endpoint", "Requests, before", "Requests, after", "Median, before", "Median, after", "p95, before", "p95, after", "p95 change", "Errors, after"], rows) + '</div>')
+        rb, ra = LB["resources"], LA["resources"]
+        rows = [[lab, f"{rb[k]['mean']:.1f}%", f"{ra[k]['mean']:.1f}%"] for lab, k in (("Apache CPU (mean)", "httpd_cpu_pct"), ("MariaDB CPU (mean)", "mysqld_cpu_pct"), ("Whole machine CPU (mean)", "total_cpu_pct"))]
+        w('<div class="card">' + table(["Resource", "Before", "After"], rows) + '</div>')
+        ap, sb = tally("load_50_after", "approval_outcome"), tally("load_50_after", "submission_outcome")
+        w(f'<p class="note">Outcomes over the whole after run, including ramp-up and ramp-down: approvals {int(ap.get("approved", 0))} approved and {int(ap.get("refused_by_server", 0))} refused by the server; '
+          f'submissions {int(sb.get("submitted", 0))} accepted and {int(sb.get("slot_taken", 0))} refused because an approved request held the slot. '
+          'A refusal is a correct answer, not an error, and was not counted as one. The k6 journeys now send <code>csrf_token</code> with both conflict checks, as the fixed pages do, '
+          'so those calls return 200 instead of 403 and run the conflict query; the before run replayed the pages as they were.</p>')
+
+    # ---------------------------------------------------------------- notes
+    w('<h3>Limits of the after-fix results</h3><div class="card"><ul>'
+      '<li>Same laptop, same barrier technique, same 20 virtual users and 5 repetitions as before; a pass in five repetitions is evidence, not a proof. The lock and the transaction are what guarantee the result.</li>'
+      '<li>Only the paths exercised by these tests were run: <code>force_approve</code> from the admin approvals page. The multi-stage path (<code>ajax_supervisor_action.php</code>, final stage) uses the same helper but was not part of the race tests.</li>'
+      '<li>Not covered: two admins approving the <i>same</i> request at the same time (the request is not checked for being already approved), and <code>supervisor_approve.php</code>, whose conflict check still omits <code>csrf_token</code>.</li>'
+      '<li>Behaviour change: approval is now refused when stock is short, where it used to approve and deduct what was left. For reagents, submission checks the total across rows but the deduction takes from one row, '
+      'so a request spread across rows can pass submission and be refused at approval.</li>'
+      '<li>The SMTP block was in place, so notification e-mail time is not included, as in the original runs.</li>'
+      '</ul></div>')
+    w('<h3>Database evidence after the fixes</h3><p class="note">Raw output of the same queries after each re-run (also saved in <code>loadtests/results/*_after_*_db.txt</code>).</p>')
+    for name in sorted(g["AFTER_EVIDENCE"]):
+        w(f'<details><summary>{E(name)}</summary><pre>{E(g["AFTER_EVIDENCE"][name])}</pre></details>')
     return "\n".join(out)
 
 

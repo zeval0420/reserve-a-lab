@@ -1,0 +1,4 @@
+run load_50_after
+http_reqs 20190 (25.35/s)
+duration avg 37 ms med 25 ms p90 47 ms p95 179 ms max 456 ms
+http_req_failed 0.00%  step_ok 100.00%  journey_ok 100.00%

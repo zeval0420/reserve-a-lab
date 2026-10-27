@@ -1,0 +1,40 @@
+﻿{
+    "name":  "conc_inventory_sequential_after_r1",
+    "script":  "concurrency_inventory.js",
+    "k6_env":  [
+                   "N=3",
+                   "MODE=sequential",
+                   "QTY=2"
+               ],
+    "k6_exit":  0,
+    "start":  "2026-10-27T20:57:11.2748422+08:00",
+    "end":  "2026-10-27T20:57:58.6471192+08:00",
+    "duration_s":  47.4,
+    "mariadb_status":  {
+                           "Aborted_clients":  0,
+                           "Aborted_connects":  1,
+                           "Connection_errors_max_connections":  0,
+                           "Innodb_buffer_pool_read_requests":  46321511,
+                           "Innodb_buffer_pool_reads":  439744,
+                           "Innodb_deadlocks":  0,
+                           "Innodb_row_lock_time":  4847,
+                           "Innodb_row_lock_time_max":  69,
+                           "Innodb_row_lock_waits":  281,
+                           "Max_used_connections":  55,
+                           "Questions":  4066393,
+                           "Slow_queries":  0,
+                           "Threads_connected":  1,
+                           "Threads_created":  129
+                       },
+    "php_log_lines":  77,
+    "php_log_types":  {
+                          "Status email failed":  61,
+                          "SciLab DEBUG - requesterEmployeeID received":  5,
+                          "SciLab DEBUG - accounts lookup found email":  5,
+                          "AUH email failed":  3,
+                          "SciLab escalation - request 50 stuck at stage subject_teacher":  1,
+                          "SciLab escalation - request 51 stuck at stage subject_teacher":  1,
+                          "SciLab escalation - request 49 stuck at stage subject_teacher":  1
+                      },
+    "apache_error_lines":  0
+}
