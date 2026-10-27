@@ -1,0 +1,318 @@
+{
+ "pages": [
+  "About",
+  "Requester home",
+  "Request form",
+  "Request tracker",
+  "Teacher approval",
+  "Admin home",
+  "Admin approvals",
+  "Inventory"
+ ],
+ "data": {
+  "About": {
+   "score": [
+    53,
+    77
+   ],
+   "lcp": [
+    17.7,
+    5.48637075
+   ],
+   "fcp": [
+    4.788132845926891,
+    2.41137075
+   ],
+   "weight": [
+    6421.2783203125,
+    979.4873046875
+   ]
+  },
+  "Requester home": {
+   "score": [
+    61,
+    85
+   ],
+   "lcp": [
+    8.238115769999999,
+    3.9877956000000006
+   ],
+   "fcp": [
+    4.57356035,
+    2.2595967
+   ],
+   "weight": [
+    1403.71875,
+    656.3662109375
+   ]
+  },
+  "Request form": {
+   "score": [
+    61,
+    89
+   ],
+   "lcp": [
+    7.505544518620479,
+    3.1620286500000003
+   ],
+   "fcp": [
+    5.332758704825278,
+    2.71202865
+   ],
+   "weight": [
+    1028.841796875,
+    345.7490234375
+   ]
+  },
+  "Request tracker": {
+   "score": [
+    64,
+    88
+   ],
+   "lcp": [
+    6.4543644,
+    3.1622781
+   ],
+   "fcp": [
+    4.5366862,
+    2.8622781000000006
+   ],
+   "weight": [
+    859.349609375,
+    319.2666015625
+   ]
+  },
+  "Teacher approval": {
+   "score": [
+    63,
+    92
+   ],
+   "lcp": [
+    6.9123544,
+    2.85908895
+   ],
+   "fcp": [
+    4.849131399999999,
+    2.55908895
+   ],
+   "weight": [
+    900.6650390625,
+    304.6044921875
+   ]
+  },
+  "Admin home": {
+   "score": [
+    61,
+    84
+   ],
+   "lcp": [
+    8.39939117,
+    3.9874563999999997
+   ],
+   "fcp": [
+    4.62982065,
+    2.4093423
+   ],
+   "weight": [
+    1417.2568359375,
+    658.2099609375
+   ]
+  },
+  "Admin approvals": {
+   "score": [
+    62,
+    88
+   ],
+   "lcp": [
+    6.9223819,
+    3.2370237
+   ],
+   "fcp": [
+    4.737078949999999,
+    2.8620237
+   ],
+   "weight": [
+    901.828125,
+    331.916015625
+   ]
+  },
+  "Inventory": {
+   "score": [
+    62,
+    85
+   ],
+   "lcp": [
+    7.2039598,
+    3.46572105
+   ],
+   "fcp": [
+    5.223891,
+    2.8657210500000003
+   ],
+   "weight": [
+    1007.708984375,
+    380.4228515625
+   ]
+  }
+ },
+ "results": [
+  {
+   "metric": "Performance score",
+   "unit": "points",
+   "n": 8,
+   "mean_before": 60.875,
+   "mean_after": 86.0,
+   "median_before": 61.5,
+   "median_after": 86.5,
+   "mean_diff": 25.125,
+   "sd_diff": 2.295181287579947,
+   "ci95": [
+    23.206180424650146,
+    27.043819575349854
+   ],
+   "median_diff": 24.0,
+   "shapiro_W": 0.8389678514667517,
+   "shapiro_p": 0.07350426232124188,
+   "t": 30.96236096634379,
+   "df": 7,
+   "t_p": 9.464683490543995e-09,
+   "cohen_dz": 10.946847700423678,
+   "wilcoxon_W": 0.0,
+   "wilcoxon_p": 0.0078125,
+   "rank_biserial": 1.0,
+   "pages_improved": 8,
+   "t_p_holm": 3.785873396217598e-08,
+   "wilcoxon_p_holm": 0.03125,
+   "recommended": "paired t-test",
+   "reason": "differences consistent with normality (Shapiro-Wilk p >= .05)"
+  },
+  {
+   "metric": "LCP",
+   "unit": "s",
+   "n": 8,
+   "mean_before": 8.66701399482756,
+   "mean_after": 3.6684704000000004,
+   "median_before": 7.354752159310239,
+   "median_after": 3.351372375,
+   "mean_diff": -4.998543594827559,
+   "sd_diff": 2.940088482479116,
+   "ci95": [
+    -7.456519077622649,
+    -2.54056811203247
+   ],
+   "median_diff": -4.151792809999999,
+   "shapiro_W": 0.5454607425540626,
+   "shapiro_p": 3.6156163968671164e-05,
+   "t": -4.808704354338092,
+   "df": 7,
+   "t_p": 0.001946636088638835,
+   "cohen_dz": -1.7001337288368719,
+   "wilcoxon_W": 0.0,
+   "wilcoxon_p": 0.0078125,
+   "rank_biserial": -1.0,
+   "pages_improved": 8,
+   "t_p_holm": 0.00389327217727767,
+   "wilcoxon_p_holm": 0.03125,
+   "recommended": "Wilcoxon signed-rank",
+   "reason": "differences not normal (Shapiro-Wilk p < .05)"
+  },
+  {
+   "metric": "FCP",
+   "unit": "s",
+   "n": 8,
+   "mean_before": 4.8338825125940215,
+   "mean_after": 2.6176812750000003,
+   "median_before": 4.762605897963445,
+   "median_after": 2.6355588,
+   "mean_diff": -2.2162012375940208,
+   "sd_diff": 0.3010759669007022,
+   "ci95": [
+    -2.467907044922902,
+    -1.9644954302651394
+   ],
+   "median_diff": -2.3020030499999997,
+   "shapiro_W": 0.9024819544138372,
+   "shapiro_p": 0.304138242047846,
+   "t": -20.81987399669922,
+   "df": 7,
+   "t_p": 1.4817671988547075e-07,
+   "cohen_dz": -7.360937043257742,
+   "wilcoxon_W": 0.0,
+   "wilcoxon_p": 0.0078125,
+   "rank_biserial": -1.0,
+   "pages_improved": 8,
+   "t_p_holm": 4.445301596564123e-07,
+   "wilcoxon_p_holm": 0.03125,
+   "recommended": "paired t-test",
+   "reason": "differences consistent with normality (Shapiro-Wilk p >= .05)"
+  },
+  {
+   "metric": "Page weight",
+   "unit": "KB",
+   "n": 8,
+   "mean_before": 1742.5809326171875,
+   "mean_after": 497.0028076171875,
+   "median_before": 1018.275390625,
+   "median_after": 363.0859375,
+   "mean_diff": -1245.578125,
+   "sd_diff": 1697.3904249431855,
+   "ci95": [
+    -2664.632032426449,
+    173.4757824264491
+   ],
+   "median_diff": -655.189453125,
+   "shapiro_W": 0.4628564285589156,
+   "shapiro_p": 3.6691523805246713e-06,
+   "t": -2.0755548652623173,
+   "df": 7,
+   "t_p": 0.07658610497949257,
+   "cohen_dz": -0.7338194599758577,
+   "wilcoxon_W": 0.0,
+   "wilcoxon_p": 0.0078125,
+   "rank_biserial": -1.0,
+   "pages_improved": 8,
+   "t_p_holm": 0.07658610497949257,
+   "wilcoxon_p_holm": 0.03125,
+   "recommended": "Wilcoxon signed-rank",
+   "reason": "differences not normal (Shapiro-Wilk p < .05)"
+  }
+ ],
+ "sensitivity_rounded_table": [
+  {
+   "metric": "Performance score",
+   "shapiro_p": 0.07350426232124188,
+   "t": 30.96236096634379,
+   "t_p": 9.464683490543995e-09,
+   "wilcoxon_W": 0.0,
+   "wilcoxon_p": 0.0078125,
+   "cohen_dz": 10.946847700423678
+  },
+  {
+   "metric": "LCP",
+   "shapiro_p": 3.154847079905345e-05,
+   "t": -4.782651143427948,
+   "t_p": 0.002006114138896063,
+   "wilcoxon_W": 0.0,
+   "wilcoxon_p": 0.0078125,
+   "cohen_dz": -1.6909225277837485
+  },
+  {
+   "metric": "FCP",
+   "shapiro_p": 0.5213534118552079,
+   "t": -20.11095178452252,
+   "t_p": 1.8817335064828368e-07,
+   "wilcoxon_W": 0.0,
+   "wilcoxon_p": 0.0078125,
+   "cohen_dz": -7.110295191475786
+  },
+  {
+   "metric": "Page weight",
+   "shapiro_p": 4.0835173614015645e-06,
+   "t": -2.0796393160041258,
+   "t_p": 0.07612566517579782,
+   "wilcoxon_W": 0.0,
+   "wilcoxon_p": 0.0078125,
+   "cohen_dz": -0.7352635313843354
+  }
+ ]
+}

@@ -1,0 +1,4 @@
+run conc_inventory_race_r2
+http_reqs 160 (3.98/s)
+duration avg 92 ms med 68 ms p90 231 ms p95 311 ms max 344 ms
+http_req_failed 0.00%  step_ok 100.00%  journey_ok 0.00%

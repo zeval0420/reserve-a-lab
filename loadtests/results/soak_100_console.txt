@@ -1,0 +1,4 @@
+run soak_100
+http_reqs 95945 (50.20/s)
+duration avg 87 ms med 26 ms p90 111 ms p95 191 ms max 130828 ms
+http_req_failed 0.01%  step_ok 99.99%  journey_ok 99.96%

@@ -1,0 +1,33 @@
+﻿{
+    "name":  "conc_manual_race_r3",
+    "script":  "concurrency_manual.js",
+    "k6_env":  [
+                   "N=20",
+                   "ITEM_ID=1247"
+               ],
+    "k6_exit":  0,
+    "start":  "2026-10-27T10:40:45.7993736+08:00",
+    "end":  "2026-10-27T10:41:01.9296809+08:00",
+    "duration_s":  16.1,
+    "mariadb_status":  {
+                           "Aborted_clients":  0,
+                           "Aborted_connects":  0,
+                           "Connection_errors_max_connections":  0,
+                           "Innodb_buffer_pool_read_requests":  1130160,
+                           "Innodb_buffer_pool_reads":  16517,
+                           "Innodb_deadlocks":  0,
+                           "Innodb_row_lock_time":  461,
+                           "Innodb_row_lock_time_max":  14,
+                           "Innodb_row_lock_waits":  57,
+                           "Max_used_connections":  20,
+                           "Questions":  29903,
+                           "Slow_queries":  0,
+                           "Threads_connected":  1,
+                           "Threads_created":  29
+                       },
+    "php_log_lines":  0,
+    "php_log_types":  {
+
+                      },
+    "apache_error_lines":  0
+}

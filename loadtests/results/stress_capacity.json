@@ -1,0 +1,5 @@
+{
+  "capacity_vus": 200,
+  "rule": "p95 <= 10000 ms and error rate <= 5% over the 3-min hold window",
+  "note": "Last completed step within limits. The 300-VU step was stopped after ~3 min when Claude Code reaped the background task for low system memory; the upper bound was not measured. Capacity reported as >= 200 VUs by decision of the researcher."
+}

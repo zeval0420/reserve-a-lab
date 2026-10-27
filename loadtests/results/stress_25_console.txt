@@ -1,0 +1,4 @@
+run stress_25
+http_reqs 2981 (13.12/s)
+duration avg 36 ms med 25 ms p90 45 ms p95 191 ms max 287 ms
+http_req_failed 0.00%  step_ok 100.00%  journey_ok 100.00%

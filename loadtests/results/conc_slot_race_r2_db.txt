@@ -1,0 +1,34 @@
+﻿# conc_slot_race_r2  (2026-10-27T10:30:41.6256253+08:00)
+# k6 env: N=20 MODE=race DATE=2027-03-16 LAB=Science Laboratory 3
+
+mysql> SELECT id, requesterEmployeeID, scilabName, inclusiveDate, inclusiveTime, statusScilabPersonnel, lab_personnel_approved_at FROM scilab_form_requests WHERE scilabName='Science Laboratory 3' AND inclusiveDate='2027-03-16' ORDER BY id;
++----+---------------------+----------------------+---------------+---------------------+-----------------------+---------------------------+
+| id | requesterEmployeeID | scilabName           | inclusiveDate | inclusiveTime       | statusScilabPersonnel | lab_personnel_approved_at |
++----+---------------------+----------------------+---------------+---------------------+-----------------------+---------------------------+
+| 49 | LT-T0004            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Approved              | 2026-10-27 10:30:34       |
+| 50 | LT-T0008            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Approved              | 2026-10-27 10:30:34       |
+| 51 | LT-T0003            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Approved              | 2026-10-27 10:30:34       |
+| 52 | LT-T0015            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Approved              | 2026-10-27 10:30:34       |
+| 53 | LT-T0007            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Approved              | 2026-10-27 10:30:34       |
+| 54 | LT-T0001            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Approved              | 2026-10-27 10:30:34       |
+| 55 | LT-T0005            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Approved              | 2026-10-27 10:30:34       |
+| 56 | LT-T0017            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Approved              | 2026-10-27 10:30:34       |
+| 57 | LT-T0014            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Approved              | 2026-10-27 10:30:34       |
+| 58 | LT-T0011            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Approved              | 2026-10-27 10:30:34       |
+| 59 | LT-T0002            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Approved              | 2026-10-27 10:30:34       |
+| 60 | LT-T0010            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Approved              | 2026-10-27 10:30:34       |
+| 61 | LT-T0018            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Approved              | 2026-10-27 10:30:34       |
+| 62 | LT-T0012            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Approved              | 2026-10-27 10:30:34       |
+| 63 | LT-T0006            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Approved              | 2026-10-27 10:30:34       |
+| 64 | LT-T0016            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Approved              | 2026-10-27 10:30:34       |
+| 65 | LT-T0013            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Approved              | 2026-10-27 10:30:34       |
+| 66 | LT-T0009            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Approved              | 2026-10-27 10:30:34       |
+| 67 | LT-T0019            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Approved              | 2026-10-27 10:30:34       |
+| 68 | LT-T0020            | Science Laboratory 3 | 2027-03-16    | 9:00 AM to 11:00 AM | Approved              | 2026-10-27 10:30:34       |
++----+---------------------+----------------------+---------------+---------------------+-----------------------+---------------------------+
+mysql> SELECT COUNT(*) AS requests_for_slot, COALESCE(SUM(statusScilabPersonnel='Approved'),0) AS approved_for_slot, COALESCE(SUM(statusScilabPersonnel='Pending'),0) AS still_pending FROM scilab_form_requests WHERE scilabName='Science Laboratory 3' AND inclusiveDate='2027-03-16' AND inclusiveTime='9:00 AM to 11:00 AM';
++-------------------+-------------------+---------------+
+| requests_for_slot | approved_for_slot | still_pending |
++-------------------+-------------------+---------------+
+|                20 |                20 |             0 |
++-------------------+-------------------+---------------+

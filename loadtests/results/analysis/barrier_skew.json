@@ -1,0 +1,19 @@
+{
+ "conc_inventory_race_r1": 2.0,
+ "conc_inventory_race_r2": 2.0,
+ "conc_inventory_race_r3": 2.0,
+ "conc_inventory_race_r4": 1.0,
+ "conc_inventory_race_r5": 1.0,
+ "conc_inventory_sequential_r1": 1.0,
+ "conc_manual_race_r1": 2.0,
+ "conc_manual_race_r2": 3.0,
+ "conc_manual_race_r3": 2.0,
+ "conc_manual_race_r4": 2.0,
+ "conc_manual_race_r5": 1.0,
+ "conc_slot_race_r1": 2.0,
+ "conc_slot_race_r2": 2.0,
+ "conc_slot_race_r3": 2.0,
+ "conc_slot_race_r4": 2.0,
+ "conc_slot_race_r5": 4.0,
+ "conc_slot_sequential_r1": 1.0
+}

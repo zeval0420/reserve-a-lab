@@ -1,0 +1,4 @@
+run conc_inventory_sequential_r1
+http_reqs 24 (0.52/s)
+duration avg 73 ms med 32 ms p90 212 ms p95 249 ms max 262 ms
+http_req_failed 0.00%  step_ok 100.00%  journey_ok 0.00%

@@ -1,0 +1,67 @@
+﻿[
+    {
+        "requests":  1040,
+        "throughput_rps":  5.78,
+        "avg_ms":  36.2,
+        "med_ms":  24.7,
+        "p90_ms":  43.5,
+        "p95_ms":  187.7,
+        "max_ms":  293.9,
+        "http_failed_pct":  0.0,
+        "error_pct":  0.0,
+        "vus":  10,
+        "within_limits":  true
+    },
+    {
+        "requests":  2592,
+        "throughput_rps":  14.4,
+        "avg_ms":  36.6,
+        "med_ms":  25.2,
+        "p90_ms":  44.8,
+        "p95_ms":  191.8,
+        "max_ms":  287.3,
+        "http_failed_pct":  0.0,
+        "error_pct":  0.0,
+        "vus":  25,
+        "within_limits":  true
+    },
+    {
+        "requests":  5141,
+        "throughput_rps":  28.56,
+        "avg_ms":  36.4,
+        "med_ms":  25.9,
+        "p90_ms":  45.0,
+        "p95_ms":  175.7,
+        "max_ms":  289.1,
+        "http_failed_pct":  0.0,
+        "error_pct":  0.0,
+        "vus":  50,
+        "within_limits":  true
+    },
+    {
+        "requests":  10366,
+        "throughput_rps":  57.59,
+        "avg_ms":  34.3,
+        "med_ms":  24.0,
+        "p90_ms":  44.4,
+        "p95_ms":  158.0,
+        "max_ms":  274.8,
+        "http_failed_pct":  0.0,
+        "error_pct":  0.0,
+        "vus":  100,
+        "within_limits":  true
+    },
+    {
+        "requests":  16953,
+        "throughput_rps":  94.18,
+        "avg_ms":  403.8,
+        "med_ms":  24.0,
+        "p90_ms":  201.9,
+        "p95_ms":  4145.0,
+        "max_ms":  6652.6,
+        "http_failed_pct":  0.0,
+        "error_pct":  0.0,
+        "vus":  200,
+        "within_limits":  true
+    }
+]

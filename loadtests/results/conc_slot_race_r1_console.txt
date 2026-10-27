@@ -1,0 +1,4 @@
+run conc_slot_race_r1
+http_reqs 180 (4.46/s)
+duration avg 73 ms med 58 ms p90 144 ms p95 182 ms max 345 ms
+http_req_failed 0.00%  step_ok 100.00%  journey_ok 0.00%

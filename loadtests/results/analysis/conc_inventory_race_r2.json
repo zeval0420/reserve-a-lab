@@ -1,0 +1,485 @@
+{
+ "run": "conc_inventory_race_r2",
+ "overall": {
+  "n": 160,
+  "avg": 92.4,
+  "med": 67.6,
+  "p90": 230.7,
+  "p95": 310.8,
+  "p99": 334.3,
+  "max": 343.9,
+  "throughput_rps": 3.9,
+  "errors": 0,
+  "error_pct": 0.0,
+  "error_types": {},
+  "statuses": {
+   "200": 160
+  },
+  "window_s": [
+   0,
+   null
+  ],
+  "span_s": 41
+ },
+ "endpoints": {
+  "GET admin_approve.php": {
+   "n": 20,
+   "avg": 91.4,
+   "med": 93.2,
+   "p90": 115.1,
+   "p95": 116.3,
+   "p99": 116.7,
+   "max": 116.8,
+   "errors": 0,
+   "rps": 0.488
+  },
+  "GET forms.php": {
+   "n": 20,
+   "avg": 278.0,
+   "med": 301.0,
+   "p90": 330.3,
+   "p95": 341.9,
+   "p99": 343.5,
+   "max": 343.9,
+   "errors": 0,
+   "rps": 0.488
+  },
+  "GET index.php": {
+   "n": 40,
+   "avg": 17.3,
+   "med": 11.3,
+   "p90": 34.4,
+   "p95": 34.4,
+   "p99": 34.9,
+   "max": 34.9,
+   "errors": 0,
+   "rps": 0.976
+  },
+  "POST ajax_admin_action.php force_approve": {
+   "n": 20,
+   "avg": 139.5,
+   "med": 156.6,
+   "p90": 161.0,
+   "p95": 164.4,
+   "p99": 182.4,
+   "max": 186.9,
+   "errors": 0,
+   "rps": 0.488
+  },
+  "POST ajax_login.php loginUser": {
+   "n": 40,
+   "avg": 30.8,
+   "med": 26.2,
+   "p90": 40.9,
+   "p95": 61.8,
+   "p99": 64.3,
+   "max": 64.3,
+   "errors": 0,
+   "rps": 0.976
+  },
+  "POST ajax_supervisor_action.php request_submission": {
+   "n": 20,
+   "avg": 134.0,
+   "med": 134.2,
+   "p90": 137.6,
+   "p95": 138.3,
+   "p99": 139.7,
+   "max": 140.0,
+   "errors": 0,
+   "rps": 0.488
+  }
+ },
+ "series": [
+  {
+   "t": 0,
+   "vus": 20.0,
+   "n": 100,
+   "rps": 10.0,
+   "med": 28.4,
+   "p95": 325.7,
+   "errors": 0
+  },
+  {
+   "t": 10,
+   "vus": 20.0,
+   "n": 0,
+   "rps": 0.0,
+   "med": null,
+   "p95": null,
+   "errors": 0
+  },
+  {
+   "t": 20,
+   "vus": 20.0,
+   "n": 20,
+   "rps": 2.0,
+   "med": 134.2,
+   "p95": 138.3,
+   "errors": 0
+  },
+  {
+   "t": 30,
+   "vus": 20.0,
+   "n": 20,
+   "rps": 2.0,
+   "med": 93.2,
+   "p95": 116.3,
+   "errors": 0
+  },
+  {
+   "t": 40,
+   "vus": 20.0,
+   "n": 20,
+   "rps": 2.0,
+   "med": 156.6,
+   "p95": 164.4,
+   "errors": 0
+  }
+ ],
+ "resources": {
+  "httpd_cpu_pct": {
+   "mean": 1.05,
+   "max": 15.78,
+   "min": 0.0
+  },
+  "httpd_mem_mb": {
+   "mean": 80.4,
+   "max": 81.3,
+   "min": 77.4
+  },
+  "mysqld_cpu_pct": {
+   "mean": 0.1,
+   "max": 0.63,
+   "min": 0.0
+  },
+  "mysqld_mem_mb": {
+   "mean": 58.99,
+   "max": 59.6,
+   "min": 58.3
+  },
+  "k6_cpu_pct": {
+   "mean": 0.1,
+   "max": 1.37,
+   "min": 0.0
+  },
+  "total_cpu_pct": {
+   "mean": 8.55,
+   "max": 25.64,
+   "min": 4.32
+  },
+  "available_mem_mb": {
+   "mean": 5349.52,
+   "max": 5514.0,
+   "min": 5225.0
+  }
+ },
+ "resource_series": [
+  {
+   "t": -3.6,
+   "httpd_cpu_pct": 0.0,
+   "httpd_mem_mb": 81.3,
+   "mysqld_cpu_pct": 0.0,
+   "mysqld_mem_mb": 57.2,
+   "k6_cpu_pct": 0.0,
+   "total_cpu_pct": 6.42,
+   "available_mem_mb": 5388.0
+  },
+  {
+   "t": -1.6,
+   "httpd_cpu_pct": 0.0,
+   "httpd_mem_mb": 81.3,
+   "mysqld_cpu_pct": 0.0,
+   "mysqld_mem_mb": 57.2,
+   "k6_cpu_pct": 0.0,
+   "total_cpu_pct": 10.49,
+   "available_mem_mb": 5362.0
+  },
+  {
+   "t": 0.5,
+   "httpd_cpu_pct": 15.78,
+   "httpd_mem_mb": 81.3,
+   "mysqld_cpu_pct": 0.63,
+   "mysqld_mem_mb": 58.3,
+   "k6_cpu_pct": 0.0,
+   "total_cpu_pct": 25.64,
+   "available_mem_mb": 5260.0
+  },
+  {
+   "t": 2.5,
+   "httpd_cpu_pct": 0.0,
+   "httpd_mem_mb": 81.3,
+   "mysqld_cpu_pct": 0.0,
+   "mysqld_mem_mb": 58.3,
+   "k6_cpu_pct": 0.0,
+   "total_cpu_pct": 7.1,
+   "available_mem_mb": 5272.0
+  },
+  {
+   "t": 4.6,
+   "httpd_cpu_pct": 0.0,
+   "httpd_mem_mb": 81.3,
+   "mysqld_cpu_pct": 0.0,
+   "mysqld_mem_mb": 58.3,
+   "k6_cpu_pct": 0.0,
+   "total_cpu_pct": 5.15,
+   "available_mem_mb": 5255.0
+  },
+  {
+   "t": 6.6,
+   "httpd_cpu_pct": 0.0,
+   "httpd_mem_mb": 81.3,
+   "mysqld_cpu_pct": 0.0,
+   "mysqld_mem_mb": 58.3,
+   "k6_cpu_pct": 0.05,
+   "total_cpu_pct": 7.18,
+   "available_mem_mb": 5323.0
+  },
+  {
+   "t": 8.7,
+   "httpd_cpu_pct": 0.0,
+   "httpd_mem_mb": 81.3,
+   "mysqld_cpu_pct": 0.0,
+   "mysqld_mem_mb": 58.3,
+   "k6_cpu_pct": 0.0,
+   "total_cpu_pct": 4.32,
+   "available_mem_mb": 5320.0
+  },
+  {
+   "t": 10.7,
+   "httpd_cpu_pct": 0.0,
+   "httpd_mem_mb": 81.3,
+   "mysqld_cpu_pct": 0.0,
+   "mysqld_mem_mb": 58.3,
+   "k6_cpu_pct": 0.05,
+   "total_cpu_pct": 6.34,
+   "available_mem_mb": 5312.0
+  },
+  {
+   "t": 12.8,
+   "httpd_cpu_pct": 0.0,
+   "httpd_mem_mb": 81.3,
+   "mysqld_cpu_pct": 0.05,
+   "mysqld_mem_mb": 58.3,
+   "k6_cpu_pct": 0.15,
+   "total_cpu_pct": 8.06,
+   "available_mem_mb": 5287.0
+  },
+  {
+   "t": 14.8,
+   "httpd_cpu_pct": 0.0,
+   "httpd_mem_mb": 81.3,
+   "mysqld_cpu_pct": 0.0,
+   "mysqld_mem_mb": 58.3,
+   "k6_cpu_pct": 0.0,
+   "total_cpu_pct": 8.47,
+   "available_mem_mb": 5280.0
+  },
+  {
+   "t": 16.9,
+   "httpd_cpu_pct": 0.0,
+   "httpd_mem_mb": 81.3,
+   "mysqld_cpu_pct": 0.0,
+   "mysqld_mem_mb": 58.3,
+   "k6_cpu_pct": 0.05,
+   "total_cpu_pct": 5.84,
+   "available_mem_mb": 5271.0
+  },
+  {
+   "t": 18.9,
+   "httpd_cpu_pct": 0.0,
+   "httpd_mem_mb": 81.3,
+   "mysqld_cpu_pct": 0.0,
+   "mysqld_mem_mb": 58.3,
+   "k6_cpu_pct": 0.1,
+   "total_cpu_pct": 7.71,
+   "available_mem_mb": 5256.0
+  },
+  {
+   "t": 21.0,
+   "httpd_cpu_pct": 2.38,
+   "httpd_mem_mb": 81.3,
+   "mysqld_cpu_pct": 0.63,
+   "mysqld_mem_mb": 59.4,
+   "k6_cpu_pct": 0.1,
+   "total_cpu_pct": 12.92,
+   "available_mem_mb": 5225.0
+  },
+  {
+   "t": 23.0,
+   "httpd_cpu_pct": 0.0,
+   "httpd_mem_mb": 81.3,
+   "mysqld_cpu_pct": 0.0,
+   "mysqld_mem_mb": 59.4,
+   "k6_cpu_pct": 0.0,
+   "total_cpu_pct": 9.7,
+   "available_mem_mb": 5230.0
+  },
+  {
+   "t": 25.1,
+   "httpd_cpu_pct": 0.0,
+   "httpd_mem_mb": 77.4,
+   "mysqld_cpu_pct": 0.0,
+   "mysqld_mem_mb": 59.4,
+   "k6_cpu_pct": 0.0,
+   "total_cpu_pct": 6.78,
+   "available_mem_mb": 5472.0
+  },
+  {
+   "t": 27.1,
+   "httpd_cpu_pct": 0.0,
+   "httpd_mem_mb": 77.4,
+   "mysqld_cpu_pct": 0.0,
+   "mysqld_mem_mb": 59.4,
+   "k6_cpu_pct": 0.05,
+   "total_cpu_pct": 6.21,
+   "available_mem_mb": 5441.0
+  },
+  {
+   "t": 29.2,
+   "httpd_cpu_pct": 0.0,
+   "httpd_mem_mb": 77.4,
+   "mysqld_cpu_pct": 0.0,
+   "mysqld_mem_mb": 59.4,
+   "k6_cpu_pct": 0.0,
+   "total_cpu_pct": 7.01,
+   "available_mem_mb": 5462.0
+  },
+  {
+   "t": 31.2,
+   "httpd_cpu_pct": 1.22,
+   "httpd_mem_mb": 79.8,
+   "mysqld_cpu_pct": 0.49,
+   "mysqld_mem_mb": 59.6,
+   "k6_cpu_pct": 1.37,
+   "total_cpu_pct": 10.2,
+   "available_mem_mb": 5389.0
+  },
+  {
+   "t": 33.3,
+   "httpd_cpu_pct": 0.0,
+   "httpd_mem_mb": 79.8,
+   "mysqld_cpu_pct": 0.0,
+   "mysqld_mem_mb": 59.6,
+   "k6_cpu_pct": 0.0,
+   "total_cpu_pct": 5.33,
+   "available_mem_mb": 5375.0
+  },
+  {
+   "t": 35.3,
+   "httpd_cpu_pct": 0.0,
+   "httpd_mem_mb": 79.8,
+   "mysqld_cpu_pct": 0.0,
+   "mysqld_mem_mb": 59.6,
+   "k6_cpu_pct": 0.1,
+   "total_cpu_pct": 9.24,
+   "available_mem_mb": 5357.0
+  },
+  {
+   "t": 37.4,
+   "httpd_cpu_pct": 0.0,
+   "httpd_mem_mb": 79.8,
+   "mysqld_cpu_pct": 0.0,
+   "mysqld_mem_mb": 59.6,
+   "k6_cpu_pct": 0.34,
+   "total_cpu_pct": 7.28,
+   "available_mem_mb": 5388.0
+  },
+  {
+   "t": 39.4,
+   "httpd_cpu_pct": 0.0,
+   "httpd_mem_mb": 79.8,
+   "mysqld_cpu_pct": 0.0,
+   "mysqld_mem_mb": 59.6,
+   "k6_cpu_pct": 0.05,
+   "total_cpu_pct": 6.11,
+   "available_mem_mb": 5400.0
+  },
+  {
+   "t": 41.4,
+   "httpd_cpu_pct": 4.68,
+   "httpd_mem_mb": 80.8,
+   "mysqld_cpu_pct": 0.54,
+   "mysqld_mem_mb": 59.6,
+   "k6_cpu_pct": 0.0,
+   "total_cpu_pct": 15.43,
+   "available_mem_mb": 5477.0
+  },
+  {
+   "t": 43.5,
+   "httpd_cpu_pct": 0.0,
+   "httpd_mem_mb": 80.8,
+   "mysqld_cpu_pct": 0.0,
+   "mysqld_mem_mb": 59.6,
+   "k6_cpu_pct": 0.0,
+   "total_cpu_pct": 6.87,
+   "available_mem_mb": 5473.0
+  },
+  {
+   "t": 45.5,
+   "httpd_cpu_pct": 0.0,
+   "httpd_mem_mb": 80.8,
+   "mysqld_cpu_pct": 0.0,
+   "mysqld_mem_mb": 59.6,
+   "k6_cpu_pct": 0.0,
+   "total_cpu_pct": 7.85,
+   "available_mem_mb": 5514.0
+  }
+ ],
+ "server": {
+  "name": "conc_inventory_race_r2",
+  "script": "concurrency_inventory.js",
+  "k6_env": [
+   "N=20",
+   "MODE=race",
+   "QTY=2"
+  ],
+  "k6_exit": 0,
+  "start": "2026-10-27T10:35:48.9410069+08:00",
+  "end": "2026-10-27T10:36:30.1771400+08:00",
+  "duration_s": 41.2,
+  "mariadb_status": {
+   "Aborted_clients": 0,
+   "Aborted_connects": 0,
+   "Connection_errors_max_connections": 0,
+   "Innodb_buffer_pool_read_requests": 779172,
+   "Innodb_buffer_pool_reads": 12392,
+   "Innodb_deadlocks": 0,
+   "Innodb_row_lock_time": 0,
+   "Innodb_row_lock_time_max": 0,
+   "Innodb_row_lock_waits": 0,
+   "Max_used_connections": 20,
+   "Questions": 20796,
+   "Slow_queries": 0,
+   "Threads_connected": 1,
+   "Threads_created": 29
+  },
+  "php_log_lines": 620,
+  "php_log_types": {
+   "Status email failed": 500,
+   "SciLab DEBUG - requesterEmployeeID received": 40,
+   "SciLab DEBUG - accounts lookup found email": 40,
+   "AUH email failed": 20,
+   "SciLab escalation - request 66 stuck at stage subject_teacher": 1,
+   "SciLab escalation - request 61 stuck at stage subject_teacher": 1,
+   "SciLab escalation - request 55 stuck at stage subject_teacher": 1,
+   "SciLab escalation - request 62 stuck at stage subject_teacher": 1,
+   "SciLab escalation - request 59 stuck at stage subject_teacher": 1,
+   "SciLab escalation - request 67 stuck at stage subject_teacher": 1,
+   "SciLab escalation - request 68 stuck at stage subject_teacher": 1,
+   "SciLab escalation - request 65 stuck at stage subject_teacher": 1,
+   "SciLab escalation - request 64 stuck at stage subject_teacher": 1,
+   "SciLab escalation - request 63 stuck at stage subject_teacher": 1,
+   "SciLab escalation - request 56 stuck at stage subject_teacher": 1,
+   "SciLab escalation - request 51 stuck at stage subject_teacher": 1,
+   "SciLab escalation - request 49 stuck at stage subject_teacher": 1,
+   "SciLab escalation - request 50 stuck at stage subject_teacher": 1,
+   "SciLab escalation - request 52 stuck at stage subject_teacher": 1,
+   "SciLab escalation - request 60 stuck at stage subject_teacher": 1,
+   "SciLab escalation - request 53 stuck at stage subject_teacher": 1,
+   "SciLab escalation - request 58 stuck at stage subject_teacher": 1,
+   "SciLab escalation - request 54 stuck at stage subject_teacher": 1,
+   "SciLab escalation - request 57 stuck at stage subject_teacher": 1
+  },
+  "apache_error_lines": 0
+ }
+}

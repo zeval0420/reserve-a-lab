@@ -1,0 +1,41 @@
+﻿{
+    "name":  "conc_slot_sequential_r1",
+    "script":  "concurrency_slot.js",
+    "k6_env":  [
+                   "N=3",
+                   "MODE=sequential",
+                   "DATE=2027-03-15",
+                   "LAB=Science Laboratory 3"
+               ],
+    "k6_exit":  0,
+    "start":  "2026-10-27T10:27:34.1521532+08:00",
+    "end":  "2026-10-27T10:28:21.4598311+08:00",
+    "duration_s":  47.3,
+    "mariadb_status":  {
+                           "Aborted_clients":  0,
+                           "Aborted_connects":  0,
+                           "Connection_errors_max_connections":  0,
+                           "Innodb_buffer_pool_read_requests":  155596,
+                           "Innodb_buffer_pool_reads":  6775,
+                           "Innodb_deadlocks":  0,
+                           "Innodb_row_lock_time":  0,
+                           "Innodb_row_lock_time_max":  0,
+                           "Innodb_row_lock_waits":  0,
+                           "Max_used_connections":  3,
+                           "Questions":  4969,
+                           "Slow_queries":  0,
+                           "Threads_connected":  1,
+                           "Threads_created":  12
+                       },
+    "php_log_lines":  93,
+    "php_log_types":  {
+                          "Status email failed":  75,
+                          "SciLab DEBUG - requesterEmployeeID received":  6,
+                          "SciLab DEBUG - accounts lookup found email":  6,
+                          "AUH email failed":  3,
+                          "SciLab escalation - request 51 stuck at stage subject_teacher":  1,
+                          "SciLab escalation - request 49 stuck at stage subject_teacher":  1,
+                          "SciLab escalation - request 50 stuck at stage subject_teacher":  1
+                      },
+    "apache_error_lines":  0
+}

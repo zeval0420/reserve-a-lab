@@ -1,0 +1,290 @@
+{
+ "run": "conc_manual_race_r4",
+ "overall": {
+  "n": 80,
+  "avg": 37.5,
+  "med": 38.5,
+  "p90": 49.1,
+  "p95": 63.8,
+  "p99": 73.6,
+  "max": 81.1,
+  "throughput_rps": 5.0,
+  "errors": 0,
+  "error_pct": 0.0,
+  "error_types": {},
+  "statuses": {
+   "200": 80
+  },
+  "window_s": [
+   0,
+   null
+  ],
+  "span_s": 16
+ },
+ "endpoints": {
+  "GET index.php": {
+   "n": 20,
+   "avg": 20.6,
+   "med": 19.8,
+   "p90": 33.2,
+   "p95": 34.3,
+   "p99": 36.9,
+   "max": 37.5,
+   "errors": 0,
+   "rps": 1.25
+  },
+  "GET inventory.php": {
+   "n": 20,
+   "avg": 41.0,
+   "med": 39.8,
+   "p90": 48.6,
+   "p95": 49.6,
+   "p99": 50.4,
+   "max": 50.6,
+   "errors": 0,
+   "rps": 1.25
+  },
+  "POST ajax_inventory.php deduct_inventory": {
+   "n": 20,
+   "avg": 41.5,
+   "med": 39.4,
+   "p90": 49.0,
+   "p95": 49.0,
+   "p99": 49.1,
+   "max": 49.1,
+   "errors": 0,
+   "rps": 1.25
+  },
+  "POST ajax_login.php loginUser": {
+   "n": 20,
+   "avg": 46.9,
+   "med": 40.6,
+   "p90": 71.2,
+   "p95": 72.1,
+   "p99": 79.3,
+   "max": 81.1,
+   "errors": 0,
+   "rps": 1.25
+  }
+ },
+ "series": [
+  {
+   "t": 0,
+   "vus": 20.0,
+   "n": 60,
+   "rps": 6.0,
+   "med": 36.7,
+   "p95": 69.7,
+   "errors": 0
+  },
+  {
+   "t": 10,
+   "vus": 20.0,
+   "n": 20,
+   "rps": 2.0,
+   "med": 39.4,
+   "p95": 49.0,
+   "errors": 0
+  }
+ ],
+ "resources": {
+  "httpd_cpu_pct": {
+   "mean": 0.35,
+   "max": 3.12,
+   "min": 0.0
+  },
+  "httpd_mem_mb": {
+   "mean": 81.3,
+   "max": 81.3,
+   "min": 81.3
+  },
+  "mysqld_cpu_pct": {
+   "mean": 0.04,
+   "max": 0.39,
+   "min": 0.0
+  },
+  "mysqld_mem_mb": {
+   "mean": 63.44,
+   "max": 63.8,
+   "min": 63.3
+  },
+  "k6_cpu_pct": {
+   "mean": 0.0,
+   "max": 0.05,
+   "min": 0.0
+  },
+  "total_cpu_pct": {
+   "mean": 8.93,
+   "max": 13.2,
+   "min": 6.27
+  },
+  "available_mem_mb": {
+   "mean": 5496.0,
+   "max": 5569.0,
+   "min": 5451.0
+  }
+ },
+ "resource_series": [
+  {
+   "t": -3.3,
+   "httpd_cpu_pct": 0.0,
+   "httpd_mem_mb": 81.3,
+   "mysqld_cpu_pct": 0.0,
+   "mysqld_mem_mb": 62.4,
+   "k6_cpu_pct": 0.0,
+   "total_cpu_pct": 11.24,
+   "available_mem_mb": 5551.0
+  },
+  {
+   "t": -1.2,
+   "httpd_cpu_pct": 0.0,
+   "httpd_mem_mb": 81.3,
+   "mysqld_cpu_pct": 0.0,
+   "mysqld_mem_mb": 62.4,
+   "k6_cpu_pct": 0.0,
+   "total_cpu_pct": 9.47,
+   "available_mem_mb": 5532.0
+  },
+  {
+   "t": 0.8,
+   "httpd_cpu_pct": 3.12,
+   "httpd_mem_mb": 81.3,
+   "mysqld_cpu_pct": 0.39,
+   "mysqld_mem_mb": 63.3,
+   "k6_cpu_pct": 0.0,
+   "total_cpu_pct": 13.2,
+   "available_mem_mb": 5454.0
+  },
+  {
+   "t": 2.9,
+   "httpd_cpu_pct": 0.0,
+   "httpd_mem_mb": 81.3,
+   "mysqld_cpu_pct": 0.0,
+   "mysqld_mem_mb": 63.3,
+   "k6_cpu_pct": 0.0,
+   "total_cpu_pct": 8.93,
+   "available_mem_mb": 5453.0
+  },
+  {
+   "t": 4.9,
+   "httpd_cpu_pct": 0.0,
+   "httpd_mem_mb": 81.3,
+   "mysqld_cpu_pct": 0.0,
+   "mysqld_mem_mb": 63.3,
+   "k6_cpu_pct": 0.0,
+   "total_cpu_pct": 10.09,
+   "available_mem_mb": 5479.0
+  },
+  {
+   "t": 7.0,
+   "httpd_cpu_pct": 0.0,
+   "httpd_mem_mb": 81.3,
+   "mysqld_cpu_pct": 0.0,
+   "mysqld_mem_mb": 63.3,
+   "k6_cpu_pct": 0.05,
+   "total_cpu_pct": 8.21,
+   "available_mem_mb": 5462.0
+  },
+  {
+   "t": 9.0,
+   "httpd_cpu_pct": 0.0,
+   "httpd_mem_mb": 81.3,
+   "mysqld_cpu_pct": 0.0,
+   "mysqld_mem_mb": 63.3,
+   "k6_cpu_pct": 0.0,
+   "total_cpu_pct": 9.43,
+   "available_mem_mb": 5451.0
+  },
+  {
+   "t": 11.1,
+   "httpd_cpu_pct": 0.0,
+   "httpd_mem_mb": 81.3,
+   "mysqld_cpu_pct": 0.0,
+   "mysqld_mem_mb": 63.3,
+   "k6_cpu_pct": 0.0,
+   "total_cpu_pct": 6.71,
+   "available_mem_mb": 5498.0
+  },
+  {
+   "t": 13.1,
+   "httpd_cpu_pct": 0.0,
+   "httpd_mem_mb": 81.3,
+   "mysqld_cpu_pct": 0.0,
+   "mysqld_mem_mb": 63.3,
+   "k6_cpu_pct": 0.0,
+   "total_cpu_pct": 6.27,
+   "available_mem_mb": 5499.0
+  },
+  {
+   "t": 15.2,
+   "httpd_cpu_pct": 0.0,
+   "httpd_mem_mb": 81.3,
+   "mysqld_cpu_pct": 0.0,
+   "mysqld_mem_mb": 63.3,
+   "k6_cpu_pct": 0.0,
+   "total_cpu_pct": 8.94,
+   "available_mem_mb": 5486.0
+  },
+  {
+   "t": 17.2,
+   "httpd_cpu_pct": 0.73,
+   "httpd_mem_mb": 81.3,
+   "mysqld_cpu_pct": 0.0,
+   "mysqld_mem_mb": 63.8,
+   "k6_cpu_pct": 0.0,
+   "total_cpu_pct": 11.61,
+   "available_mem_mb": 5569.0
+  },
+  {
+   "t": 19.3,
+   "httpd_cpu_pct": 0.0,
+   "httpd_mem_mb": 81.3,
+   "mysqld_cpu_pct": 0.0,
+   "mysqld_mem_mb": 63.8,
+   "k6_cpu_pct": 0.0,
+   "total_cpu_pct": 6.87,
+   "available_mem_mb": 5559.0
+  },
+  {
+   "t": 21.3,
+   "httpd_cpu_pct": 0.0,
+   "httpd_mem_mb": 81.3,
+   "mysqld_cpu_pct": 0.0,
+   "mysqld_mem_mb": 63.8,
+   "k6_cpu_pct": 0.0,
+   "total_cpu_pct": 7.95,
+   "available_mem_mb": 5546.0
+  }
+ ],
+ "server": {
+  "name": "conc_manual_race_r4",
+  "script": "concurrency_manual.js",
+  "k6_env": [
+   "N=20",
+   "ITEM_ID=1247"
+  ],
+  "k6_exit": 0,
+  "start": "2026-10-27T10:41:16.3067115+08:00",
+  "end": "2026-10-27T10:41:32.4105442+08:00",
+  "duration_s": 16.1,
+  "mariadb_status": {
+   "Aborted_clients": 0,
+   "Aborted_connects": 0,
+   "Connection_errors_max_connections": 0,
+   "Innodb_buffer_pool_read_requests": 1163637,
+   "Innodb_buffer_pool_reads": 17109,
+   "Innodb_deadlocks": 0,
+   "Innodb_row_lock_time": 633,
+   "Innodb_row_lock_time_max": 15,
+   "Innodb_row_lock_waits": 76,
+   "Max_used_connections": 20,
+   "Questions": 30765,
+   "Slow_queries": 0,
+   "Threads_connected": 1,
+   "Threads_created": 29
+  },
+  "php_log_lines": 0,
+  "php_log_types": {},
+  "apache_error_lines": 0
+ }
+}

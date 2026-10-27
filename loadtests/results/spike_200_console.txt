@@ -1,0 +1,4 @@
+run spike_200
+http_reqs 7880 (22.54/s)
+duration avg 305 ms med 23 ms p90 156 ms p95 2461 ms max 9581 ms
+http_req_failed 0.00%  step_ok 100.00%  journey_ok 99.78%

@@ -1,0 +1,14 @@
+﻿{
+    "test":  "inventory",
+    "mode":  "race",
+    "rep":  2,
+    "starting_stock":  5,
+    "qty_per_request":  2,
+    "requests":  20,
+    "quantity_now":  -1,
+    "approved":  20,
+    "units_allocated":  40,
+    "went_negative":  true,
+    "over_allocated":  true,
+    "pass":  false
+}

@@ -1,0 +1,40 @@
+﻿# conc_inventory_race_r3  (2026-10-27T10:37:31.9773547+08:00)
+# k6 env: N=20 MODE=race QTY=2
+
+mysql> SELECT f.id, f.requesterEmployeeID, f.statusScilabPersonnel, m.item, m.quantity AS qty_requested FROM scilab_form_requests f JOIN scilab_material_requests m ON m.formID=f.id WHERE m.item='LT Last Units' ORDER BY f.id;
++----+---------------------+-----------------------+---------------+---------------+
+| id | requesterEmployeeID | statusScilabPersonnel | item          | qty_requested |
++----+---------------------+-----------------------+---------------+---------------+
+| 49 | LT-T0012            | Approved              | LT Last Units |             2 |
+| 50 | LT-T0002            | Approved              | LT Last Units |             2 |
+| 51 | LT-T0015            | Approved              | LT Last Units |             2 |
+| 52 | LT-T0013            | Approved              | LT Last Units |             2 |
+| 53 | LT-T0006            | Approved              | LT Last Units |             2 |
+| 54 | LT-T0016            | Approved              | LT Last Units |             2 |
+| 55 | LT-T0004            | Approved              | LT Last Units |             2 |
+| 56 | LT-T0005            | Approved              | LT Last Units |             2 |
+| 57 | LT-T0018            | Approved              | LT Last Units |             2 |
+| 58 | LT-T0019            | Approved              | LT Last Units |             2 |
+| 59 | LT-T0020            | Approved              | LT Last Units |             2 |
+| 60 | LT-T0009            | Approved              | LT Last Units |             2 |
+| 61 | LT-T0003            | Approved              | LT Last Units |             2 |
+| 62 | LT-T0011            | Approved              | LT Last Units |             2 |
+| 63 | LT-T0007            | Approved              | LT Last Units |             2 |
+| 64 | LT-T0010            | Approved              | LT Last Units |             2 |
+| 65 | LT-T0017            | Approved              | LT Last Units |             2 |
+| 66 | LT-T0008            | Approved              | LT Last Units |             2 |
+| 67 | LT-T0014            | Approved              | LT Last Units |             2 |
+| 68 | LT-T0001            | Approved              | LT Last Units |             2 |
++----+---------------------+-----------------------+---------------+---------------+
+mysql> SELECT id, item, quantity AS quantity_now FROM scilab_inventory WHERE id=1246;
++------+---------------+--------------+
+| id   | item          | quantity_now |
++------+---------------+--------------+
+| 1246 | LT Last Units |            0 |
++------+---------------+--------------+
+mysql> SELECT COUNT(*) AS approved_requests, COALESCE(SUM(m.quantity),0) AS units_allocated_to_approved, 5 AS starting_stock FROM scilab_form_requests f JOIN scilab_material_requests m ON m.formID=f.id WHERE m.item='LT Last Units' AND f.statusScilabPersonnel='Approved';
++-------------------+-----------------------------+----------------+
+| approved_requests | units_allocated_to_approved | starting_stock |
++-------------------+-----------------------------+----------------+
+|                20 |                          40 |              5 |
++-------------------+-----------------------------+----------------+
