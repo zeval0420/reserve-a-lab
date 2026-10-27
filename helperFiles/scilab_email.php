@@ -531,7 +531,7 @@ function scilab_render_email_card($heading, $introHtml, array $details, $buttonL
         . '<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">'
         . '<style>' . $css . '</style></head><body>'
         . '<div class="container">'
-        . '<div class="header"><h1>Reserve-a-Lab</h1><p>PSHS-IRC Web-based Science Laboratory Reservation System</p></div>'
+        . '<div class="header"><h1>Reserve-a-Lab</h1><p>PSHS-IRC Science Laboratory Reservation and Inventory Management System</p></div>'
         . '<div class="content">'
         . '<h2>' . htmlspecialchars($heading) . '</h2>'
         . $introHtml
