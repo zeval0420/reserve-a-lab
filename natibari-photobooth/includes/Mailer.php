@@ -31,8 +31,10 @@ class Mailer
 
     /**
      * SMTP account. Inside reserve-a-lab, reuse its mail account
-     * (helperFiles/email_credentials.php + the gitignored secrets.php) so the
-     * password lives in one place; a standalone copy falls back to settings.json.
+     * (helperFiles/email_credentials.php + secrets.php) so the password lives
+     * in one place. email_credentials.php is gitignored and may be missing on
+     * a deployed server: then the account comes from settings.json and only
+     * the password from secrets.php. A standalone copy uses settings.json alone.
      */
     private static function smtp(): array
     {
@@ -41,8 +43,9 @@ class Mailer
             return $smtp;
         }
         $dir = dirname(ROOT_PATH) . '/helperFiles';
-        if (is_file($dir . '/email_credentials.php') && is_file($dir . '/secrets.php')) {
-            $scilab_secrets = require $dir . '/secrets.php';
+        $secrets = is_file($dir . '/secrets.php') ? (require $dir . '/secrets.php') : [];
+        if (is_file($dir . '/email_credentials.php') && $secrets) {
+            $scilab_secrets = $secrets;
             include $dir . '/email_credentials.php';
             return $smtp = [
                 'host' => (string)$email_smtp_host,
@@ -55,7 +58,7 @@ class Mailer
             'host' => (string)Settings::get('email.smtp_host', 'smtp.gmail.com'),
             'port' => (int)Settings::get('email.smtp_port', 465),
             'user' => trim((string)Settings::get('email.smtp_user', '')),
-            'pass' => (string)Settings::get('email.smtp_pass', ''),
+            'pass' => (string)Settings::get('email.smtp_pass', '') ?: (string)($secrets['smtp_password'] ?? ''),
         ];
     }
 
