@@ -40,10 +40,11 @@
         "idle_return_seconds": 300
     },
     "email": {
-        "smtp_host": "smtp.gmail.com",
-        "smtp_port": 587,
-        "smtp_user": "pshsircscilab@gmail.com",
-        "smtp_pass": "wxzmkkrffptfchcc",
+        "enabled": true,
+        "to": [
+            "zeval042009@gmail.com",
+            "danikadanielle.pangilinan@irc.pshs.edu.ph"
+        ],
         "from_name": "Natibari Photobooth"
     }
 }

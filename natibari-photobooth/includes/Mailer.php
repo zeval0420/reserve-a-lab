@@ -3,7 +3,9 @@
  * includes/Mailer.php
  * ------------------------------------------------------------------
  * Emails every accepted session (final strip, side-by-side print file and
- * raw photos) over plain SMTP — no Composer. Configure in settings.json:
+ * raw photos) over plain SMTP — no Composer. When installed inside
+ * reserve-a-lab, the SMTP account comes from its helperFiles (see smtp()).
+ * Otherwise configure it in settings.json:
  *
  *   "email": { "enabled": true, "subject": "Natibari Photobooth",
  *              "to": [...], "smtp_host": "smtp.gmail.com", "smtp_port": 465,
@@ -20,10 +22,41 @@ class Mailer
 
     public static function enabled(): bool
     {
+        $smtp = self::smtp();
         return (bool)Settings::get('email.enabled', false)
             && self::recipients() !== []
-            && trim((string)Settings::get('email.smtp_user', '')) !== ''
-            && (string)Settings::get('email.smtp_pass', '') !== '';
+            && $smtp['user'] !== ''
+            && $smtp['pass'] !== '';
+    }
+
+    /**
+     * SMTP account. Inside reserve-a-lab, reuse its mail account
+     * (helperFiles/email_credentials.php + the gitignored secrets.php) so the
+     * password lives in one place; a standalone copy falls back to settings.json.
+     */
+    private static function smtp(): array
+    {
+        static $smtp = null;
+        if ($smtp !== null) {
+            return $smtp;
+        }
+        $dir = dirname(ROOT_PATH) . '/helperFiles';
+        if (is_file($dir . '/email_credentials.php') && is_file($dir . '/secrets.php')) {
+            $scilab_secrets = require $dir . '/secrets.php';
+            include $dir . '/email_credentials.php';
+            return $smtp = [
+                'host' => (string)$email_smtp_host,
+                'port' => (int)$email_smtp_port,
+                'user' => trim((string)$email_smtp_user),
+                'pass' => (string)$email_smtp_password,
+            ];
+        }
+        return $smtp = [
+            'host' => (string)Settings::get('email.smtp_host', 'smtp.gmail.com'),
+            'port' => (int)Settings::get('email.smtp_port', 465),
+            'user' => trim((string)Settings::get('email.smtp_user', '')),
+            'pass' => (string)Settings::get('email.smtp_pass', ''),
+        ];
     }
 
     public static function recipients(): array
@@ -118,7 +151,7 @@ class Mailer
 
     private static function buildMessage(string $subject, string $text, array $files, string $msgId, ?string $rootId): string
     {
-        $user = (string)Settings::get('email.smtp_user');
+        $user = self::smtp()['user'];
         $fromName = (string)Settings::get('email.from_name', 'Natibari Photobooth');
         $b = 'pb' . bin2hex(random_bytes(10));
         $h = [
@@ -158,10 +191,7 @@ class Mailer
 
     private static function deliver(string $message): void
     {
-        $host = (string)Settings::get('email.smtp_host', 'smtp.gmail.com');
-        $port = (int)Settings::get('email.smtp_port', 465);
-        $user = (string)Settings::get('email.smtp_user');
-        $pass = (string)Settings::get('email.smtp_pass');
+        ['host' => $host, 'port' => $port, 'user' => $user, 'pass' => $pass] = self::smtp();
 
         $fp = @stream_socket_client(($port === 465 ? 'ssl://' : 'tcp://') . "{$host}:{$port}", $errno, $err, 20);
         if (!$fp) {
