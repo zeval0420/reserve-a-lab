@@ -22,11 +22,47 @@ class Mailer
 
     public static function enabled(): bool
     {
+        return self::problem() === null;
+    }
+
+    /** Why sessions can't be emailed, or null when everything is in place. */
+    public static function problem(): ?string
+    {
         $smtp = self::smtp();
-        return (bool)Settings::get('email.enabled', false)
-            && self::recipients() !== []
-            && $smtp['user'] !== ''
-            && $smtp['pass'] !== '';
+        if (!Settings::get('email.enabled', false)) {
+            return 'Email is turned off (email.enabled in settings.json).';
+        }
+        if (self::recipients() === []) {
+            return 'No valid addresses in email.to (settings.json).';
+        }
+        if ($smtp['user'] === '') {
+            return 'No SMTP user (email.smtp_user in settings.json).';
+        }
+        if ($smtp['pass'] === '') {
+            return 'No SMTP password: ' . dirname(ROOT_PATH) . '/helperFiles/secrets.php is missing or has no smtp_password.';
+        }
+        return null;
+    }
+
+    /** Everything api/email_test.php reports, including an SMTP login (never the password). */
+    public static function diagnose(): array
+    {
+        $smtp = self::smtp();
+        $out = [
+            'problem' => self::problem(),
+            'smtp' => ['host' => $smtp['host'], 'port' => $smtp['port'], 'user' => $smtp['user'], 'password_found' => $smtp['pass'] !== ''],
+            'recipients' => self::recipients(),
+            'send_after_response' => PrintManager::isWindows() ? 'background php.exe'
+                : (function_exists('fastcgi_finish_request') ? 'fastcgi_finish_request'
+                : (function_exists('litespeed_finish_request') ? 'litespeed_finish_request' : 'not supported: the kiosk waits while the email sends')),
+        ];
+        try {
+            self::deliver(null);
+            $out['smtp_login'] = 'ok';
+        } catch (Throwable $e) {
+            $out['smtp_login'] = $e->getMessage();
+        }
+        return $out;
     }
 
     /**
@@ -44,6 +80,7 @@ class Mailer
         }
         $dir = dirname(ROOT_PATH) . '/helperFiles';
         $secrets = is_file($dir . '/secrets.php') ? (require $dir . '/secrets.php') : [];
+        $secrets = is_array($secrets) ? $secrets : [];
         if (is_file($dir . '/email_credentials.php') && $secrets) {
             $scilab_secrets = $secrets;
             include $dir . '/email_credentials.php';
@@ -76,7 +113,10 @@ class Mailer
      */
     public static function dispatch(string $sessionId, bool $wait = false): void
     {
-        if (!self::enabled()) {
+        if (($problem = self::problem()) !== null) {
+            // Record why, so a skipped email is visible instead of silent.
+            $meta = SessionManager::getMetadata($sessionId);
+            SessionManager::saveMetadata($sessionId, ['email_status' => 'skipped', 'email_error' => $problem] + $meta);
             return;
         }
         if ($wait) {
@@ -125,6 +165,11 @@ class Mailer
     public static function sendSession(string $sessionId, bool $dryRun = false): string
     {
         $meta = SessionManager::getMetadata($sessionId);
+        // Always attach the side-by-side strip, even when the print layout is a single strip.
+        if (!empty($meta['strip']) && (empty($meta['strip_print']) || $meta['strip_print'] === $meta['strip'])) {
+            $meta['strip_print'] = Compositor::generateSideBySide($sessionId, $meta['strip']);
+            SessionManager::saveMetadata($sessionId, $meta);
+        }
         $files = [];
         foreach (['strip', 'strip_print'] as $key) {
             if (!empty($meta[$key]) && is_file(SessionManager::abs($meta[$key]))) {
@@ -203,7 +248,8 @@ class Mailer
         return preg_match('/[^\x20-\x7e]/', $s) ? '=?UTF-8?B?' . base64_encode($s) . '?=' : $s;
     }
 
-    private static function deliver(string $message): void
+    /** Send $message over SMTP; null only logs in and quits (connection test). */
+    private static function deliver(?string $message): void
     {
         ['host' => $host, 'port' => $port, 'user' => $user, 'pass' => $pass] = self::smtp();
 
@@ -246,6 +292,10 @@ class Mailer
             $cmd('AUTH LOGIN', '334');
             $cmd(base64_encode($user), '334', 'username');
             $cmd(base64_encode($pass), '235', 'password (check the Gmail app password)');
+            if ($message === null) {
+                @fwrite($fp, "QUIT\r\n");
+                return;
+            }
             $cmd("MAIL FROM:<{$user}>", '250');
             foreach (self::recipients() as $to) {
                 $cmd("RCPT TO:<{$to}>", '250');
