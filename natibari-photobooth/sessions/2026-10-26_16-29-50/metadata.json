@@ -1,4 +1,6 @@
 {
+    "email_status": "sent",
+    "email_sent_at": "2026-10-27T16:31:07+08:00",
     "session_id": "2026-10-26_16-29-50",
     "created_at": "2026-10-26T16:29:50+08:00",
     "template": "16-halloween-horror",

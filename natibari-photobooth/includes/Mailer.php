@@ -67,8 +67,9 @@ class Mailer
     }
 
     /**
-     * Email a session without making the guest wait: spawn the CLI sender
-     * detached. $wait = true runs it inline (needed before raw photos are purged).
+     * Email a session without making the guest wait: on Windows spawn the CLI
+     * sender detached, elsewhere send after the response is flushed.
+     * $wait = true runs it inline (needed before raw photos are purged).
      */
     public static function dispatch(string $sessionId, bool $wait = false): void
     {
@@ -79,17 +80,27 @@ class Mailer
             self::sendAndRecord($sessionId);
             return;
         }
-        $isWin = PrintManager::isWindows();
-        $php = $isWin ? dirname(PHP_BINARY) . '\\php.exe' : 'php';
-        if ($isWin && !is_file($php)) {
-            $php = 'C:\\xampp\\php\\php.exe';
-        }
-        $cmd = escapeshellarg($php) . ' ' . escapeshellarg(ROOT_PATH . '/tools/send_session_email.php') . ' ' . escapeshellarg($sessionId);
-        if ($isWin) {
+        if (PrintManager::isWindows() && function_exists('popen')) {
+            $php = dirname(PHP_BINARY) . '\\php.exe';
+            if (!is_file($php)) {
+                $php = 'C:\\xampp\\php\\php.exe';
+            }
+            $cmd = escapeshellarg($php) . ' ' . escapeshellarg(ROOT_PATH . '/tools/send_session_email.php') . ' ' . escapeshellarg($sessionId);
             pclose(popen('start /B "" ' . $cmd . ' >NUL 2>&1', 'r'));
-        } else {
-            exec($cmd . ' >/dev/null 2>&1 &');
+            return;
         }
+        // Hosted servers: no exec() or php CLI to rely on, so send from this
+        // request once the response has been flushed to the kiosk.
+        register_shutdown_function(function () use ($sessionId) {
+            ignore_user_abort(true);
+            @set_time_limit(300);
+            if (function_exists('fastcgi_finish_request')) {
+                fastcgi_finish_request();
+            } elseif (function_exists('litespeed_finish_request')) {
+                litespeed_finish_request();
+            }
+            self::sendAndRecord($sessionId);
+        });
     }
 
     /** Send and note the outcome in metadata.json. Returns success. */

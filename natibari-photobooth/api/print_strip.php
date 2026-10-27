@@ -22,10 +22,12 @@ if (empty($meta['strip'])) {
 try {
     $meta['strip_print'] = Compositor::printableFor($sessionId, $meta);
     SessionManager::saveMetadata($sessionId, $meta);
-    $result = PrintManager::printFile(SessionManager::abs($meta['strip_print']));
+    $result = PrintManager::method() === 'server'
+        ? PrintManager::printFile(SessionManager::abs($meta['strip_print']))
+        : PrintManager::browserJob($meta['strip_print']);
 } catch (Throwable $e) {
     json_error('Could not prepare the print: ' . $e->getMessage(), 500);
 }
-SessionManager::recordPrintStatus($sessionId, $result['status'], $result);
+SessionManager::recordPrintStatus($sessionId, $result['status'] === 'browser' ? 'printed' : $result['status'], $result);
 
 json_response(['success' => true, 'print_result' => $result]);

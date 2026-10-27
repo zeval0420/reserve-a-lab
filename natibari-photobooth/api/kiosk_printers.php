@@ -1,7 +1,7 @@
 <?php
 /**
  * api/kiosk_printers.php
- * GET -> { success, printers: [{name, status}], paper_sizes: [...], current: {printer, paper_size} }
+ * GET -> { success, printers: [{name, status}], method: 'server'|'browser', paper_sizes: [...], current: {printer, paper_size} }
  *
  * Feeds the kiosk's "Printer & paper" panel. Unlike printers_list.php this
  * is not admin-gated: printer names and paper sizes aren't sensitive, and
@@ -12,6 +12,7 @@ require_once __DIR__ . '/../includes/bootstrap.php';
 json_response([
     'success' => true,
     'printers' => PrintManager::listPrinters(),
+    'method' => PrintManager::method(),
     'paper_sizes' => PrintManager::PAPER_SIZES,
     'current' => [
         'printer' => Settings::get('printing.printer_name', ''),

@@ -336,12 +336,6 @@ async function save() {
     ui: { idle_return_seconds: num('#f-idle-seconds', 300) },
   };
 
-  if (settings.printing.auto_print && !settings.printing.printer_name) {
-    activeTab = 'printing'; showTab();
-    toast('Automatic printing needs a printer — pick one first.', 'error', 5000);
-    return;
-  }
-
   const payload = { settings };
   const newPasscode = $('#f-new-passcode').value.trim();
   if (newPasscode) payload.new_passcode = newPasscode;

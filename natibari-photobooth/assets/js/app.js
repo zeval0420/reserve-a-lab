@@ -15,6 +15,7 @@ import { TemplateGallery } from './templateGallery.js?v=1';
 import { CaptureFlow } from './captureFlow.js?v=2';
 import { ReviewGrid } from './review.js?v=1';
 import { SessionClient } from './sessionClient.js?v=4';
+import { printImage } from './browserPrint.js?v=1';
 
 class PhotoboothApp {
   constructor() {
@@ -216,7 +217,8 @@ class PhotoboothApp {
     const list = $('#print-modal-printers');
     list.innerHTML = '';
     if (printers.length === 0) {
-      list.appendChild(el('div', { class: 'camera-modal__item', style: 'cursor:default;color:var(--color-text-muted)' }, 'No printers detected'));
+      const note = this.printOptions.method === 'browser' ? "Prints to this computer's default printer" : 'No printers detected';
+      list.appendChild(el('div', { class: 'camera-modal__item', style: 'cursor:default;color:var(--color-text-muted)' }, note));
     }
     printers.forEach((p) => {
       const suffix = /offline|error|paused/i.test(p.status) ? ` (${p.status})` : '';
@@ -469,6 +471,15 @@ class PhotoboothApp {
       printResult = res.print_result;
     } catch (e) {
       toast('Could not finish: ' + e.message, 'error');
+    }
+    // The server can't reach the printer (hosted online): print from this browser.
+    if (printResult.status === 'browser') {
+      try {
+        await printImage(printResult.file, printResult);
+        printResult = { status: 'printed' };
+      } catch (e) {
+        printResult = { status: 'failed', reason: e.message };
+      }
     }
 
     const message =

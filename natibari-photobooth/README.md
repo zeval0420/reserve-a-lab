@@ -150,7 +150,12 @@ from the Gallery.
   spooler using System.Drawing — no extra software. Needs PHP `exec()` and
   PowerShell (both default on Windows).
 - **Linux/macOS**: CUPS `lp`.
-- No printer selected → prints are *simulated* and logged in `metadata.json`.
+- **Hosted online** (the server can't see the printer, or no printer is
+  selected): the kiosk browser prints the strip itself
+  (`assets/js/browserPrint.js`), sized to the chosen paper. Start the kiosk
+  with `chrome --kiosk --kiosk-printing <url>` so it prints straight to the
+  kiosk's default printer without a dialog; set that printer's default paper
+  size and borderless option in Windows.
 
 If the printer is offline or misnamed, the guest still gets their saved strip
 and the failure reason is stored on the session (visible in the Gallery).

@@ -31,6 +31,30 @@ class PrintManager
     }
 
     /**
+     * 'server' when this machine can drive the configured printer itself,
+     * else 'browser': the app is hosted away from the printer, so the kiosk
+     * browser prints (see assets/js/browserPrint.js).
+     */
+    public static function method(): string
+    {
+        $printer = trim((string)Settings::get('printing.printer_name', ''));
+        return $printer !== '' && in_array($printer, self::printerNames(), true) ? 'server' : 'browser';
+    }
+
+    /** A print job for the kiosk browser to carry out. $relPath is app-root-relative. */
+    public static function browserJob(string $relPath, array $override = []): array
+    {
+        $p = Settings::get('printing', []);
+        $paper = (string)($override['paper_size'] ?? $p['paper_size'] ?? '5R');
+        return [
+            'status' => 'browser',
+            'file' => $relPath . '?t=' . time(),
+            'paper_size' => in_array($paper, self::PAPER_SIZES, true) ? $paper : '5R',
+            'copies' => max(1, min(20, (int)($p['copies'] ?? 1))),
+        ];
+    }
+
+    /**
      * Print (or simulate) one image using the current printing settings.
      * @param array $override optional keys: printer, copies, paper_size, fit
      *                        (fit = true: zero margin, 100% scale — image fills the paper)
@@ -122,7 +146,18 @@ class PrintManager
      */
     public static function listPrinters(): array
     {
+        static $cache = null; // the Windows query takes a second or two; once per request is enough
+        return $cache ??= self::queryPrinters();
+    }
+
+    private static function queryPrinters(): array
+    {
         $printers = [];
+        // Hosted servers usually disable shell functions (calling one is then
+        // a fatal error, which @ can't hide) and have no printers anyway.
+        if (!function_exists(self::isWindows() ? 'exec' : 'shell_exec')) {
+            return [];
+        }
         if (self::isWindows()) {
             $out = [];
             @exec('powershell -NoProfile -NonInteractive -Command "Get-Printer | ForEach-Object { $_.Name + \'|\' + $_.PrinterStatus }"', $out);

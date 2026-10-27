@@ -7,6 +7,7 @@
  * ------------------------------------------------------------------
  */
 import { $, el, toast, apiFetch, apiPost } from '../utils.js';
+import { printImage } from '../browserPrint.js';
 
 const content = $('#gallery-content');
 let all = [];
@@ -137,7 +138,10 @@ async function reprint(sessionId, btn) {
   btn.textContent = 'Printing…';
   try {
     const { print_result: r } = await apiPost('../api/print_strip.php', { session_id: sessionId });
-    if (r.status === 'printed') toast('Sent to ' + r.printer, 'success');
+    if (r.status === 'browser') {
+      await printImage('../' + r.file, r);
+      toast("Sent to this computer's printer", 'success');
+    } else if (r.status === 'printed') toast('Sent to ' + r.printer, 'success');
     else if (r.status === 'simulated') toast('No printer is set up — pick one in Settings → Printing.', 'error', 5000);
     else toast('Print failed: ' + (r.reason || 'unknown error'), 'error', 6000);
     load();

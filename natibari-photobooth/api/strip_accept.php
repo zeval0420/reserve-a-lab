@@ -5,7 +5,8 @@
  * -> { success: true, print_result: {...} }
  *
  * Called when the guest taps "Accept". Honors two settings:
- *   printing.auto_print   — send the strip to the printer now (else status "skipped")
+ *   printing.auto_print   — send the strip to the printer now (else status "skipped");
+ *                           status "browser" means the kiosk prints print_result.file itself
  *   storage.save_mode     — "final_only" deletes the raw photos once the strip is safe
  */
 require_once __DIR__ . '/../includes/bootstrap.php';
@@ -44,7 +45,9 @@ $printResult = ['status' => 'skipped', 'reason' => 'Automatic printing is off.']
 if (Settings::get('printing.auto_print', false)) {
     try {
         $meta['strip_print'] = Compositor::printableFor($sessionId, $meta);
-        $printResult = PrintManager::printFile(SessionManager::abs($meta['strip_print']), null, $override);
+        $printResult = PrintManager::method() === 'server'
+            ? PrintManager::printFile(SessionManager::abs($meta['strip_print']), null, $override)
+            : PrintManager::browserJob($meta['strip_print'], $override);
     } catch (Throwable $e) {
         $printResult = ['status' => 'failed', 'reason' => $e->getMessage()];
     }
@@ -59,7 +62,8 @@ if (DriveUploader::enabled()) {
     }
 }
 SessionManager::saveMetadata($sessionId, $meta);
-SessionManager::recordPrintStatus($sessionId, $printResult['status'], $printResult);
+// A browser job is printed by the kiosk right after this response; record it as printed.
+SessionManager::recordPrintStatus($sessionId, $printResult['status'] === 'browser' ? 'printed' : $printResult['status'], $printResult);
 
 // Email the strip + raw photos. If the raw photos are about to be deleted, send first (inline).
 $purge = SessionManager::saveMode() === 'final_only';
