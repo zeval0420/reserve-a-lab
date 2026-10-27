@@ -118,9 +118,11 @@ class Compositor
         $srcH = imagesy($src);
 
         // "Cover" fit: scale so the photo fully fills the box, cropping overflow.
-        $scale = max($boxW / $srcW, $boxH / $srcH);
-        $cropW = (int)round($boxW / $scale);
-        $cropH = (int)round($boxH / $scale);
+        // (Separate variable: $scale is the output scale, still needed below
+        // to position the photo.)
+        $fit = max($boxW / $srcW, $boxH / $srcH);
+        $cropW = (int)round($boxW / $fit);
+        $cropH = (int)round($boxH / $fit);
         $cropX = (int)round(($srcW - $cropW) / 2);
         $cropY = (int)round(($srcH - $cropH) / 2);
 

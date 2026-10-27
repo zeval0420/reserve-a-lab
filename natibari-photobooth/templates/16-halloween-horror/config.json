@@ -11,24 +11,24 @@
   },
   "photos": [
     {
-      "x": 267,
-      "y": 267,
-      "width": 345,
-      "height": 330,
+      "x": 262,
+      "y": 262,
+      "width": 355,
+      "height": 340,
       "rotation": 12.0
     },
     {
-      "x": 10,
-      "y": 769,
-      "width": 335,
-      "height": 321,
+      "x": 5,
+      "y": 764,
+      "width": 345,
+      "height": 331,
       "rotation": -12.0
     },
     {
-      "x": 221,
-      "y": 1288,
-      "width": 337,
-      "height": 322,
+      "x": 216,
+      "y": 1283,
+      "width": 346,
+      "height": 332,
       "rotation": 12.0
     }
   ],
