@@ -27,7 +27,7 @@
     },
     "storage": {
         "save_mode": "both",
-        "jpeg_quality": 92
+        "jpeg_quality": 95
     },
     "templates": {
         "default_template": "01-classic-strip"
@@ -38,5 +38,12 @@
     "ui": {
         "dark_mode": "light",
         "idle_return_seconds": 300
+    },
+    "email": {
+        "smtp_host": "smtp.gmail.com",
+        "smtp_port": 587,
+        "smtp_user": "pshsircscilab@gmail.com",
+        "smtp_pass": "wxzmkkrffptfchcc",
+        "from_name": "Natibari Photobooth"
     }
 }
