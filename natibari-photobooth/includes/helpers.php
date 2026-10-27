@@ -53,7 +53,10 @@ function write_json_file(string $path, $data): bool
 function array_merge_recursive_distinct(array $base, array $override): array
 {
     foreach ($override as $key => $value) {
-        if (is_array($value) && isset($base[$key]) && is_array($base[$key])) {
+        // Lists (e.g. email.to) replace the default list outright; merging by
+        // index would keep default entries past the end of a shorter override.
+        $isList = is_array($value) && array_keys($value) === array_keys(array_values($value));
+        if (is_array($value) && !$isList && isset($base[$key]) && is_array($base[$key])) {
             $base[$key] = array_merge_recursive_distinct($base[$key], $value);
         } else {
             $base[$key] = $value;

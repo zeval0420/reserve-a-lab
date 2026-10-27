@@ -42,7 +42,7 @@
   "email": {
     "enabled": true,
     "subject": "Natibari Photobooth",
-    "to": ["zeval042009@gmail.com", "danikadanielle.pangilinan@irc.pshs.edu.ph"],
+    "to": ["mikaela.daus@irc.pshs.edu.ph"],
     "smtp_host": "smtp.gmail.com",
     "smtp_port": 465,
     "smtp_user": "",
