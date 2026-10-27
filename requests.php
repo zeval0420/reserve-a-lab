@@ -773,7 +773,7 @@
 
                     <a href="?status=Rejected&filterMode=<?= urlencode($filterMode) ?>&timeframe=<?= urlencode($timeFrame) ?>&fromDate=<?= urlencode($fromDate) ?>&toDate=<?= urlencode($toDate) ?>"
                     class="btn-liquid-danger <?= $statusFilter==='Rejected'?'active':'' ?>">
-                        <span class="badge badge-secondary"><?= $counts['Rejected'] ?></span> Rejected
+                        <span class="badge badge-secondary"><?= $counts['Rejected'] ?></span> Disapproved
                     </a>
 
                 </div>
@@ -940,7 +940,7 @@
                     <div class="custom-modal-header-left">
 
                         <h2 id="rejectModalTitle">
-                            Rejected Request
+                            Disapproved Request
                         </h2>
 
                         <p>

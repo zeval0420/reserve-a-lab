@@ -209,7 +209,7 @@ function getStepStatusText($status, $prevStatus = 'approved')
     if ($status === 'approved')
         return 'Approved';
     if ($status === 'rejected')
-        return 'Rejected';
+        return 'Disapproved';
     if ($status === 'pending' && $prevStatus === 'approved')
         return 'Pending';
     return 'Upcoming';
@@ -1340,7 +1340,7 @@ function getStepIcon($class)
                         ⚠ Reason for Rejection <span style="color:var(--danger)">*</span>
                     </label>
                     <textarea id="rejectReason"
-                        placeholder="Please provide a clear reason why this request is being rejected…"
+                        placeholder="Please provide a clear reason why this request is being disapproved…"
                         maxlength="500"></textarea>
                     <div class="reject-error" id="rejectError">
                         A rejection reason is required before confirming.

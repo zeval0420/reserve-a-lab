@@ -657,7 +657,7 @@ function scilab_notify_stage_status($conn, $request, $currentStage, $event, $rea
     // Resolve requester display name
     $requesterName = scilab_resolve_requester_name($conn, $request['requesterEmployeeID'] ?? '');
 
-    $verb = ($event === 'approve') ? 'approved' : 'rejected';
+    $verb = ($event === 'approve') ? 'approved' : 'disapproved';
     $reasonHtml = ($event === 'reject' && $reason) ? '<br><br><strong>Reason:</strong> ' . htmlspecialchars($reason) : '';
 
     // Spell out the terminal outcome so the final email a requestor receives is
@@ -666,7 +666,7 @@ function scilab_notify_stage_status($conn, $request, $currentStage, $event, $rea
     $isTerminal = in_array(strtolower($overall), ['approved', 'rejected'], true);
     $overallHtml = '';
     if ($isTerminal) {
-        $overallLabel = (strtolower($overall) === 'approved') ? 'APPROVED' : 'REJECTED';
+        $overallLabel = (strtolower($overall) === 'approved') ? 'APPROVED' : 'DISAPPROVED';
         if ($event === 'approve' && strtolower($overall) !== 'approved') {
             $overallHtml = '<p><strong>Status so far:</strong> this request has passed the '
                 . htmlspecialchars($stageLabel) . ' stage and is still ' . $verb
@@ -677,7 +677,7 @@ function scilab_notify_stage_status($conn, $request, $currentStage, $event, $rea
     }
 
     // Common body used for all recipients, in the same boxed layout as the submission confirmation.
-    $heading = ($event === 'approve') ? 'Request Approved' : 'Request Rejected';
+    $heading = ($event === 'approve') ? 'Request Approved' : 'Request Disapproved';
     $decisionText = $stageLabel . ' ' . $verb . ' this request';
     $pendingHtml = '';
     $nextApprovers = [
