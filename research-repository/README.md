@@ -2,7 +2,21 @@
 
 Public index of research papers (PDF), at `/research-repository/`.
 
-## Adding a paper
+## Adding a paper from the browser (admins)
+
+Log in to Reserve-a-Lab as an admin, open the repository, and choose **Upload paper**
+(`upload.php`). Pick or drop the PDF, choose the subject, and fill in the title and date
+published (authors, keywords and abstract are optional).
+
+- PDF only, up to 25 MB (`REPO_MAX_PDF_BYTES` in `lib.php`; PHP's `upload_max_filesize`
+  and `post_max_size` must be at least that).
+- The file is stored in `assets/<subject>/` under its own name, made safe; an existing
+  file is never overwritten (`name_2.pdf`, `name_3.pdf`, ...). The details go into
+  `metadata.json`, which is locked while it is written.
+- Uploads cannot be edited or deleted from the browser yet: to fix or remove a paper,
+  change `metadata.json` or delete the PDF as described below.
+
+## Adding a paper by hand
 
 1. Copy the PDF into the folder for its subject:
 

@@ -11,83 +11,18 @@
  * The list is filtered in the browser (repository.js); this file only builds the data.
  */
 
-// Folder name => label. Folders not listed here still appear, labelled from the folder name.
-$subjectLabels = [
-    'filipino'       => 'Filipino',
-    'research'       => 'Research',
-    'social_science' => 'Social Science',
-];
+require_once __DIR__ . '/lib.php';
 
-$metadata = json_decode((string) @file_get_contents(__DIR__ . '/metadata.json'), true);
-if (!is_array($metadata)) {
-    $metadata = [];
-}
-
-function repo_format_size(int $bytes): string
-{
-    if ($bytes >= 1048576) {
-        return round($bytes / 1048576, 1) . ' MB';
-    }
-    return max(1, (int) round($bytes / 1024)) . ' KB';
-}
-
-// "2024", "2024-03" or "2024-03-14" => [sortable Y-m-d, display label]; null if not a valid date.
-function repo_parse_date($value): ?array
-{
-    if (!is_string($value) || !preg_match('/^(\d{4})(?:-(\d{2}))?(?:-(\d{2}))?$/', trim($value), $m)) {
-        return null;
-    }
-    $year  = (int) $m[1];
-    $month = isset($m[2]) && $m[2] !== '' ? (int) $m[2] : 0;
-    $day   = isset($m[3]) && $m[3] !== '' ? (int) $m[3] : 0;
-    if ($month > 12 || ($month === 0 && $day > 0) || ($day > 0 && !checkdate($month, $day, $year))) {
-        return null;
-    }
-    $sort = sprintf('%04d-%02d-%02d', $year, $month ?: 1, $day ?: 1);
-    if ($day) {
-        $label = date('F j, Y', strtotime($sort));
-    } elseif ($month) {
-        $label = date('F Y', strtotime($sort));
-    } else {
-        $label = (string) $year;
-    }
-    return [$sort, $label];
-}
-
-function repo_string_list($value): array
-{
-    if (is_string($value)) {
-        $value = preg_split('/\s*[,;]\s*/', $value);
-    }
-    if (!is_array($value)) {
-        return [];
-    }
-    return array_values(array_filter(array_map(function ($v) {
-        return is_string($v) ? trim($v) : '';
-    }, $value), 'strlen'));
-}
+$metadata = repo_read_metadata();
+$isAdmin  = repo_viewer_is_admin();
 
 $subjects = [];
 $papers   = [];
 
-$folders = [];
-foreach (scandir(__DIR__ . '/assets') ?: [] as $name) {
-    if ($name[0] !== '.' && is_dir(__DIR__ . '/assets/' . $name)) {
-        $folders[] = $name;
-    }
-}
-// Known subjects first, in the order above; extra folders after them, alphabetically.
-usort($folders, function ($a, $b) use ($subjectLabels) {
-    $pa = array_search($a, array_keys($subjectLabels), true);
-    $pb = array_search($b, array_keys($subjectLabels), true);
-    $pa = $pa === false ? PHP_INT_MAX : $pa;
-    $pb = $pb === false ? PHP_INT_MAX : $pb;
-    return $pa <=> $pb ?: strcmp($a, $b);
-});
+$folders = repo_subject_folders();
 
 foreach ($folders as $folder) {
-    $label = $subjectLabels[$folder] ?? ucwords(str_replace(['_', '-'], ' ', $folder));
-    $subjects[$folder] = ['label' => $label, 'count' => 0];
+    $subjects[$folder] = ['label' => repo_subject_label($folder), 'count' => 0];
 
     foreach (scandir(__DIR__ . '/assets/' . $folder) ?: [] as $file) {
         $full = __DIR__ . '/assets/' . $folder . '/' . $file;
@@ -147,17 +82,11 @@ $jsonFlags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_
     <link rel="stylesheet" href="repository.css?v=<?= filemtime(__DIR__ . '/repository.css') ?>">
 </head>
 <body>
-    <header class="rr-header">
-        <div class="rr-header-inner">
-            <img src="../img/logo.png" alt="PSHS Logo" class="rr-logo" width="52" height="52">
-            <div class="rr-school">
-                <span>Department of Science and Technology</span>
-                <strong>PHILIPPINE SCIENCE HIGH SCHOOL</strong>
-                <strong>ILOCOS REGION CAMPUS</strong>
-            </div>
-            <a class="rr-home" href="../index.php">Reserve-a-Lab</a>
-        </div>
-    </header>
+    <?php
+    $rrNav = $isAdmin ? [['upload.php', 'Upload paper']] : [];
+    $rrNav[] = ['../index.php', 'Reserve-a-Lab'];
+    include __DIR__ . '/header.inc.php';
+    ?>
 
     <main class="rr-main">
         <section class="rr-intro">
