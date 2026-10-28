@@ -41,7 +41,8 @@ svg .ref{stroke:var(--muted);stroke-dasharray:4 4}svg .hit{fill:transparent}svg 
 <div class="kpi"><div class="k">Capacity (stress test)</div><div class="v">≥ 200 <small>virtual users</small></div></div>
 <div class="kpi"><div class="k">p95 at expected peak (50 users)</div><div class="v">187 ms</div></div>
 <div class="kpi"><div class="k">Worst p95, stress test</div><div class="v">4.14 s <small>at 200 users</small></div></div>
-<div class="kpi"><div class="k">Double booking</div><div class="v"><span class="pill bad">FAIL</span> <small>20 of 20 approved</small></div></div>
+<div class="kpi"><div class="k">Double booking, before fixes</div><div class="v"><span class="pill bad">FAIL</span> <small>20 of 20 approved</small></div></div>
+<div class="kpi"><div class="k">Double booking, after fixes</div><div class="v"><span class="pill good">PASS</span> <small>max 1 of 20 approved</small></div></div>
 <div class="kpi"><div class="k">Lighthouse score, paired t-test</div><div class="v">+25.1 <small>p < .001</small></div></div>
 </div>
 <h2>Main findings</h2><div class="card"><ul>
@@ -49,8 +50,8 @@ svg .ref{stroke:var(--muted);stroke-dasharray:4 4}svg .hit{fill:transparent}svg 
 <li><b>Capacity is at least 200 users</b> (p95 ≤ 10 s and errors ≤ 5%). At 200 users the median stayed at 24 ms but the p95 rose to 4.14 s: about one request in ten waited 2–6 s. The 300-user step was stopped by the host for low memory before it finished, so the upper limit was not measured.</li>
 <li><b>The 200-user slowdown is most likely Apache's thread limit, not CPU.</b> Apache on Windows serves each connection with one of 150 threads and keeps idle connections open for 5 s. With more users than threads, a request on a new connection waits for a thread; the delay sits in time-to-first-byte, is bounded by the 5 s keep-alive timeout, and appears only above 150 users, while CPU averaged 34% of the machine.</li>
 <li><b>Response time climbs as data accumulates.</b> In the 30-minute soak, the admin approvals page went from a median of 166 ms in the first 5 minutes to 4.9 s by minute 25, because it renders every pending request on one page (about 4,000 by the end). Apache and MariaDB CPU rose with it at constant load. Memory showed no growth in the first 15 minutes, before other programmes on the laptop began to interfere.</li>
-<li><b>Double booking: FAIL.</b> When 20 approvals of the same lab, date and time were sent at once, 20, 20, 19, 18, 17 of 20 were approved in the five repetitions (the correct number is 1). It also happens without any concurrency: approved 3 seconds apart through the real page, all 3 of 3 were approved.</li>
-<li><b>Inventory over-allocation: FAIL.</b> 20 requests for 2 of the last 5 units were all approved in every repetition (40 units allocated against 5 in stock), and the stock went below zero (−1) in 2 of 5 repetitions. The inventory page's manual deduction, which locks the row, passed the same test 5 of 5 times.</li>
+<li><b>Double booking: FAIL before the fixes</b> (<a href="#after-fixes">PASS after them</a>: 1 approved of 20 in every repetition). When 20 approvals of the same lab, date and time were sent at once, 20, 20, 19, 18, 17 of 20 were approved in the five repetitions (the correct number is 1). It also happens without any concurrency: approved 3 seconds apart through the real page, all 3 of 3 were approved.</li>
+<li><b>Inventory over-allocation: FAIL before the fixes</b> (<a href="#after-fixes">PASS after them</a>: 2 approved, stock never below zero). 20 requests for 2 of the last 5 units were all approved in every repetition (40 units allocated against 5 in stock), and the stock went below zero (−1) in 2 of 5 repetitions. The inventory page's manual deduction, which locks the row, passed the same test 5 of 5 times.</li>
 <li><b>The Lighthouse improvements are statistically significant</b> for performance score (+25.1 points, paired t-test p < .001), FCP (−2.22 s, t-test p < .001), LCP (−5.00 s, Wilcoxon p .0078) and page weight (−1,246 KB, Wilcoxon p .0078), n = 8 pages.</li>
 </ul></div>
 <h2>Test setup</h2>
