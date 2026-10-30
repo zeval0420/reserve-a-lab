@@ -36,6 +36,60 @@
         return $row;
     }
 
+    /**
+     * Admin approve / force approve. Control number fields left blank are filled automatically
+     * (scilab_approve_request -> scilab_assign_control_numbers). A value the admin typed (and
+     * changed from the prefilled preview) goes through scilab_set_control_number, which also
+     * shifts the later forms of that series.
+     */
+    function scilab_admin_approve($conn, $id, $adminName)
+    {
+        $remarks = $_POST['remarks'] ?? '';
+        $typed = [];
+        foreach (scilab_control_series() as $type => $col) {
+            $value = trim($_POST[$col] ?? '');
+            $edited = ($_POST[$col . '_edited'] ?? '1') !== '0';
+            if ($value !== '' && $edited) {
+                $typed[$type] = $value;
+            }
+        }
+
+        // Control numbers are left alone here: blanks are auto-assigned inside the approval transaction
+        $approval = scilab_approve_request($conn, $id, function ($conn) use ($adminName, $remarks, $id) {
+            $stmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Approved', supervisor_status = 'approved', subject_teacher_status = 'approved', lab_personnel_status = 'approved', cid_chief_status = 'approved', supervisor_approved_at = NOW(), subject_teacher_approved_at = NOW(), lab_personnel_approved_at = NOW(), cid_chief_approved_at = NOW(), supervisor_approved_by = ?, subject_teacher_approved_by = ?, lab_personnel_approved_by = ?, cid_chief_approved_by = ?, feedback = ? WHERE id = ?");
+            $stmt->bind_param("sssssi", $adminName, $adminName, $adminName, $adminName, $remarks, $id);
+            $stmt->execute();
+            $updated = $stmt->affected_rows > 0;
+            $stmt->close();
+            return $updated;
+        });
+
+        if (!$approval['ok']) {
+            echo $approval['message'];
+            return;
+        }
+
+        // Safety net: idempotent, only fills blanks (normally already done inside the approval)
+        scilab_assign_control_numbers($conn, $id);
+
+        $notes = [];
+        $shifted = 0;
+        foreach ($typed as $type => $value) {
+            $r = scilab_set_control_number($conn, $id, $type, $value);
+            if (!$r['ok']) {
+                $notes[] = ucfirst($type) . ' control number not applied (' . $r['message'] . ')';
+            } else {
+                $shifted += $r['shifted'];
+            }
+        }
+
+        $request = scilab_fetch_request($conn, $id);
+        if ($request) {
+            scilab_notify_stage_status($conn, $request, 'force_approve', 'approve');
+        }
+        echo "Request approved." . ($shifted ? " $shifted later form" . ($shifted === 1 ? '' : 's') . " shifted." : '') . ($notes ? ' ' . implode('; ', $notes) . '.' : '');
+    }
+
 
     if (isset($_POST['action'])) {
         $id = isset($_POST['id']) ? $_POST['id'] : null;
@@ -87,89 +141,73 @@
             echo "no_conflict";
             exit();
         }
-        elseif ($_POST['action'] === 'approve') {
-            $controlEquipment = trim($_POST['control_equipment'] ?? '');
-            $controlReagent = trim($_POST['control_reagent'] ?? '');
-            $controlPermit = trim($_POST['control_permit'] ?? '');
-            $controlReservation = trim($_POST['control_reservation'] ?? '');
-            $remarks = $_POST['remarks'] ?? '';
-
-            $controlPrimary = $controlEquipment ?: ($controlReagent ?: ($controlPermit ?: $controlReservation));
-            $legacyControl = is_numeric($controlPrimary) ? (int)$controlPrimary : 0;
-
-            // Slot check, status update and inventory deduction in one transaction
-            $approval = scilab_approve_request($conn, $id, function ($conn) use ($adminName, $legacyControl, $controlEquipment, $controlReagent, $controlPermit, $controlReservation, $remarks, $id) {
-                $stmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Approved', supervisor_status = 'approved', subject_teacher_status = 'approved', lab_personnel_status = 'approved', cid_chief_status = 'approved', supervisor_approved_at = NOW(), subject_teacher_approved_at = NOW(), lab_personnel_approved_at = NOW(), cid_chief_approved_at = NOW(), supervisor_approved_by = ?, subject_teacher_approved_by = ?, lab_personnel_approved_by = ?, cid_chief_approved_by = ?, controlNumber = ?, control_equipment = ?, control_reagent = ?, control_permit = ?, control_reservation = ?, feedback = ? WHERE id = ?");
-                $stmt->bind_param("ssssisssssi", $adminName, $adminName, $adminName, $adminName, $legacyControl, $controlEquipment, $controlReagent, $controlPermit, $controlReservation, $remarks, $id);
-                $stmt->execute();
-                $updated = $stmt->affected_rows > 0;
-                $stmt->close();
-                return $updated;
-            });
-
-            if ($approval['ok']) {
-                $request = scilab_fetch_request($conn, $id);
-                if ($request) {
-                    scilab_notify_stage_status($conn, $request, 'force_approve', 'approve');
-                }
-                echo "Request approved.";
-            } else {
-                echo $approval['message'];
-            }
+        elseif ($_POST['action'] === 'approve' || $_POST['action'] === 'force_approve') {
+            scilab_admin_approve($conn, $id, $adminName);
             exit();
         }
-        elseif ($_POST['action'] === 'force_approve') {
-            $controlEquipment = trim($_POST['control_equipment'] ?? '');
-            $controlReagent = trim($_POST['control_reagent'] ?? '');
-            $controlPermit = trim($_POST['control_permit'] ?? '');
-            $controlReservation = trim($_POST['control_reservation'] ?? '');
-            $remarks = $_POST['remarks'] ?? '';
-
-            $controlPrimary = $controlEquipment ?: ($controlReagent ?: ($controlPermit ?: $controlReservation));
-            $legacyControl = is_numeric($controlPrimary) ? (int)$controlPrimary : 0;
-
-            // Slot check, status update and inventory deduction in one transaction
-            $approval = scilab_approve_request($conn, $id, function ($conn) use ($adminName, $legacyControl, $controlEquipment, $controlReagent, $controlPermit, $controlReservation, $remarks, $id) {
-                $stmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Approved', supervisor_status = 'approved', subject_teacher_status = 'approved', lab_personnel_status = 'approved', cid_chief_status = 'approved', supervisor_approved_at = NOW(), subject_teacher_approved_at = NOW(), lab_personnel_approved_at = NOW(), cid_chief_approved_at = NOW(), supervisor_approved_by = ?, subject_teacher_approved_by = ?, lab_personnel_approved_by = ?, cid_chief_approved_by = ?, controlNumber = ?, control_equipment = ?, control_reagent = ?, control_permit = ?, control_reservation = ?, feedback = ? WHERE id = ?");
-                $stmt->bind_param("ssssisssssi", $adminName, $adminName, $adminName, $adminName, $legacyControl, $controlEquipment, $controlReagent, $controlPermit, $controlReservation, $remarks, $id);
-                $stmt->execute();
-                $updated = $stmt->affected_rows > 0;
-                $stmt->close();
-                return $updated;
-            });
-
-            if ($approval['ok']) {
-                $request = scilab_fetch_request($conn, $id);
-                if ($request) {
-                    scilab_notify_stage_status($conn, $request, 'force_approve', 'approve');
-                }
-                echo "Request approved.";
-            } else {
-                echo $approval['message'];
-            }
+        elseif ($_POST['action'] === 'next_control_numbers') {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true, 'numbers' => scilab_preview_control_numbers($conn)]);
             exit();
         }
         elseif ($_POST['action'] === 'update_control_numbers') {
-            $controlEquipment = trim($_POST['control_equipment'] ?? '');
-            $controlReagent = trim($_POST['control_reagent'] ?? '');
-            $controlPermit = trim($_POST['control_permit'] ?? '');
-            $controlReservation = trim($_POST['control_reservation'] ?? '');
-
-            $stmt = $conn->prepare("UPDATE scilab_form_requests SET control_equipment = ?, control_reagent = ?, control_permit = ?, control_reservation = ? WHERE id = ?");
-            $stmt->bind_param("ssssi", $controlEquipment, $controlReagent, $controlPermit, $controlReservation, $id);
-            $stmt->execute();
-
-            if ($stmt->affected_rows > 0) {
-                echo "Control numbers updated.";
-            } else {
+            $current = scilab_fetch_request($conn, $id);
+            if (!$current) {
                 echo "Update failed.";
+                exit();
             }
-            $stmt->close();
+
+            // All changed fields in one transaction; each edit shifts the later forms of its series
+            $conn->begin_transaction();
+            $shifted = 0;
+            $changed = 0;
+            $errors = [];
+            $noShift = [];
+            try {
+                foreach (scilab_control_series() as $type => $col) {
+                    if (!array_key_exists($col, $_POST)) {
+                        continue;
+                    }
+                    $value = trim($_POST[$col]);
+                    if ($value === trim((string)($current[$col] ?? ''))) {
+                        continue;
+                    }
+                    $r = scilab_set_control_number($conn, $id, $type, $value);
+                    if (!$r['ok']) {
+                        $errors[] = ucfirst($type) . ': ' . $r['message'];
+                        break;
+                    }
+                    if ($r['changed']) {
+                        $changed++;
+                        $shifted += $r['shifted'];
+                        if (!$r['shift'] && $value !== '') {
+                            $noShift[] = ucfirst($type);
+                        }
+                    }
+                }
+                if ($errors) {
+                    $conn->rollback();
+                } else {
+                    $conn->commit();
+                }
+            } catch (Throwable $e) {
+                $conn->rollback();
+                $errors[] = 'Update failed.';
+            }
+
+            if ($errors) {
+                echo implode(' ', $errors);
+            } elseif ($changed === 0) {
+                echo "No changes made.";
+            } else {
+                echo "Control numbers updated." . ($shifted ? " $shifted later form" . ($shifted === 1 ? '' : 's') . " shifted." : " No later forms needed shifting.")
+                    . ($noShift ? ' No shift for ' . implode(', ', $noShift) . ' (value has no trailing number).' : '');
+            }
             exit();
         }
         elseif ($_POST['action'] === 'reject') {
             $feedback = $_POST['feedback'] ?? '';
-            $stmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Rejected', supervisor_status = 'rejected', subject_teacher_status = 'rejected', lab_personnel_status = 'rejected', cid_chief_status = 'rejected', controlNumber = NULL, feedback = ? WHERE id = ?");
+            $stmt = $conn->prepare("UPDATE scilab_form_requests SET statusScilabPersonnel = 'Rejected', supervisor_status = 'rejected', subject_teacher_status = 'rejected', lab_personnel_status = 'rejected', cid_chief_status = 'rejected', controlNumber = NULL, control_equipment = NULL, control_reagent = NULL, control_permit = NULL, control_reservation = NULL, controlAssignedAt = NULL, feedback = ? WHERE id = ?");
             $stmt->bind_param("si", $feedback, $id);
 
             $stmt->execute();
@@ -223,7 +261,11 @@
                     st.lastname AS student_lastname,
                     fr.inclusiveDate,
                     fr.inclusiveTime,
-                    fr.id AS formID
+                    fr.id AS formID,
+                    fr.control_equipment,
+                    fr.control_reagent,
+                    fr.control_permit,
+                    fr.control_reservation
                 FROM scilab_material_requests mr
                 JOIN scilab_form_requests fr ON mr.formID = fr.id
                 LEFT JOIN scilab_inventory si ON mr.item = si.item
@@ -281,7 +323,8 @@
                     'requestor' => $requestorName,
                     'date' => $row['inclusiveDate'],
                     'time' => $row['inclusiveTime'],
-                    'formID' => $row['formID']
+                    'formID' => $row['formID'],
+                    'controlNumber' => scilab_control_for_classification($classification, $row)
                 ];
             }
 

@@ -44,7 +44,7 @@
     $currentSY = $syQuery->fetch_assoc()['value'] ?? null;
 
     // status filter
-    $statusFilter = input_enum('status', RAL_REQUEST_STATUSES, 'Pending', $_GET);
+    $statusFilter = input_enum('status', array_merge(RAL_REQUEST_STATUSES, ['Cancelled']), 'Pending', $_GET);
 
     // ===== UPDATED: Time frame / manual date filter =====
         $filterMode = $_GET['filterMode'] ?? 'timeframe';
@@ -87,7 +87,7 @@
     $result = ral_query($conn, $sql, 'ss' . $dateTypes, array_merge([(string)$userID, $statusFilter], $dateParams));
 
     // counts  
-    $counts = ['Pending'=>0,'Approved'=>0,'Rejected'=>0];
+    $counts = ['Pending'=>0,'Approved'=>0,'Rejected'=>0,'Cancelled'=>0];
     $countQuery = ral_query($conn, "
         SELECT statusScilabPersonnel AS status, COUNT(*) AS total
         FROM scilab_form_requests
@@ -776,6 +776,11 @@
                         <span class="badge badge-secondary"><?= $counts['Rejected'] ?></span> Rejected
                     </a>
 
+                    <a href="?status=Cancelled&filterMode=<?= urlencode($filterMode) ?>&timeframe=<?= urlencode($timeFrame) ?>&fromDate=<?= urlencode($fromDate) ?>&toDate=<?= urlencode($toDate) ?>"
+                    class="btn-liquid-secondary <?= $statusFilter==='Cancelled'?'active':'' ?>" <?= $statusFilter==='Cancelled' ? 'style="background:#6c757d;color:#fff;"' : '' ?>>
+                        <span class="badge badge-secondary"><?= $counts['Cancelled'] ?></span> Cancelled
+                    </a>
+
                 </div>
 
                 <br>
@@ -858,6 +863,10 @@
                                 <td><?= !empty($row['teacherInCharge']) ? htmlspecialchars($row['teacherInCharge']) : '—' ?></td>
 
                                 <td>
+                                    <?php if ($statusFilter === 'Cancelled'): ?>
+                                        <strong>Cancelled</strong>
+                                        <?php if (!empty($row['cancelReason'])): ?><div style="font-size:12px;color:#666;">Reason: <?= htmlspecialchars($row['cancelReason']) ?></div><?php endif; ?>
+                                    <?php else: ?>
                                     <button
                                         class="btn-liquid view-btn"
                                         data-status="<?= $statusFilter ?>"
@@ -866,6 +875,7 @@
                                     >
                                         View
                                     </button>
+                                    <?php endif; ?>
                                 </td>
                             </tr>
                             <?php endforeach; ?>
@@ -1057,6 +1067,14 @@
                                 ${ralEsc(teacher)}
                             </div>
                         </div>
+
+                        ${data.subjectTeacher ? `
+                        <div class="detail-field">
+                            <div class="detail-label">Subject Teacher</div>
+                            <div class="detail-value">
+                                ${ralEsc(data.subjectTeacher)}
+                            </div>
+                        </div>` : ''}
 
                         <div class="detail-field">
                             <div class="detail-label">Grade Level</div>

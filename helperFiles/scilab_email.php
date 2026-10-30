@@ -14,6 +14,7 @@ use PHPMailer\PHPMailer\Exception;
 require_once __DIR__ . '/../PHPMailer/src/Exception.php';
 require_once __DIR__ . '/../PHPMailer/src/PHPMailer.php';
 require_once __DIR__ . '/../PHPMailer/src/SMTP.php';
+require_once __DIR__ . '/stage_flow.php';
 
 function scilab_is_faculty_requester($conn, $requesterID) {
     $requesterID = trim((string)$requesterID);
@@ -561,13 +562,10 @@ function scilab_notify_unresolved_stage($conn, $request, $stage, $detail) {
     $id = intval($request['id'] ?? 0);
     if ($id <= 0) return;
 
-    $stageLabels = [
-        'supervisor' => 'Supervisor (Teacher-in-Charge)',
-        'subject_teacher' => 'Area Unit Head (AUH)',
-        'lab_personnel' => 'Lab Personnel',
-        'cid_chief' => 'CID Chief',
-    ];
-    $stageLabel = $stageLabels[$stage] ?? ucwords(str_replace('_', ' ', (string)$stage));
+    $stageLabel = scilab_stage_label($request, $stage);
+    if ($stage === 'supervisor') {
+        $stageLabel = 'Supervisor (Teacher-in-Charge)';
+    }
 
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
     $baseURL = $protocol . ($_SERVER['HTTP_HOST'] ?? '') . '/' . ($active_server ?? '');
@@ -586,6 +584,7 @@ function scilab_notify_unresolved_stage($conn, $request, $stage, $detail) {
             'Facility' => $request['scilabName'] ?? '',
             'Requested By' => $requesterName,
             'Teacher In-Charge' => $request['teacherInCharge'] ?? '',
+            'Subject Teacher' => scilab_is_subject_teacher_flow($request) ? $request['subjectTeacher'] : 'N/A',
             'Academic Unit' => $request['subjectAcademicUnit'] ?? '',
             'Date/Time' => trim(($request['inclusiveDate'] ?? '') . ' ' . ($request['inclusiveTime'] ?? '')),
         ],
@@ -637,22 +636,16 @@ function scilab_notify_stage_status($conn, $request, $currentStage, $event, $rea
         }
     }
 
-    $stageOrder = ['supervisor' => 0, 'subject_teacher' => 1, 'lab_personnel' => 2, 'cid_chief' => 3];
+    // Stage order follows the request's flow (subject-teacher flow vs legacy), see stage_flow.php.
+    $stageOrder = scilab_stage_order($request);
     $isForce = ($currentStage === 'force_approve');
-    $currIdx = $isForce ? 999 : ($stageOrder[$currentStage] ?? -1);
+    $currIdx = $isForce ? 999 : scilab_stage_index($request, $currentStage);
 
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
     $baseURL = $protocol . $_SERVER['HTTP_HOST'] . "/" . $active_server;
     $trackerLink = $baseURL . "/supervisor_approve.php?id=" . $id;
 
-    $stageLabels = [
-        'supervisor' => 'Supervisor',
-        'subject_teacher' => 'Area Unit Head (AUH)',
-        'lab_personnel' => 'Lab Personnel',
-        'cid_chief' => 'CID Chief',
-        'force_approve' => 'Administrator (Force Approval)',
-    ];
-    $stageLabel = $stageLabels[$currentStage] ?? ucwords(str_replace('_', ' ', $currentStage));
+    $stageLabel = scilab_stage_label($request, $currentStage);
 
     // Resolve requester display name
     $requesterName = scilab_resolve_requester_name($conn, $request['requesterEmployeeID'] ?? '');
@@ -680,20 +673,17 @@ function scilab_notify_stage_status($conn, $request, $currentStage, $event, $rea
     $heading = ($event === 'approve') ? 'Request Approved' : 'Request Rejected';
     $decisionText = $stageLabel . ' ' . $verb . ' this request';
     $pendingHtml = '';
-    $nextApprovers = [
-        'supervisor' => 'Area Unit Head (AUH)',
-        'subject_teacher' => 'Lab Personnel',
-        'lab_personnel' => 'CID Chief',
-    ];
+    // Next approver label = the next stage in this request's order (lab_personnel -> cid_chief, etc.).
+    $nextStageKey = $isForce ? '' : scilab_next_stage($request, $currentStage);
     $showDecisionRow = true;
     if ($event === 'approve' && !$isForce && $currentStage !== 'cid_chief'
-        && isset($nextApprovers[$currentStage])
+        && $nextStageKey !== ''
         && strtolower($overall) !== 'approved') {
         // Intermediate approval: the request is still moving through the chain.
         $heading = $decisionText;
         $showDecisionRow = false;
         $pendingHtml = '<p><strong>Request Pending Approval by '
-            . htmlspecialchars($nextApprovers[$currentStage]) . '</strong></p>';
+            . htmlspecialchars(scilab_stage_label($request, $nextStageKey)) . '</strong></p>';
     }
     $details = [
         'Request ID' => 'SLR-' . intval($id),
@@ -730,12 +720,11 @@ function scilab_notify_stage_status($conn, $request, $currentStage, $event, $rea
     // --- Prerequisite approvers (only those strictly BEFORE the current stage and already approved) ---
     $prior = [];
     if ($isForce) {
-        $prior = ['supervisor', 'subject_teacher', 'lab_personnel', 'cid_chief'];
-    } else {
-        if ($currIdx > 0 && (($request['supervisor_status'] ?? '') === 'approved')) $prior[] = 'supervisor';
-        if ($currIdx > 1 && (($request['subject_teacher_status'] ?? '') === 'approved')) $prior[] = 'subject_teacher';
-        if ($currIdx > 2 && (($request['lab_personnel_status'] ?? '') === 'approved')) $prior[] = 'lab_personnel';
-        if ($currIdx > 3 && (($request['cid_chief_status'] ?? '') === 'approved')) $prior[] = 'cid_chief';
+        $prior = $stageOrder;
+    } elseif ($currIdx > 0) {
+        foreach (scilab_prior_stages($request, $currentStage) as $priorStage) {
+            if (($request[$priorStage . '_status'] ?? '') === 'approved') $prior[] = $priorStage;
+        }
     }
 
     $stageEmailResolver = [
@@ -743,6 +732,9 @@ function scilab_notify_stage_status($conn, $request, $currentStage, $event, $rea
             return scilab_resolve_teacher_in_charge_emails($conn, $request['teacherInCharge'] ?? '');
         },
         'subject_teacher' => function () use ($conn, $request) {
+            if (scilab_is_subject_teacher_flow($request)) {
+                return scilab_resolve_teacher_in_charge_emails($conn, $request['subjectTeacher'] ?? '');
+            }
             return scilab_resolve_auh_emails($conn, $request['subjectAcademicUnit'] ?? '', $request['gradeLevel'] ?? null);
         },
         'lab_personnel' => function () use ($conn) {
@@ -786,7 +778,7 @@ function createMailer()
  * Notify supervisors of a new request. Each supervisor gets a personal
  * approval link carrying their stage token.
  */
-function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails, $formID)
+function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails, $formID, $stage = 'supervisor')
 {
     global $active_server;
     if (empty($supervisorEmails))
@@ -831,7 +823,7 @@ function sendSubmissionNotificationToSupervisors($conn, $data, $supervisorEmails
                 $mail->addAddress($email);
                 $mail->Subject = $subjectLine;
 
-                $approvalLink = $baseURL . "/supervisor_approve.php?id=" . $formID . "&token=" . urlencode(scilab_approval_token($formID, 'supervisor'));
+                $approvalLink = $baseURL . "/supervisor_approve.php?id=" . $formID . "&token=" . urlencode(scilab_approval_token($formID, $stage));
                 $personalizedBody = str_replace("[ApprovalLink]", $approvalLink, $bodyTemplate);
 
                 $mail->Body = $personalizedBody;

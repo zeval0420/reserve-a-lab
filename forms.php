@@ -56,6 +56,12 @@
 
     /* Query valid teacher personnel accounts to be assigned as supervisory instructors. */
     $teacherOptions = [];
+
+    /* The Subject Teacher is asked of student requesters only (they approve first, then the Teacher In-Charge).
+     * Faculty requests keep the existing approval chain, so the field is not rendered for them.
+     * Uses the same faculty test as ajax_supervisor_action.php. */
+    include_once(__DIR__ . '/helperFiles/scilab_email.php');
+    $showSubjectTeacher = !(scilab_is_faculty_requester($conn, $userID) || scilab_is_faculty_requester($conn, $email));
     $result = $conn->query("SELECT employeeID, firstname, middlename, lastname FROM accounts WHERE status='active' ORDER BY lastname, firstname, middlename ASC");
     while ($row = $result->fetch_assoc()) {
         $teacherOptions[] = [
@@ -187,7 +193,7 @@
             /* Before bootstrap-multiselect runs (at document ready) these native multi-selects render as
                tall list boxes, then collapse to the 38px button and shift the form up (CLS). Give them the
                button's height up front. The plugin hides them with an inline display:none afterwards. */
-            #sections-checkboxes, #teacher-checkboxes { display: block; width: 100%; height: 38px; }
+            #sections-checkboxes, #teacher-checkboxes, #subject-teacher-select { display: block; width: 100%; height: 38px; }
             button.multiselect {
                 width: 100%; text-align: left; 
                 background: linear-gradient(135deg, rgba(43, 85, 196, 0.05), rgba(43, 85, 196, 0.15)) !important;
@@ -466,6 +472,21 @@
                             </select>
                         </div>
                     </div>
+
+                    <?php if ($showSubjectTeacher): ?>
+                    <!-- Subject Teacher (students only): approves first, before the Teacher In-Charge -->
+                    <div class="form-row row">
+                        <div class="form-group col-md-6">
+                            <label class="required">Subject Teacher:</label>
+                            <select id="subject-teacher-select" class="form-control" name="subject_teacher" required>
+                                <option value="">Select Subject Teacher</option>
+                                <?php foreach ($teacherOptions as $t): ?>
+                                    <option value="<?= htmlspecialchars(trim($t['name'])) ?>"><?= htmlspecialchars(trim($t['name'])) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+                    <?php endif; ?>
 
                     <!-- Schedule -->
                     <div class="form-row row">
@@ -943,6 +964,13 @@
                     isValid = false;
                 }
 
+                // Check that subject teacher is selected (student requesters only; the field is absent for faculty)
+                if ($('#subject-teacher-select').length && !$('#subject-teacher-select').val()) {
+                    showToast("Please select a subject teacher.", 'warning');
+                    $('#subject-teacher-select').next('.btn-group').find('.multiselect').addClass('is-invalid');
+                    isValid = false;
+                }
+
                 // Check that date is filled
                 const dateVal = $('#datepicker').val();
                 if (!dateVal) {
@@ -1051,6 +1079,10 @@
                                     <th>Teacher/s</th>
                                     <td>${(form.find('[name="teacher[]"]').val() || []).join(', ')}</td>
                                 </tr>
+                                ${$('#subject-teacher-select').length ? `<tr>
+                                    <th>Subject Teacher</th>
+                                    <td>${ralEsc($('#subject-teacher-select').val() || '')}</td>
+                                </tr>` : ''}
                                 <tr>
                                     <th>Date</th>
                                     <td>${form.find('[name="inclusive_date"]').val()}</td>
@@ -1223,6 +1255,12 @@
                     teachers.forEach(t => formData.append('teacher[]', t));
                 }
 
+                // Subject teacher (students only); faculty requests do not carry the field
+                formData.delete('subject_teacher');
+                if ($('#subject-teacher-select').length) {
+                    formData.set('subject_teacher', $('#subject-teacher-select').val() || '');
+                }
+
                 const sections = $('#sections-checkboxes').val();
                 formData.delete('sections[]');
                 if (sections) {
@@ -1314,6 +1352,19 @@
                     $('#teacher-checkboxes').next('.btn-group').find('.multiselect').removeClass('is-invalid');
                 }
             });
+
+            if ($('#subject-teacher-select').length) {
+                $('#subject-teacher-select').multiselect({
+                    includeSelectAllOption: false,
+                    nonSelectedText: 'Select Subject Teacher',
+                    enableFiltering: true,
+                    enableCaseInsensitiveFiltering: true,
+                    filterPlaceholder: 'Search teacher...',
+                    onChange: function() {
+                        $('#subject-teacher-select').next('.btn-group').find('.multiselect').removeClass('is-invalid');
+                    }
+                });
+            }
 
             function checkRealtimeConflict() {
                 const venue = $('#venue_select').val();

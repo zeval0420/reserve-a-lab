@@ -130,7 +130,7 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
     }
 
 
-    $checkStmt = $conn->prepare("SELECT statusScilabPersonnel, inclusiveTime FROM scilab_form_requests WHERE scilabName = ? AND inclusiveDate = ? AND statusScilabPersonnel != 'Rejected'");
+    $checkStmt = $conn->prepare("SELECT statusScilabPersonnel, inclusiveTime FROM scilab_form_requests WHERE scilabName = ? AND inclusiveDate = ? AND statusScilabPersonnel NOT IN ('Rejected', 'Cancelled')");
     $checkStmt->bind_param("ss", $scilabName, $startDate);
     $checkStmt->execute();
     $checkRes = $checkStmt->get_result();
@@ -174,11 +174,22 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
     $initialCidChiefApprovedAt = $isFacultyOrSysadmin ? date('Y-m-d H:i:s') : null;
     $initialCidChiefApprovedBy = $isFacultyOrSysadmin ? 'Auto-approved (Teacher request)' : null;
 
-    $stmt = $conn->prepare("INSERT INTO scilab_form_requests (
-            scilabName, gradeLevel, sections, subject, subjectTopic, inclusiveDate, inclusiveTime, dateRequested, requesterEmployeeID, sy, teacherInCharge, statusScilabPersonnel, supervisor_status, subject_teacher_status, lab_personnel_status, cid_chief_status, supervisor_approved_at, supervisor_approved_by, cid_chief_approved_at, cid_chief_approved_by) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', ?, 'pending', 'pending', ?, ?, ?, ?, ?)");
+    // Subject teacher: student requests only (faculty rows keep '' and the legacy stage order).
+    $subjectTeacher = '';
+    if (!$isFacultyOrSysadmin) {
+        $subjectTeacherInput = $_POST['subject_teacher'] ?? '';
+        $subjectTeacher = is_string($subjectTeacherInput) ? trim($subjectTeacherInput) : '';
+        if ($subjectTeacher === '') {
+            echo "Please select a Subject Teacher.";
+            exit();
+        }
+    }
 
-    $stmt->bind_param("sisssssssssssssssss", $scilabName, $grade, $sections, $subject, $topic, $startDate, $formattedTime, $dateRequested, $requesterID, $schoolYear, $teacher, $initialSupervisorStatus, $initialCidChiefStatus, $initialSupervisorApprovedAt, $initialSupervisorApprovedBy, $initialCidChiefApprovedAt, $initialCidChiefApprovedBy);
+    $stmt = $conn->prepare("INSERT INTO scilab_form_requests (
+            scilabName, gradeLevel, sections, subject, subjectTopic, inclusiveDate, inclusiveTime, dateRequested, requesterEmployeeID, sy, teacherInCharge, subjectTeacher, statusScilabPersonnel, supervisor_status, subject_teacher_status, lab_personnel_status, cid_chief_status, supervisor_approved_at, supervisor_approved_by, cid_chief_approved_at, cid_chief_approved_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', ?, 'pending', 'pending', ?, ?, ?, ?, ?)");
+
+    $stmt->bind_param("sissssssssssssssss", $scilabName, $grade, $sections, $subject, $topic, $startDate, $formattedTime, $dateRequested, $requesterID, $schoolYear, $teacher, $subjectTeacher, $initialSupervisorStatus, $initialCidChiefStatus, $initialSupervisorApprovedAt, $initialSupervisorApprovedBy, $initialCidChiefApprovedAt, $initialCidChiefApprovedBy);
 
     if (!$stmt->execute()) {
         echo "error";
@@ -276,8 +287,12 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
 
     // For Student requests: Notify Supervisor / Teacher-in-Charge.
     // For Teacher requests: Supervisor stage is auto-approved, so skip supervisor email.
+    // Subject-teacher flow: the Subject Teacher is the first approver, so they get the first email
+    // (the Teacher-in-Charge is emailed when the subject teacher approves).
     if (!$isFacultyOrSysadmin && !empty($teacher)) {
-        $teacherEmails = scilab_resolve_teacher_in_charge_emails($conn, $teacher);
+        $firstStage = ($reqRow && scilab_is_subject_teacher_flow($reqRow)) ? 'subject_teacher' : 'supervisor';
+        $firstApproverName = $firstStage === 'subject_teacher' ? $subjectTeacher : $teacher;
+        $teacherEmails = scilab_resolve_teacher_in_charge_emails($conn, $firstApproverName);
 
         if (!empty($teacherEmails)) {
             sendSubmissionNotificationToSupervisors($conn, [
@@ -293,12 +308,12 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
                 'materials' => implode("; ", $materials),
                 'students' => $studentList,
                 'requester' => $requesterName
-            ], $teacherEmails, $formID);
+            ], $teacherEmails, $formID, $firstStage);
         } elseif ($reqRow) {
-            // No account matched the Teacher-in-Charge name. Leave the stage pending
+            // No account matched the approver's name. Leave the stage pending
             // and escalate rather than letting the request stall unnoticed.
-            scilab_notify_unresolved_stage($conn, $reqRow, 'supervisor',
-                'No active account matched the Teacher-in-Charge "' . $teacher . '".');
+            scilab_notify_unresolved_stage($conn, $reqRow, $firstStage,
+                'No active account matched the ' . scilab_stage_label($reqRow, $firstStage) . ' "' . $firstApproverName . '".');
         }
     }
 
@@ -464,10 +479,10 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
     $endTs = strtotime($endTime);
 
     if ($exclude_id > 0) {
-        $stmt = $conn->prepare("SELECT id, statusScilabPersonnel, inclusiveTime, requesterEmployeeID, subject, subjectTopic FROM scilab_form_requests WHERE scilabName = ? AND inclusiveDate = ? AND statusScilabPersonnel != 'Rejected' AND id != ?");
+        $stmt = $conn->prepare("SELECT id, statusScilabPersonnel, inclusiveTime, requesterEmployeeID, subject, subjectTopic FROM scilab_form_requests WHERE scilabName = ? AND inclusiveDate = ? AND statusScilabPersonnel NOT IN ('Rejected', 'Cancelled') AND id != ?");
         $stmt->bind_param("ssi", $scilabName, $date, $exclude_id);
     } else {
-        $stmt = $conn->prepare("SELECT id, statusScilabPersonnel, inclusiveTime, requesterEmployeeID, subject, subjectTopic FROM scilab_form_requests WHERE scilabName = ? AND inclusiveDate = ? AND statusScilabPersonnel != 'Rejected'");
+        $stmt = $conn->prepare("SELECT id, statusScilabPersonnel, inclusiveTime, requesterEmployeeID, subject, subjectTopic FROM scilab_form_requests WHERE scilabName = ? AND inclusiveDate = ? AND statusScilabPersonnel NOT IN ('Rejected', 'Cancelled')");
         $stmt->bind_param("ss", $scilabName, $date);
     }
 

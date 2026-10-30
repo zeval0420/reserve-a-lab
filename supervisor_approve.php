@@ -69,17 +69,13 @@ $subject_teacher_status = $request['subject_teacher_status'] ?? 'pending';
 $lab_personnel_status = $request['lab_personnel_status'] ?? 'pending';
 $cid_chief_status = $request['cid_chief_status'] ?? 'pending';
 
-if ($supervisor_status === 'pending') {
-    $currentStage = 'supervisor';
-} elseif ($supervisor_status === 'approved' && $subject_teacher_status === 'pending') {
-    $currentStage = 'subject_teacher';
-} elseif ($subject_teacher_status === 'approved' && $lab_personnel_status === 'pending') {
-    $currentStage = 'lab_personnel';
-} elseif ($lab_personnel_status === 'approved' && $cid_chief_status === 'pending') {
-    $currentStage = 'cid_chief';
-} else {
-    $currentStage = '';
-}
+// Stage order depends on the request's flow (helperFiles/stage_flow.php):
+// subject-teacher flow = Subject Teacher -> Teacher-in-Charge -> Lab Personnel -> CID Chief,
+// legacy flow = Supervisor -> AUH -> Lab Personnel -> CID Chief.
+$isSubjectTeacherFlow = scilab_is_subject_teacher_flow($request);
+$stageOrder = scilab_stage_order($request);
+$subjectTeacherName = trim((string)($request['subjectTeacher'] ?? ''));
+$currentStage = scilab_current_stage($request);
 
 $tokenValidStage = '';
 if ($token) {
@@ -97,8 +93,9 @@ if ($token) {
 // session with a username as authorized to act.
 $currentRole = $_SESSION['role'] ?? 'guest';
 
-// Check if current user is the Teacher in Charge
+// Check if current user is the Teacher in Charge (and, on the new flow, the selected Subject Teacher)
 $isTeacherInCharge = false;
+$isSelectedSubjectTeacher = false;
 $loggedInEmployeeID = $_SESSION['employeeID'] ?? '';
 $userPosition = '';
 
@@ -109,22 +106,28 @@ if ($loggedInEmployeeID) {
     $resCheck = $stmtCheck->get_result();
     if ($uRow = $resCheck->fetch_assoc()) {
         $userPosition = $uRow['position'] ?? '';
-        $formattedName = trim($uRow['lastname'] . ', ' . $uRow['firstname'] . ' ' . $uRow['middlename']);
 
-        if (strpos($request['teacherInCharge'], $formattedName) !== false) {
+        if (scilab_name_matches_user($uRow, $request['teacherInCharge'] ?? '')) {
             $isTeacherInCharge = true;
+        }
+        if ($isSubjectTeacherFlow && scilab_name_matches_user($uRow, $subjectTeacherName)) {
+            $isSelectedSubjectTeacher = true;
         }
     }
     $stmtCheck->close();
 }
 
-$isSubjectTeacher = (strpos(strtolower($userPosition), 'teacher') !== false);
+// Legacy flow: any teacher position (or AUH designation holder) acts on the subject_teacher stage.
+// New flow: only the Subject Teacher the requester selected.
+$isSubjectTeacher = $isSubjectTeacherFlow
+    ? $isSelectedSubjectTeacher
+    : (strpos(strtolower($userPosition), 'teacher') !== false);
 $isLabPersonnel = ($userPosition === 'Sci. Res. Assist.' || $userPosition === 'Sci. Research Specialist I');
 $isCIDChief = (strpos(strtolower($userPosition), 'chief') !== false);
 
 // Designation holders for the current school year may also act on these stages.
 if ($loggedInEmployeeID) {
-    if (!$isSubjectTeacher && scilab_user_holds_designation($conn, $loggedInEmployeeID, 'AUH-' . ($request['subjectAcademicUnit'] ?? ''))) {
+    if (!$isSubjectTeacherFlow && !$isSubjectTeacher && scilab_user_holds_designation($conn, $loggedInEmployeeID, 'AUH-' . ($request['subjectAcademicUnit'] ?? ''))) {
         $isSubjectTeacher = true;
     }
     if (!$isCIDChief && scilab_user_holds_designation($conn, $loggedInEmployeeID, 'CID Chief')) {
@@ -134,7 +137,7 @@ if ($loggedInEmployeeID) {
 
 // A request that already reached a terminal state has no actionable step, even if
 // some stage columns are still 'pending' from an older record.
-$requestIsTerminal = in_array(strtolower(trim((string)($request['statusScilabPersonnel'] ?? ''))), ['approved', 'rejected'], true);
+$requestIsTerminal = in_array(strtolower(trim((string)($request['statusScilabPersonnel'] ?? ''))), ['approved', 'rejected', 'cancelled'], true);
 if ($requestIsTerminal) {
     $currentStage = '';
 }
@@ -142,33 +145,37 @@ if ($requestIsTerminal) {
 $canApproveCurrentStep = false;
 $currentApproverStep = '';
 
-if ($supervisor_status === 'pending') {
-    $canApproveCurrentStep = $isTeacherInCharge;
-    $currentApproverStep = 'Supervisor';
-} elseif ($supervisor_status === 'approved' && $subject_teacher_status === 'pending') {
-    $canApproveCurrentStep = $isSubjectTeacher;
-    $currentApproverStep = 'Area Unit Head (AUH)';
-} elseif ($subject_teacher_status === 'approved' && $lab_personnel_status === 'pending') {
-    $canApproveCurrentStep = $isLabPersonnel;
-    $currentApproverStep = 'Lab Personnel';
-} elseif ($lab_personnel_status === 'approved' && $cid_chief_status === 'pending') {
-    $canApproveCurrentStep = $isCIDChief;
-    $currentApproverStep = 'CID Chief';
+// Which stages the logged-in user may act on.
+$stageRoleFlags = [
+    'supervisor' => $isTeacherInCharge,
+    'subject_teacher' => $isSubjectTeacher,
+    'lab_personnel' => $isLabPersonnel,
+    'cid_chief' => $isCIDChief,
+];
+
+// The stage in progress (computed from statuses, so it is set even for a terminal request,
+// where the footer only says who the request was waiting on).
+$progressStage = scilab_current_stage($request);
+if ($progressStage !== '') {
+    $canApproveCurrentStep = !empty($stageRoleFlags[$progressStage]);
+    $currentApproverStep = scilab_stage_label($request, $progressStage);
 }
 
 if ($tokenValidStage !== '' && $tokenValidStage === $currentStage) {
     $canApproveCurrentStep = true;
 }
 
+// The user's own step status: the first stage (in this request's order) they hold a role
+// for that is no longer pending, else pending if they hold a role for any stage.
 $userStepStatus = null;
-if ($isTeacherInCharge) {
-    $userStepStatus = $supervisor_status;
-} elseif ($isSubjectTeacher) {
-    $userStepStatus = $subject_teacher_status;
-} elseif ($isLabPersonnel) {
-    $userStepStatus = $lab_personnel_status;
-} elseif ($isCIDChief) {
-    $userStepStatus = $cid_chief_status;
+foreach ($stageOrder as $stageKey) {
+    if (empty($stageRoleFlags[$stageKey])) continue;
+    $candidateStatus = $request[$stageKey . '_status'] ?? 'pending';
+    if ($userStepStatus === null) $userStepStatus = $candidateStatus;
+    if ($candidateStatus !== 'pending') {
+        $userStepStatus = $candidateStatus;
+        break;
+    }
 }
 
 if ($tokenValidStage !== '' && $userStepStatus === null) {
@@ -1079,50 +1086,29 @@ function getStepIcon($class)
                     <!-- Progress fill bar (width set by JS) -->
                     <div class="tracker-progress" id="trackerProgress"></div>
 
-                    <!-- Step 1: Supervisor -->
-                    <?php $s1Class = getStepClass($supervisor_status); ?>
-                    <div class="step <?= $s1Class ?>" data-step="1">
-                        <div class="step-dot"><?= getStepIcon($s1Class) ?></div>
+                    <?php
+                    // Steps follow this request's stage order. CID Chief is not shown for
+                    // teacher/faculty requesters (auto-approved).
+                    $trackerPrevStatus = 'approved';
+                    $trackerStepNo = 0;
+                    foreach ($stageOrder as $trackerStage):
+                        if ($trackerStage === 'cid_chief' && $requesterIsTeacher) continue;
+                        $trackerStatus = $request[$trackerStage . '_status'] ?? 'pending';
+                        $trackerClass = getStepClass($trackerStatus, $trackerPrevStatus);
+                        $trackerStepNo++;
+                    ?>
+                    <div class="step <?= $trackerClass ?>" data-step="<?= $trackerStepNo ?>" data-stage="<?= htmlspecialchars($trackerStage) ?>">
+                        <div class="step-dot"><?= getStepIcon($trackerClass) ?></div>
                         <div class="step-info">
-                            <div class="step-role">Supervisor</div>
-                            <span class="step-status"><?= getStepStatusText($supervisor_status) ?></span>
-                        </div>
-                    </div>
-
-                    <!-- Step 2: Area Unit Head (AUH) -->
-                    <?php $s2Class = getStepClass($subject_teacher_status, $supervisor_status); ?>
-                    <div class="step <?= $s2Class ?>" data-step="2">
-                        <div class="step-dot"><?= getStepIcon($s2Class) ?></div>
-                        <div class="step-info">
-                            <div class="step-role">Area Unit Head (AUH)</div>
+                            <div class="step-role"><?= htmlspecialchars(scilab_stage_label($request, $trackerStage)) ?></div>
                             <span
-                                class="step-status"><?= getStepStatusText($subject_teacher_status, $supervisor_status) ?></span>
+                                class="step-status"><?= getStepStatusText($trackerStatus, $trackerPrevStatus) ?></span>
                         </div>
                     </div>
-
-                    <!-- Step 3: Lab Personnel -->
-                    <?php $s3Class = getStepClass($lab_personnel_status, $subject_teacher_status); ?>
-                    <div class="step <?= $s3Class ?>" data-step="3">
-                        <div class="step-dot"><?= getStepIcon($s3Class) ?></div>
-                        <div class="step-info">
-                            <div class="step-role">Lab Personnel</div>
-                            <span
-                                class="step-status"><?= getStepStatusText($lab_personnel_status, $subject_teacher_status) ?></span>
-                        </div>
-                    </div>
-
-                    <?php if (!$requesterIsTeacher): ?>
-                    <!-- Step 4: CID Chief (not shown for teacher/faculty requesters) -->
-                    <?php $s4Class = getStepClass($cid_chief_status, $lab_personnel_status); ?>
-                    <div class="step <?= $s4Class ?>" data-step="4">
-                        <div class="step-dot"><?= getStepIcon($s4Class) ?></div>
-                        <div class="step-info">
-                            <div class="step-role">CID Chief</div>
-                            <span
-                                class="step-status"><?= getStepStatusText($cid_chief_status, $lab_personnel_status) ?></span>
-                        </div>
-                    </div>
-                    <?php endif; ?>
+                    <?php
+                        $trackerPrevStatus = $trackerStatus;
+                    endforeach;
+                    ?>
 
                 </div><!-- /tracker -->
             </div>
@@ -1315,6 +1301,12 @@ function getStepIcon($class)
                         <div class="detail-label">Teacher-in-Charge</div>
                         <div class="detail-value"><?= htmlspecialchars($teacherInCharge) ?></div>
                     </div>
+                    <?php if ($isSubjectTeacherFlow): ?>
+                    <div class="detail-field">
+                        <div class="detail-label">Subject Teacher</div>
+                        <div class="detail-value"><?= htmlspecialchars($subjectTeacherName) ?></div>
+                    </div>
+                    <?php endif; ?>
                     <div class="detail-field full-width">
                         <div class="detail-label">Purpose / Activity</div>
                         <div class="detail-value">

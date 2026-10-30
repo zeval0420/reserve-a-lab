@@ -446,6 +446,17 @@ if (!function_exists('scilab_deduct_inventory')) {
         $upd = $conn->prepare("UPDATE scilab_inventory SET quantity = quantity - ? WHERE id = ? AND quantity >= ?");
         if (!$upd) return ['ok' => false, 'message' => 'Could not update the inventory.'];
 
+        // Ledger of what was taken out of stock (scilab_inventory_deductions): one row per
+        // form + inventory row, so a later cancel or release can put back / adjust exactly this.
+        // A row already restored by a cancel starts over; otherwise quantities add up, in step
+        // with the stock changes made here.
+        $ledger = $conn->prepare("INSERT INTO scilab_inventory_deductions (formID, inventoryID, quantity) VALUES (?, ?, ?)
+            ON DUPLICATE KEY UPDATE quantity = IF(restoredAt IS NULL, quantity + VALUES(quantity), VALUES(quantity)), restoredAt = NULL");
+        if (!$ledger) {
+            $upd->close();
+            return ['ok' => false, 'message' => 'Could not record the inventory deduction.'];
+        }
+
         $deducted = [];
         foreach ($materials as $mat) {
             // Same choice as before: the exact description match, else the row with the most stock
@@ -469,6 +480,7 @@ if (!function_exists('scilab_deduct_inventory')) {
             $available = intval($target['quantity']);
             if ($mat['qty'] > $available) {
                 $upd->close();
+                $ledger->close();
                 return ['ok' => false, 'message' => 'Cannot approve: not enough stock for "' . $target['item'] . '" (' . $mat['qty'] . ' requested, only ' . $available . ' ' . $target['unit'] . ' left). Nothing was deducted.'];
             }
 
@@ -476,7 +488,16 @@ if (!function_exists('scilab_deduct_inventory')) {
             $upd->execute();
             if ($upd->affected_rows !== 1) {
                 $upd->close();
+                $ledger->close();
                 return ['ok' => false, 'message' => 'Stock changed while deducting. Please try again.'];
+            }
+
+            $ledgerInv = intval($target['id']);
+            $ledger->bind_param("iii", $formID, $ledgerInv, $mat['qty']);
+            if (!$ledger->execute()) {
+                $upd->close();
+                $ledger->close();
+                return ['ok' => false, 'message' => 'Could not record the inventory deduction. Nothing was deducted.'];
             }
 
             // Later materials in this request see the reduced quantity
@@ -488,6 +509,7 @@ if (!function_exists('scilab_deduct_inventory')) {
         }
 
         $upd->close();
+        $ledger->close();
         return ['ok' => true, 'deducted' => $deducted];
     }
 }
@@ -535,7 +557,9 @@ if (!function_exists('scilab_approve_request')) {
      *     approvals for the same lab run one at a time;
      *  2. refuse if an approved request for the same lab and date overlaps;
      *  3. run $markApproved($conn), the caller's status UPDATE (returns bool);
-     *  4. deduct the materials (scilab_deduct_inventory), refusing if stock is short.
+     *  4. deduct the materials (scilab_deduct_inventory), refusing if stock is short, and
+     *     record them in the scilab_inventory_deductions ledger;
+     *  5. assign blank control numbers (scilab_assign_control_numbers, when available).
      * A refusal rolls everything back. Low-stock alerts are sent after the commit.
      * Refusal messages avoid the word "approved": admin_approve.php treats a
      * response containing it as success.
@@ -594,6 +618,12 @@ if (!function_exists('scilab_approve_request')) {
                 return ['ok' => false, 'reason' => 'insufficient_stock', 'message' => $deduction['message']];
             }
 
+            // Automatic control numbers (helperFiles/control_numbers.php): only fills blanks,
+            // and runs inside this transaction so a failure rolls the approval back too.
+            if (function_exists('scilab_assign_control_numbers')) {
+                scilab_assign_control_numbers($conn, $formID);
+            }
+
             $conn->commit();
         } catch (Throwable $e) {
             $conn->rollback();
@@ -606,4 +636,13 @@ if (!function_exists('scilab_approve_request')) {
         return ['ok' => true, 'reason' => null, 'message' => ''];
     }
 }
+
+// Helpers added with the subject-teacher / control-number / material-release work.
+// Each file is owned by one feature; see tasks-subject-teacher-release.md.
+foreach (['stage_flow.php', 'control_numbers.php', 'material_release.php'] as $ral_helper) {
+    if (is_file(__DIR__ . '/' . $ral_helper)) {
+        require_once __DIR__ . '/' . $ral_helper;
+    }
+}
+unset($ral_helper);
 ?>

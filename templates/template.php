@@ -199,6 +199,15 @@
                 </div>
             </div>
 
+            <?php if (!empty($form['subjectTeacher'])): ?>
+            <div class="row">
+                <div class="inline-field col-md-12">
+                    <label>Subject Teacher:</label>
+                    <span class="text"><?= htmlspecialchars($form['subjectTeacher']) ?></span>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <div class="row">
                 <div class="inline-field col-md-12">
                     <label>Venue of the Experiment:</label>

@@ -39,6 +39,7 @@ $stmt = $conn->prepare("
         fr.subject,
         fr.subjectTopic,
         fr.teacherInCharge,
+        fr.subjectTeacher,
         fr.inclusiveDate,
         fr.inclusiveTime,
         fr.requesterEmployeeID,
@@ -199,6 +200,17 @@ function formatApprovedOn($formData, $stage) {
     return "Approved on " . $dateStr . " via the system" . $byLine;
 }
 
+// Signature block: on the subject-teacher flow the endorsement is by the Subject Teacher the
+// requester selected (approved first, subject_teacher_* columns); legacy forms keep the
+// Teacher-in-Charge name with the "Subject Teacher/Unit Head" label.
+require_once __DIR__ . '/../helperFiles/stage_flow.php';
+if (scilab_is_subject_teacher_flow($formData)) {
+    $endorserName = trim((string)$formData['subjectTeacher']);
+    $endorserLabel = 'Subject Teacher';
+} else {
+    $endorserName = (string)($formData['teacherInCharge'] ?? '');
+    $endorserLabel = 'Subject Teacher/Unit Head';
+}
 $endorsedOn = formatApprovedOn($formData, 'subject_teacher');
 $approvedOn = formatApprovedOn($formData, 'lab_personnel');
 $cidApprovedOn = formatApprovedOn($formData, 'cid_chief');
@@ -754,7 +766,7 @@ $html .= "
             <div class='form-field w-50'>
                 <div style='position: relative;'>
                     <label>Endorsed by:</label>
-                    <span class='value' style='min-width: 140pt;'>" . htmlspecialchars($formData['teacherInCharge'] ?? '') . "</span>
+                    <span class='value' style='min-width: 140pt;'>" . htmlspecialchars($endorserName) . "</span>
                     $endorsedBySig
                     " . ($endorsedOn !== '' ? "<span class='approved-on'>$endorsedOn</span>" : '') . "
                 </div>
@@ -770,7 +782,7 @@ $html .= "
         </div>
         <div class='form-row'>
             <div class='form-field w-50'>
-                <span class='signature-label'>Subject Teacher/Unit Head</span>
+                <span class='signature-label'>" . htmlspecialchars($endorserLabel) . "</span>
             </div>
             <div class='form-field w-50'>
                 <span class='signature-label'>SRS/SRA</span>
@@ -985,7 +997,7 @@ $html .= "
             <div class='form-field w-50'>
                 <div style='position: relative;'>
                     <label>Endorsed by:</label>
-                    <span class='value' style='min-width: 140pt;'>" . htmlspecialchars($formData['teacherInCharge'] ?? '') . "</span>
+                    <span class='value' style='min-width: 140pt;'>" . htmlspecialchars($endorserName) . "</span>
                     $endorsedBySig
                     " . ($endorsedOn !== '' ? "<span class='approved-on'>$endorsedOn</span>" : '') . "
                 </div>
@@ -1001,7 +1013,7 @@ $html .= "
         </div>
         <div class='form-row'>
             <div class='form-field w-50'>
-                <span class='signature-label'>Subject Teacher/Unit Head</span>
+                <span class='signature-label'>" . htmlspecialchars($endorserLabel) . "</span>
             </div>
             <div class='form-field w-50'>
                 <span class='signature-label'>SRS/SRA</span>
@@ -1233,8 +1245,8 @@ $html .= "
             <div class='labres-row'>
                 <div class='labres-field labres-w-100'>
                     <span class='labres-label'>Endorsed by:</span>
-                    <span class='labres-signature-line'>" . htmlspecialchars($formData['teacherInCharge'] ?? '') . "</span>
-                    <span class='labres-signature-label'>Subject Teacher/Unit Head</span>
+                    <span class='labres-signature-line'>" . htmlspecialchars($endorserName) . "</span>
+                    <span class='labres-signature-label'>" . htmlspecialchars($endorserLabel) . "</span>
                     " . ($endorsedOn !== '' ? "<span class='labres-approved-on'>$endorsedOn</span>" : '') . "
                 </div>
             </div>

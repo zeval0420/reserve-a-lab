@@ -79,6 +79,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'get_day_snapshot') {
     while ($row = $res->fetch_assoc()) {
         $lab = $row['scilabName'];
         $statusRaw = strtolower(trim($row['statusScilabPersonnel']));
+        if ($statusRaw === 'cancelled') continue; // a cancelled request frees its slot
         $status = ucfirst($statusRaw);
         $parsed = parseTimeRangeMinutes($row['inclusiveTime']);
         if (!$parsed) continue;

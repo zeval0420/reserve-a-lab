@@ -20,7 +20,7 @@
         exit();
     }
 
-    $statusFilter = input_enum('status', RAL_REQUEST_STATUSES, 'Pending', $_GET);
+    $statusFilter = input_enum('status', array_merge(RAL_REQUEST_STATUSES, ['Cancelled']), 'Pending', $_GET);
     $syResult = $conn->query("SELECT value FROM current WHERE description = 'School Year' ORDER BY id DESC LIMIT 1");
     $currentSY = ($syResult && $syResult->num_rows > 0) ? $syResult->fetch_assoc()['value'] : null;
 
@@ -76,7 +76,8 @@
     $counts = [
         'Pending' => 0,
         'Approved' => 0,
-        'Rejected' => 0
+        'Rejected' => 0,
+        'Cancelled' => 0
     ];
 
     $countQuery = ral_query($conn, "
@@ -96,9 +97,20 @@
 
     $materials = [];
     $materialsDetailed = [];
+    $releaseInfo = [];   // formID => latest release (who received the materials), for Approved rows
 
     if ($formIDs) {
         $ids = implode(',', array_map('intval', $formIDs));
+
+        $relQ = $conn->query("
+            SELECT r.formID, r.releasedAt, r.releasedBy, r.receiverType, r.receiverID, r.receiverName
+            FROM scilab_material_releases r
+            WHERE r.formID IN ($ids)
+            ORDER BY r.id ASC
+        ");
+        while ($relQ && ($rel = $relQ->fetch_assoc())) {
+            $releaseInfo[$rel['formID']] = $rel;   // later releases overwrite earlier ones
+        }
 
         $matQ = $conn->query("
             SELECT formID, quantity, item, description
@@ -136,7 +148,7 @@
 <html>
     <head>
         <title>Admin Approval</title>
-        <?php $pageAssets = ['datatables', 'multiselect']; ?>
+        <?php $pageAssets = ['datatables', 'multiselect', 'barcode']; ?>
         <?php include('helperFiles/headData.php'); ?>
         <style>
             body { background-color: #f5f5f5; }
@@ -974,6 +986,9 @@
                     <a href="?status=Rejected&filterMode=<?= urlencode($filterMode) ?>&timeframe=<?= urlencode($timeFrame) ?>&fromDate=<?= urlencode($fromDate) ?>&toDate=<?= urlencode($toDate) ?>" class="btn-liquid-danger <?= $statusFilter === 'Rejected' ? 'active' : '' ?>">
                         <span class="badge badge-pill badge-secondary"><?= $counts['Rejected'] ?></span> Rejected
                     </a>
+                    <a href="?status=Cancelled&filterMode=<?= urlencode($filterMode) ?>&timeframe=<?= urlencode($timeFrame) ?>&fromDate=<?= urlencode($fromDate) ?>&toDate=<?= urlencode($toDate) ?>" class="btn-liquid-secondary <?= $statusFilter === 'Cancelled' ? 'active' : '' ?>">
+                        <span class="badge badge-pill badge-secondary"><?= $counts['Cancelled'] ?></span> Cancelled
+                    </a>
                 </div>
                 <br/>
 
@@ -994,8 +1009,10 @@
                                 <th>Teacher-in-Charge</th>
                                 <th>Flag</th>
                                 <?php if ($statusFilter === 'Approved'): ?><th>Remarks</th><?php endif; ?>
+                                <?php if ($statusFilter === 'Approved'): ?><th>Materials Released To</th><?php endif; ?>
                                 <?php if ($statusFilter === 'Rejected'): ?><th>Feedback</th><?php endif; ?>
-                                <?php if ($statusFilter !== 'Rejected'): ?><th>Action</th><?php endif; ?>
+                                <?php if ($statusFilter === 'Cancelled'): ?><th>Cancelled</th><?php endif; ?>
+                                <?php if ($statusFilter !== 'Rejected' && $statusFilter !== 'Cancelled'): ?><th>Action</th><?php endif; ?>
                             </tr>
                         </thead>
                         <tbody>
@@ -1014,6 +1031,8 @@
                                         $daysBeforeUse = $flagged ? max(0, (int)floor((strtotime($row['inclusiveDate']) - strtotime($row['dateRequested'])) / 86400)) : 0;
                                         $row['flagged'] = $flagged;
                                         $row['daysBeforeUse'] = $daysBeforeUse;
+                                        $isReleased = (($row['releaseStatus'] ?? 'none') === 'released');
+                                        $row['releaseInfo'] = $releaseInfo[$formID] ?? null;
                                 ?>
                                     <tr id="row-<?= $row['id'] ?>" class="<?= $flagged ? 'request-flagged-row' : '' ?>">
                                         <td><span style="display:none;"><?= $row['id'] ?></span><?= $i++ ?></td>
@@ -1035,18 +1054,39 @@
 
                                         <?php if ($statusFilter === 'Approved'): ?>
                                             <td><?= htmlspecialchars($row['feedback'] ?? '—') ?></td>
+                                            <td>
+                                                <?php if ($isReleased && !empty($row['releaseInfo'])): $ri = $row['releaseInfo']; ?>
+                                                    <span class="release-badge">RELEASED</span>
+                                                    <div class="release-sub"><?= htmlspecialchars($ri['receiverName']) ?></div>
+                                                    <div class="release-sub"><?= htmlspecialchars(ucfirst($ri['receiverType'])) ?> ID: <?= htmlspecialchars($ri['receiverID']) ?></div>
+                                                    <div class="release-sub"><?= htmlspecialchars(date('M j, Y g:i A', strtotime($ri['releasedAt']))) ?></div>
+                                                <?php elseif ($isReleased): ?>
+                                                    <span class="release-badge">RELEASED</span>
+                                                <?php else: ?>
+                                                    <span class="request-flag-none">Not yet released</span>
+                                                <?php endif; ?>
+                                            </td>
                                         <?php endif; ?>
 
                                         <?php if ($statusFilter === 'Rejected'): ?>
                                             <td><?= htmlspecialchars($row['feedback'] ?? 'No reason provided') ?></td>
                                         <?php endif; ?>
 
-                                        <?php if ($statusFilter !== 'Rejected'): ?>
+                                        <?php if ($statusFilter === 'Cancelled'): ?>
+                                            <td>
+                                                <span class="cancelled-badge">CANCELLED</span>
+                                                <?php if (!empty($row['cancelReason'])): ?><div class="release-sub">Reason: <?= htmlspecialchars($row['cancelReason']) ?></div><?php endif; ?>
+                                                <div class="release-sub">By <?= htmlspecialchars($row['cancelledBy'] ?? '—') ?><?= !empty($row['cancelledAt']) ? ', ' . htmlspecialchars(date('M j, Y g:i A', strtotime($row['cancelledAt']))) : '' ?></div>
+                                            </td>
+                                        <?php endif; ?>
+
+                                        <?php if ($statusFilter !== 'Rejected' && $statusFilter !== 'Cancelled'): ?>
                                             <td>
                                                 <?php if ($statusFilter === 'Pending'): ?>
                                                     <a href="supervisor_approve.php?id=<?= $row['id'] ?>" class="btn-liquid" style="width: 90%; margin-bottom: 10px; display:block; text-align:center; padding-left:0; padding-right:0;">Review</a>
                                                     <button class="btn-liquid-success approve-btn" style="width: 90%; margin-bottom: 10px; padding-left:0; padding-right:0;" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>Force Approve</button>
                                                     <button class="btn-liquid-danger reject-btn" style="width: 90%; padding-left:0; padding-right:0;" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>Reject</button>
+                                                    <button type="button" class="btn-liquid-secondary cancel-req-btn" style="width: 90%; margin-top: 10px; padding-left:0; padding-right:0;" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>Cancel Request</button>
                                                 <?php elseif ($statusFilter === 'Approved'): ?>
                                                     <a href="templates/print_template.php?id=<?= $row['id'] ?>" target="_blank" class="btn-liquid" style="width: 90%; margin-bottom: 10px; display:block; text-align:center; padding-left:0; padding-right:0;">
                                                         <i class="glyphicon glyphicon-print"></i> Print
@@ -1054,6 +1094,14 @@
                                                     <button class="btn-liquid edit-control-btn" style="width: 90%; padding-left:0; padding-right:0;" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>
                                                         <i class="glyphicon glyphicon-edit"></i> Edit Control #'s
                                                     </button>
+                                                    <button type="button" class="btn-liquid-success release-btn" style="width: 90%; margin-top: 10px; padding-left:0; padding-right:0;" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>
+                                                        <?= $isReleased ? 'View Release' : 'Release Materials' ?>
+                                                    </button>
+                                                    <?php if ($isReleased): ?>
+                                                        <button type="button" class="btn-liquid-secondary" style="width: 90%; margin-top: 10px; padding-left:0; padding-right:0;" disabled title="Materials were already released, so this request can no longer be cancelled.">Cancel Request</button>
+                                                    <?php else: ?>
+                                                        <button type="button" class="btn-liquid-secondary cancel-req-btn" style="width: 90%; margin-top: 10px; padding-left:0; padding-right:0;" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>Cancel Request</button>
+                                                    <?php endif; ?>
                                                 <?php endif; ?>
                                             </td>
                                         <?php endif; ?>
@@ -1200,6 +1248,7 @@
 
                         <!-- Control Numbers -->
                         <p class="custom-modal-section-title">Control Numbers</p>
+                        <p class="text-muted" style="font-size: 12px; margin: -4px 0 8px;">Filled in automatically with the next number of each series. Edit a field to use a different number; later forms of that series are shifted to follow it.</p>
 
                         <div class="detail-grid">
 
@@ -1207,7 +1256,7 @@
                                 <div class="detail-label">Equipment Form <span class="required-asterisk">*</span></div>
                                 <div class="detail-value" style="padding: 0;">
                                     <input type="text"
-                                        class="liquid-input"
+                                        class="liquid-input control-input"
                                         name="control_equipment"
                                         id="control_equipment"
                                         placeholder="e.g. CIID-20-001">
@@ -1218,7 +1267,7 @@
                                 <div class="detail-label">Reagent Form <span class="required-asterisk">*</span></div>
                                 <div class="detail-value" style="padding: 0;">
                                     <input type="text"
-                                        class="liquid-input"
+                                        class="liquid-input control-input"
                                         name="control_reagent"
                                         id="control_reagent"
                                         placeholder="e.g. RG-001">
@@ -1229,7 +1278,7 @@
                                 <div class="detail-label">Work Permit <span class="required-asterisk">*</span></div>
                                 <div class="detail-value" style="padding: 0;">
                                     <input type="text"
-                                        class="liquid-input"
+                                        class="liquid-input control-input"
                                         name="control_permit"
                                         id="control_permit"
                                         placeholder="e.g. PT-001">
@@ -1240,7 +1289,7 @@
                                 <div class="detail-label">Lab Reservation Form <span class="required-asterisk">*</span></div>
                                 <div class="detail-value" style="padding: 0;">
                                     <input type="text"
-                                        class="liquid-input"
+                                        class="liquid-input control-input"
                                         name="control_reservation"
                                         id="control_reservation"
                                         placeholder="e.g. CID-05-0042">
@@ -1322,6 +1371,99 @@
                                 <button type="button" class="btn-liquid-secondary" data-dismiss="modal">Cancel</button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================
+                RELEASE MATERIALS / CANCEL REQUEST (agent C). The JS is the last script block at the end of this file.
+            ============================================================ -->
+            <style>
+                .btn-liquid-secondary.active { background: #6c757d; color: #fff; }
+                .btn-liquid-secondary .badge { margin-right: 5px; background: rgba(0,0,0,0.1); color: inherit; }
+                .btn-liquid-secondary.active .badge { background: rgba(255,255,255,0.2); color: #fff; }
+                .release-badge, .cancelled-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; white-space: nowrap; }
+                .release-badge { background: #16A34A; }
+                .cancelled-badge { background: #6c757d; }
+                .release-sub { font-size: 11px; color: #666; margin-top: 2px; }
+
+                #releaseModal .custom-modal { max-width: 900px; }
+                .rel-table-wrap { overflow-x: auto; margin-bottom: 16px; }
+                .rel-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+                .rel-table th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); padding: 8px 10px; border-bottom: 1.5px solid var(--border); white-space: nowrap; }
+                .rel-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; white-space: normal; max-width: none; }
+                .rel-table input[type="number"] { width: 90px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; }
+                .rel-table tr.rel-changed td { background: #FFF8E1; }
+                .rel-table tr.rel-over td { background: #FEE2E2; }
+                .rel-table tr.rel-added td { background: #EEF2FB; }
+                .rel-muted { color: var(--muted); font-size: 12px; }
+                .rel-sub { display: block; font-size: 11px; color: var(--text-secondary); }
+                .rel-tag { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: var(--secondary); color: #fff; margin-left: 6px; vertical-align: middle; }
+                .rel-add-wrap { position: relative; margin-bottom: 16px; }
+                .rel-add-wrap input[type="text"], .rel-scan-input, #relRemarks, #cancelReason { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: var(--radius-input); font-size: 14px; background: var(--input-bg); }
+                .rel-add-results { position: absolute; left: 0; right: 0; top: 100%; z-index: 20; background: #fff; border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow-card); max-height: 240px; overflow-y: auto; display: none; }
+                .rel-add-results.open { display: block; }
+                .rel-add-results button { display: block; width: 100%; text-align: left; border: 0; background: #fff; padding: 8px 12px; font-size: 13px; cursor: pointer; border-bottom: 1px solid var(--muted-light); }
+                .rel-add-results button:hover:not([disabled]) { background: var(--secondary-light); }
+                .rel-add-results button[disabled] { color: var(--muted); cursor: not-allowed; }
+                .rel-scan-box { text-align: center; padding: 18px; border: 2px dashed var(--secondary); border-radius: 14px; background: var(--secondary-light); margin-bottom: 16px; }
+                .rel-scan-box h3 { margin: 0 0 4px; font-size: 16px; color: var(--primary); }
+                .rel-scan-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+                .rel-scan-row .rel-scan-input { flex: 1 1 240px; font-size: 16px; }
+                #relCameraWrap { display: none; margin-top: 12px; }
+                #relScanner { position: relative; width: 100%; max-width: 420px; height: 260px; margin: 0 auto; background: #000; border-radius: 10px; overflow: hidden; }
+                #relScanner video, #relScanner canvas { position: absolute !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; object-fit: cover !important; }
+                .rel-receiver { border: 1.5px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; }
+                .rel-receiver.ok { border-color: #16A34A; background: #F0FDF4; }
+                .rel-receiver.bad { border-color: #DC2626; background: #FEF2F2; color: #991B1B; }
+                .rel-receiver .rel-name { font-size: 18px; font-weight: 800; color: var(--primary); }
+                .rel-note { font-size: 12px; margin-top: 6px; color: #92400E; }
+                .rel-summary-line { font-size: 13px; color: var(--text-secondary); margin: -6px 0 12px; }
+                @media (max-width: 600px) { #releaseModal .custom-modal-body { padding: 16px; } }
+            </style>
+
+            <div class="custom-modal-overlay" id="releaseModal" role="dialog" aria-modal="true" aria-labelledby="releaseModalTitle">
+                <div class="custom-modal">
+                    <div class="custom-modal-header">
+                        <div class="custom-modal-header-left">
+                            <h2 id="releaseModalTitle">RELEASE MATERIALS</h2>
+                            <p>Request ID: <strong id="releaseRequestId">REQ-0000</strong></p>
+                        </div>
+                        <button type="button" class="custom-modal-close" id="releaseModalCloseTop" aria-label="Close modal">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="custom-modal-body" id="releaseBody"></div>
+                    <div class="custom-modal-footer" id="releaseFooter"></div>
+                </div>
+            </div>
+
+            <div class="custom-modal-overlay" id="cancelRequestModal" role="dialog" aria-modal="true" aria-labelledby="cancelRequestTitle">
+                <div class="custom-modal">
+                    <div class="custom-modal-header">
+                        <div class="custom-modal-header-left">
+                            <h2 id="cancelRequestTitle">CANCEL REQUEST</h2>
+                            <p>Request ID: <strong id="cancelRequestId">REQ-0000</strong></p>
+                        </div>
+                        <button type="button" class="custom-modal-close" id="cancelRequestCloseTop" aria-label="Close modal">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="custom-modal-body">
+                        <div id="cancelSummary"></div>
+                        <div class="alert alert-warning" id="cancelNotice" style="border-radius:8px;"></div>
+                        <label for="cancelReason" class="detail-label">Reason (optional)</label>
+                        <textarea id="cancelReason" rows="3" maxlength="255" placeholder="Why is this request being cancelled?"></textarea>
+                    </div>
+                    <div class="custom-modal-footer">
+                        <button type="button" class="btn-liquid-danger" id="confirmCancelRequest">Yes, Cancel Request</button>
+                        <button type="button" class="btn-liquid-secondary" id="keepRequestBtn">Keep Request</button>
                     </div>
                 </div>
             </div>
@@ -1481,9 +1623,16 @@
                     $footer.append($('<a class="btn-liquid">Review</a>').attr('href', 'supervisor_approve.php?id=' + d.id));
                     $footer.append($('<button type="button" class="btn-liquid-success approve-btn">Force Approve</button>').data('request', d));
                     $footer.append($('<button type="button" class="btn-liquid-danger reject-btn">Reject</button>').data('request', d));
+                    $footer.append($('<button type="button" class="btn-liquid-secondary cancel-req-btn">Cancel Request</button>').data('request', d));
                 } else if (REQUEST_STATUS === 'Approved') {
                     $footer.append($('<a class="btn-liquid" target="_blank">Print</a>').attr('href', 'templates/print_template.php?id=' + d.id));
                     $footer.append($('<button type="button" class="btn-liquid edit-control-btn">Edit Control #s</button>').data('request', d));
+                    $footer.append($('<button type="button" class="btn-liquid-success release-btn"></button>').text(d.releaseStatus === 'released' ? 'View Release' : 'Release Materials').data('request', d));
+                    if (d.releaseStatus !== 'released') {
+                        $footer.append($('<button type="button" class="btn-liquid-secondary cancel-req-btn">Cancel Request</button>').data('request', d));
+                    }
+                } else if (REQUEST_STATUS === 'Cancelled') {
+                    $footer.append($('<div class="release-sub" style="flex:1 1 100%;"></div>').text('Cancelled' + (d.cancelReason ? ': ' + d.cancelReason : '') + (d.cancelledBy ? ' (by ' + d.cancelledBy + ')' : '')));
                 }
                 $footer.append('<button type="button" class="btn-liquid-secondary details-close-btn">Close</button>');
 
@@ -1514,6 +1663,17 @@
                 $('#control_permit').val('');
                 $('#control_reservation').val('');
                 $('#approveRemarks').val('');
+
+                // Prefill the next automatic control numbers (still editable)
+                $('#approveForm .control-input').removeData('preview');
+                $.post('ajax/ajax_admin_action.php', { action: 'next_control_numbers' }, function (res) {
+                    if (res && res.success && res.numbers) {
+                        const map = { equipment: '#control_equipment', reagent: '#control_reagent', permit: '#control_permit', reservation: '#control_reservation' };
+                        Object.keys(map).forEach(k => {
+                            $(map[k]).val(res.numbers[k] || '').data('preview', res.numbers[k] || '');
+                        });
+                    }
+                }, 'json');
 
                 // ========================================================
                 // REQUESTER INFORMATION
@@ -1687,12 +1847,17 @@
                     control_reagent: controlReagent,
                     control_permit: controlPermit,
                     control_reservation: controlReservation,
+                    // 0 = left as prefilled (server keeps its own automatic number), 1 = admin typed a value
+                    control_equipment_edited: controlEquipment === ($('#control_equipment').data('preview') || '') ? 0 : 1,
+                    control_reagent_edited: controlReagent === ($('#control_reagent').data('preview') || '') ? 0 : 1,
+                    control_permit_edited: controlPermit === ($('#control_permit').data('preview') || '') ? 0 : 1,
+                    control_reservation_edited: controlReservation === ($('#control_reservation').data('preview') || '') ? 0 : 1,
                     remarks: remarks
                 }, function (response) {
                     const isSuccess = response.toLowerCase().includes('approved');
                     showToast(response, isSuccess ? 'success' : 'error');
                     if (isSuccess) {
-                        setTimeout(() => location.reload(), 1500);
+                        setTimeout(() => location.reload(), 2200);
                     }
                 });
             });
@@ -1725,9 +1890,11 @@
                     control_reservation: controlReservation
                 }, function (response) {
                     const isSuccess = response.toLowerCase().includes('updated') || response.toLowerCase().includes('success');
-                    showToast(response, isSuccess ? 'success' : 'error');
+                    const noChange = response.toLowerCase().startsWith('no changes');
+                    showToast(response, isSuccess ? 'success' : (noChange ? 'warning' : 'error'));
                     if (isSuccess) {
-                        setTimeout(() => location.reload(), 1200);
+                        // the toast reports how many later forms were shifted; give it time to be read
+                        setTimeout(() => location.reload(), 2200);
                     }
                 });
             });
@@ -1854,11 +2021,11 @@
                             if (response.items.hasOwnProperty(classification) && response.items[classification].length > 0) {
                                 hasItems = true;
                                 content += `<h4>${ralEsc(classification)}</h4>`;
-                                content += '<table class="table table-bordered table-striped mt-2 mb-4"><thead><tr><th>Item</th><th>Description</th><th>Quantity Used</th><th>Requestor</th><th>Date of Use</th><th style="width: 100px; text-align: center;">Action</th></tr></thead><tbody>';
+                                content += '<table class="table table-bordered table-striped mt-2 mb-4"><thead><tr><th style="white-space: nowrap;">Control #</th><th>Item</th><th>Description</th><th>Quantity Used</th><th>Requestor</th><th>Date of Use</th><th style="width: 100px; text-align: center;">Action</th></tr></thead><tbody>';
                                 response.items[classification].forEach(i => {
                                     const description = ralEsc(i.description || 'N/A');
                                     const unit = ralEsc(i.unit || ''); // Fallback for items with no unit
-                                    content += `<tr><td>${ralEsc(i.item)}</td><td>${description}</td><td>${ralEsc(i.quantity)} ${unit}</td><td>${ralEsc(i.requestor)}</td><td>${ralEsc(i.date)} (${ralEsc(i.time)})</td><td style="text-align: center;"><a href="supervisor_approve.php?id=${encodeURIComponent(i.formID)}" target="_blank" class="btn btn-liquid" style="padding: 2px 8px; font-size: 11px; margin: 0; display: inline-block;">View Details</a></td></tr>`;
+                                    content += `<tr><td style="white-space: nowrap;">${ralEsc(i.controlNumber || '')}</td><td>${ralEsc(i.item)}</td><td>${description}</td><td>${ralEsc(i.quantity)} ${unit}</td><td>${ralEsc(i.requestor)}</td><td>${ralEsc(i.date)} (${ralEsc(i.time)})</td><td style="text-align: center;"><a href="supervisor_approve.php?id=${encodeURIComponent(i.formID)}" target="_blank" class="btn btn-liquid" style="padding: 2px 8px; font-size: 11px; margin: 0; display: inline-block;">View Details</a></td></tr>`;
                                 });
                                 content += '</tbody></table>';
                             }
@@ -1924,5 +2091,517 @@
             $('#filterModeForm').submit();
         });
         // ===== END ADDED =====
+    </script>
+
+    <script>
+    // ============================================================
+    // RELEASE MATERIALS + CANCEL REQUEST
+    // Endpoint: ajax/ajax_release.php. Step 1 edit the items, step 2 scan the receiver's ID.
+    // ============================================================
+    (function () {
+        'use strict';
+
+        const RELEASE_URL = 'ajax/ajax_release.php';
+        const esc = function (v) { return window.ralEsc(v == null ? '' : v); };
+        const pad = function (id) { return 'REQ-' + String(id).padStart(4, '0'); };
+        const $modal = $('#releaseModal');
+        const $body = $('#releaseBody');
+        const $footer = $('#releaseFooter');
+
+        let st = null;            // state of the open release modal
+        let cameraOn = false;
+        let camLast = { code: null, time: 0, hits: 0 };
+
+        function field(label, value) {
+            return '<div class="detail-field"><div class="detail-label">' + esc(label) + '</div>' +
+                '<div class="detail-value">' + esc(value === '' || value == null ? '—' : value) + '</div></div>';
+        }
+
+        function requestHeader(r) {
+            return '<p class="custom-modal-section-title">Request</p><div class="detail-grid">' +
+                field('Requester', r.requesterName + ' (' + r.requesterID + ')') +
+                field('Laboratory', r.lab) +
+                field('Date of Use', r.date) +
+                field('Time', r.time) +
+                '</div>';
+        }
+
+        function openOverlay($el) { $el.addClass('open'); $('body').addClass('modal-open'); }
+        function closeOverlay($el) { $el.removeClass('open'); $('body').removeClass('modal-open'); }
+
+        // ------------------------------------------------------------
+        // Camera (Quagga, as in inventory.php)
+        // ------------------------------------------------------------
+        function onCameraDetected(data) {
+            const code = data && data.codeResult && data.codeResult.code ? String(data.codeResult.code).trim() : '';
+            if (!code) return;
+            const now = Date.now();
+            // Same code twice within 2.5 s, to ignore a single misread
+            if (camLast.code === code && now - camLast.time < 2500) { camLast.hits++; } else { camLast = { code: code, time: now, hits: 1 }; }
+            camLast.time = now;
+            if (camLast.hits < 2) return;
+            stopCamera();
+            lookupReceiver(code, 'camera');
+        }
+
+        function startCamera() {
+            if (typeof Quagga === 'undefined') {
+                showToast('The camera scanner is still loading. Try again in a moment.', 'warning');
+                return;
+            }
+            if (cameraOn) return;
+            cameraOn = true;
+            camLast = { code: null, time: 0, hits: 0 };
+            $('#relCameraWrap').show();
+            $('#relCameraBtn').text('Stop Camera');
+            Quagga.init({
+                inputStream: { type: 'LiveStream', target: document.querySelector('#relScanner'), constraints: { facingMode: 'environment' } },
+                decoder: { readers: ['code_128_reader', 'code_39_reader', 'ean_reader', 'ean_8_reader', 'upc_reader', 'codabar_reader', 'i2of5_reader'] },
+                locate: true
+            }, function (err) {
+                if (err) {
+                    cameraOn = false;
+                    $('#relCameraWrap').hide();
+                    $('#relCameraBtn').text('Use Camera');
+                    showToast('Could not start the camera: ' + esc(err.message || err), 'error');
+                    return;
+                }
+                if (!cameraOn) { try { Quagga.stop(); } catch (e) {} return; }
+                Quagga.onDetected(onCameraDetected);
+                Quagga.start();
+            });
+        }
+
+        function stopCamera() {
+            if (!cameraOn) return;
+            cameraOn = false;
+            try { if (typeof Quagga !== 'undefined') { Quagga.offDetected(onCameraDetected); Quagga.stop(); } } catch (e) { /* ignore */ }
+            try {
+                document.querySelectorAll('#relScanner video').forEach(function (v) {
+                    const s = v.srcObject;
+                    if (s && s.getTracks) s.getTracks().forEach(function (t) { try { t.stop(); } catch (e) {} });
+                    try { v.srcObject = null; } catch (e) {}
+                });
+            } catch (e) { /* ignore */ }
+            $('#relScanner').empty();
+            $('#relCameraWrap').hide();
+            $('#relCameraBtn').text('Use Camera');
+        }
+
+        function closeRelease() {
+            stopCamera();
+            closeOverlay($modal);
+            st = null;
+        }
+
+        // ------------------------------------------------------------
+        // Open: load the request, then show the editable list (or the read-only record)
+        // ------------------------------------------------------------
+        function openRelease(row) {
+            st = { id: row.id, data: null, added: [], items: [], receiver: null, method: 'scanner', remarks: '', busy: false };
+            $('#releaseRequestId').text(pad(row.id));
+            $body.html('<p class="text-center" style="padding:30px 0;">Loading request...</p>');
+            $footer.empty().append('<button type="button" class="btn-liquid-secondary rel-close">Close</button>');
+            openOverlay($modal);
+
+            $.post(RELEASE_URL, { action: 'get_release_data', id: row.id }, null, 'json').done(function (res) {
+                if (!st || st.id !== row.id) return;
+                if (!res || !res.success) {
+                    $body.html('<p class="text-danger">' + esc(res && res.message ? res.message : 'Could not load the request.') + '</p>');
+                    return;
+                }
+                st.data = res;
+                if (res.canRelease) renderItems(); else renderRecord();
+            }).fail(function (xhr) {
+                const msg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Could not reach the server.';
+                $body.html('<p class="text-danger">' + esc(msg) + '</p>');
+            });
+        }
+
+        // ------------------------------------------------------------
+        // Read-only view: released (old + new values + receiver) or not releasable
+        // ------------------------------------------------------------
+        function renderRecord() {
+            const d = st.data;
+            let html = requestHeader(d.request);
+            if (d.release) {
+                const r = d.release;
+                html += '<p class="custom-modal-section-title">Received By</p><div class="rel-receiver ok">' +
+                    '<div class="rel-name">' + esc(r.receiverName) + '</div>' +
+                    '<div>' + esc(r.receiverType === 'student' ? 'Student' : 'Employee') + ' ID: <strong>' + esc(r.receiverID) + '</strong></div>' +
+                    '<div class="rel-muted">Released ' + esc(r.releasedAt) + ' by ' + esc(r.releasedBy) + ' (' + esc(r.scanMethod) + ')' +
+                    (r.remarks ? ' - ' + esc(r.remarks) : '') + '</div></div>';
+                html += '<p class="custom-modal-section-title">Materials Released</p><div class="rel-table-wrap"><table class="rel-table"><thead><tr><th>Item</th><th>Requested</th><th>Released</th></tr></thead><tbody>';
+                (r.items || []).forEach(function (i) {
+                    const added = String(i.isAdded) === '1';
+                    const changed = !added && Number(i.originalQuantity) !== Number(i.releasedQuantity);
+                    html += '<tr class="' + (added ? 'rel-added' : (changed ? 'rel-changed' : '')) + '"><td>' + esc(i.item) +
+                        (i.description && i.description !== 'N/A' ? '<span class="rel-sub">' + esc(i.description) + '</span>' : '') +
+                        (added ? '<span class="rel-tag">Added</span>' : '') + '</td><td>' +
+                        (added ? '—' : esc(i.originalQuantity) + ' ' + esc(i.unit || '')) + '</td><td><strong>' + esc(i.releasedQuantity) + '</strong> ' + esc(i.unit || '') + '</td></tr>';
+                });
+                html += '</tbody></table></div>';
+            } else {
+                html += '<div class="alert alert-info" style="border-radius:8px;">Materials can only be released for an approved request that has not been cancelled. This request is <strong>' + esc(d.request.status) + '</strong>.</div>';
+            }
+            $body.html(html);
+            $footer.empty().append('<button type="button" class="btn-liquid-secondary rel-close">Close</button>');
+        }
+
+        // ------------------------------------------------------------
+        // Step 1: requested materials autofilled, editable, plus extra items
+        // ------------------------------------------------------------
+        function renderItems() {
+            const d = st.data;
+            let rows = '';
+            d.materials.forEach(function (m) {
+                const max = m.maxQuantity;
+                rows += '<tr data-mid="' + esc(m.materialRequestID) + '" data-orig="' + esc(m.quantity) + '" data-max="' + (max == null ? '' : esc(max)) + '" data-name="' + esc(m.item) + '">' +
+                    '<td>' + esc(m.item) + (m.description && m.description !== 'N/A' ? '<span class="rel-sub">' + esc(m.description) + '</span>' : '') + '</td>' +
+                    '<td>' + esc(m.quantity) + ' ' + esc(m.unit || '') + '</td>' +
+                    '<td><input type="number" class="rel-qty" min="0" step="1" value="' + esc(m.quantity) + '" aria-label="Quantity to release for ' + esc(m.item) + '"></td>' +
+                    '<td>' + (max == null ? '<span class="rel-muted">not tracked in inventory</span>' : '<span class="rel-muted">up to ' + esc(max) + ' ' + esc(m.unit || '') + '</span>') + '</td></tr>';
+            });
+            if (!rows) rows = '<tr><td colspan="4" class="rel-muted">This request has no requested materials. Add items below.</td></tr>';
+
+            const html = requestHeader(d.request) +
+                '<p class="custom-modal-section-title">Requested Materials (change the quantity to release)</p>' +
+                '<div class="rel-table-wrap"><table class="rel-table"><thead><tr><th>Item</th><th>Requested</th><th>Release</th><th>Stock</th></tr></thead>' +
+                '<tbody id="relOrigBody">' + rows + '</tbody><tbody id="relAddedBody"></tbody></table></div>' +
+                '<div class="rel-summary-line" id="relChangeSummary"></div>' +
+                '<p class="custom-modal-section-title">Add Additional Item</p>' +
+                '<div class="rel-add-wrap"><input type="text" id="relAddSearch" placeholder="Search the inventory by item, description or classification..." autocomplete="off">' +
+                '<div class="rel-add-results" id="relAddResults"></div></div>' +
+                '<label for="relRemarks" class="detail-label">Remarks (optional)</label>' +
+                '<textarea id="relRemarks" rows="2" maxlength="500" placeholder="e.g. items handed over at the lab"></textarea>';
+            $body.html(html);
+            $('#relRemarks').val(st.remarks);
+            renderAdded();
+            updateChangeState();
+
+            $footer.empty()
+                .append('<button type="button" class="btn-liquid-success" id="relConfirmItems">Confirm</button>')
+                .append('<button type="button" class="btn-liquid-secondary rel-close">Close</button>');
+        }
+
+        function renderAdded() {
+            let html = '';
+            st.added.forEach(function (a, idx) {
+                html += '<tr class="rel-added" data-idx="' + idx + '"><td>' + esc(a.item) + '<span class="rel-tag">Added</span>' +
+                    (a.description ? '<span class="rel-sub">' + esc(a.description) + '</span>' : '') + '</td>' +
+                    '<td>—</td>' +
+                    '<td><input type="number" class="rel-qty-added" min="1" step="1" value="' + esc(a.qty) + '" aria-label="Quantity to release for ' + esc(a.item) + '"></td>' +
+                    '<td><span class="rel-muted">up to ' + esc(a.stock) + ' ' + esc(a.unit || '') + '</span> ' +
+                    '<button type="button" class="btn-liquid-danger rel-remove-added" style="padding:2px 10px; margin-left:6px;" aria-label="Remove ' + esc(a.item) + '">Remove</button></td></tr>';
+            });
+            $('#relAddedBody').html(html);
+        }
+
+        function updateChangeState() {
+            let changed = 0;
+            $('#relOrigBody tr[data-mid]').each(function () {
+                const $r = $(this);
+                const raw = String($r.find('.rel-qty').val()).trim();
+                const q = /^\d+$/.test(raw) ? parseInt(raw, 10) : NaN;
+                const orig = Number($r.attr('data-orig'));
+                const maxAttr = $r.attr('data-max');
+                $r.toggleClass('rel-changed', q !== orig && !isNaN(q));
+                $r.toggleClass('rel-over', !isNaN(q) && maxAttr !== '' && q > Number(maxAttr));
+                if (q !== orig) changed++;
+            });
+            const parts = [];
+            if (changed) parts.push(changed + ' quantity change' + (changed > 1 ? 's' : ''));
+            if (st.added.length) parts.push(st.added.length + ' item' + (st.added.length > 1 ? 's' : '') + ' added');
+            $('#relChangeSummary').text(parts.length ? 'Changes from the original request: ' + parts.join(', ') + '. The original and the released quantities are both saved.' : 'No changes from the original request.');
+        }
+
+        function showAddResults(term) {
+            const t = String(term || '').toLowerCase().trim();
+            const $box = $('#relAddResults');
+            if (t.length < 2) { $box.removeClass('open').empty(); return; }
+            const hits = st.data.catalog.filter(function (c) {
+                return (c.item + ' ' + c.description + ' ' + c.classification).toLowerCase().indexOf(t) !== -1;
+            }).slice(0, 12);
+            if (!hits.length) { $box.html('<button type="button" disabled>No matching inventory item</button>').addClass('open'); return; }
+            $box.html(hits.map(function (c) {
+                return '<button type="button" data-id="' + esc(c.id) + '"' + (c.quantity <= 0 ? ' disabled' : '') + '>' + esc(c.item) +
+                    (c.description ? ' <span class="rel-muted">(' + esc(c.description) + ')</span>' : '') +
+                    ' <span class="rel-muted">- ' + esc(c.classification) + ', ' + (c.quantity <= 0 ? 'out of stock' : esc(c.quantity) + ' ' + esc(c.unit || '') + ' in stock') + '</span></button>';
+            }).join('')).addClass('open');
+        }
+
+        function addCatalogItem(id) {
+            const c = st.data.catalog.find(function (x) { return Number(x.id) === Number(id); });
+            if (!c) return;
+            const existing = st.added.find(function (a) { return a.inventoryID === c.id; });
+            if (existing) {
+                existing.qty = Math.min(existing.qty + 1, c.quantity);
+            } else {
+                st.added.push({ inventoryID: c.id, item: c.item, description: c.description, unit: c.unit, stock: c.quantity, qty: 1 });
+            }
+            renderAdded();
+            updateChangeState();
+            $('#relAddSearch').val('');
+            $('#relAddResults').removeClass('open').empty();
+        }
+
+        // Read and validate the table. Returns {items, total} or null (after a toast).
+        function collectItems() {
+            const items = [];
+            let total = 0;
+            let ok = true;
+            $('#relOrigBody tr[data-mid]').each(function () {
+                const $r = $(this);
+                const raw = String($r.find('.rel-qty').val()).trim();
+                if (!/^\d{1,6}$/.test(raw)) { showToast('Quantities must be whole numbers of 0 or more.', 'warning'); ok = false; return false; }
+                const q = parseInt(raw, 10);
+                const maxAttr = $r.attr('data-max');
+                if (maxAttr !== '' && q > Number(maxAttr)) {
+                    showToast('Not enough stock for ' + esc($r.attr('data-name')) + ' (at most ' + esc(maxAttr) + ').', 'warning');
+                    ok = false; return false;
+                }
+                total += q;
+                items.push({ materialRequestID: Number($r.attr('data-mid')), quantity: q, item: $r.attr('data-name'), orig: Number($r.attr('data-orig')) });
+            });
+            if (!ok) return null;
+            st.added.forEach(function (a) {
+                if (!(a.qty >= 1) || a.qty > a.stock) { showToast('Check the quantity of ' + esc(a.item) + ' (1 to ' + esc(a.stock) + ').', 'warning'); ok = false; return; }
+                total += a.qty;
+                items.push({ inventoryID: a.inventoryID, quantity: a.qty, item: a.item, added: true });
+            });
+            if (!ok) return null;
+            if (total <= 0) { showToast('Every quantity is 0. Use Cancel Request instead.', 'warning'); return null; }
+            return { items: items, total: total };
+        }
+
+        // ------------------------------------------------------------
+        // Step 2: scan the receiver's ID
+        // ------------------------------------------------------------
+        let keyTimes = [];
+
+        function renderScan() {
+            const d = st.data;
+            let list = '<div class="rel-table-wrap"><table class="rel-table"><thead><tr><th>Item</th><th>Requested</th><th>Releasing</th></tr></thead><tbody>';
+            st.items.forEach(function (i) {
+                const changed = !i.added && i.quantity !== i.orig;
+                list += '<tr class="' + (i.added ? 'rel-added' : (changed ? 'rel-changed' : '')) + '"><td>' + esc(i.item) + (i.added ? '<span class="rel-tag">Added</span>' : '') + '</td>' +
+                    '<td>' + (i.added ? '—' : esc(i.orig)) + '</td><td><strong>' + esc(i.quantity) + '</strong></td></tr>';
+            });
+            list += '</tbody></table></div>';
+
+            $body.html(requestHeader(d.request) +
+                '<p class="custom-modal-section-title">Materials to Release</p>' + list +
+                '<p class="custom-modal-section-title">Receiver</p>' +
+                '<div class="rel-scan-box"><h3>Scan the receiver\'s ID</h3>' +
+                '<div class="rel-muted">Employee ID or student LRN. Use the barcode scanner, the camera, or type the ID and press Enter.</div>' +
+                '<div class="rel-scan-row"><input type="text" class="rel-scan-input" id="relScanInput" placeholder="Scan or type ID, then press Enter" autocomplete="off" autocapitalize="off" spellcheck="false">' +
+                '<button type="button" class="btn-liquid" id="relLookupBtn">Look Up</button>' +
+                '<button type="button" class="btn-liquid-secondary" id="relCameraBtn">Use Camera</button></div>' +
+                '<div id="relCameraWrap"><div id="relScanner"></div></div></div>' +
+                '<div id="relReceiver"></div>');
+
+            $footer.empty()
+                .append('<button type="button" class="btn-liquid-success" id="relConfirmRelease" disabled>Confirm Release</button>')
+                .append('<button type="button" class="btn-liquid-secondary" id="relBackBtn">Back</button>')
+                .append('<button type="button" class="btn-liquid-secondary rel-close">Close</button>');
+            st.receiver = null;
+            keyTimes = [];
+            setTimeout(function () { $('#relScanInput').trigger('focus'); }, 80);
+        }
+
+        function receiverCard(res) {
+            if (!res.success) {
+                return '<div class="rel-receiver bad"><strong>No match.</strong> ' + esc(res.message || 'ID not found.') + ' Scan again.</div>';
+            }
+            return '<div class="rel-receiver ok"><div class="detail-label">Matched ' + (res.type === 'student' ? 'student' : 'employee') + '</div>' +
+                '<div class="rel-name">' + esc(res.name) + '</div>' +
+                '<div>' + (res.type === 'student' ? 'Student LRN' : 'Employee ID') + ': <strong>' + esc(res.id) + '</strong></div>' +
+                (res.isRequester ? '<div class="rel-muted">This is the person who made the request.</div>'
+                    : '<div class="rel-note">Not the requester (' + esc(st.data.request.requesterName) + '). Confirm that this person is receiving the materials.</div>') +
+                '</div>';
+        }
+
+        function lookupReceiver(code, method) {
+            code = String(code || '').trim();
+            if (!st || !code) return;
+            $('#relReceiver').html('<p class="rel-muted">Looking up ' + esc(code) + '...</p>');
+            $('#relConfirmRelease').prop('disabled', true);
+            $.post(RELEASE_URL, { action: 'lookup_receiver', id: st.id, receiver_id: code }, null, 'json').done(function (res) {
+                if (!st) return;
+                if (res && res.success) {
+                    st.receiver = { id: res.id, type: res.type, name: res.name };
+                    st.method = method;
+                    $('#relConfirmRelease').prop('disabled', false);
+                    $('#relScanInput').val(res.id);
+                } else {
+                    st.receiver = null;
+                    $('#relScanInput').val('').trigger('focus');
+                }
+                $('#relReceiver').html(receiverCard(res || { success: false }));
+            }).fail(function (xhr) {
+                if (!st) return;
+                st.receiver = null;
+                $('#relReceiver').html(receiverCard({ success: false, message: xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Could not reach the server.' }));
+            });
+        }
+
+        function confirmRelease() {
+            if (!st || !st.receiver || st.busy) return;
+            st.busy = true;
+            $('#relConfirmRelease').prop('disabled', true).text('Releasing...');
+            const payload = st.items.map(function (i) {
+                return i.added ? { inventoryID: i.inventoryID, quantity: i.quantity } : { materialRequestID: i.materialRequestID, quantity: i.quantity };
+            });
+            $.post(RELEASE_URL, {
+                action: 'confirm_release',
+                id: st.id,
+                items: JSON.stringify(payload),
+                receiver_id: st.receiver.id,      // the server looks the ID up again; the name is never sent
+                scan_method: st.method,
+                remarks: st.remarks
+            }, null, 'json').done(function (res) {
+                if (res && res.success) {
+                    showToast(esc(res.message), 'success');
+                    closeRelease();
+                    setTimeout(function () { location.reload(); }, 1200);
+                } else {
+                    st.busy = false;
+                    $('#relConfirmRelease').prop('disabled', false).text('Confirm Release');
+                    showToast(esc(res && res.message ? res.message : 'Release failed.'), 'error');
+                }
+            }).fail(function (xhr) {
+                st.busy = false;
+                $('#relConfirmRelease').prop('disabled', false).text('Confirm Release');
+                showToast(esc(xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Could not reach the server.'), 'error');
+            });
+        }
+
+        // ------------------------------------------------------------
+        // Events
+        // ------------------------------------------------------------
+        $(document).on('click', '.release-btn', function () {
+            const row = $(this).data('request');
+            if (row) openRelease(row);
+        });
+        $(document).on('click', '#detailsFooter .release-btn, #detailsFooter .cancel-req-btn', function () {
+            $('#detailsModal').removeClass('open');
+            $('body').removeClass('modal-open');
+        });
+
+        $('#releaseModalCloseTop').on('click', closeRelease);
+        $modal.on('click', function (e) { if (e.target === this && !(st && st.busy)) closeRelease(); });
+        $modal.on('click', '.rel-close', closeRelease);
+
+        $modal.on('input', '.rel-qty', updateChangeState);
+        $modal.on('input', '.rel-qty-added', function () {
+            const idx = Number($(this).closest('tr').attr('data-idx'));
+            const v = parseInt($(this).val(), 10);
+            if (st.added[idx]) st.added[idx].qty = isNaN(v) ? 0 : v;
+        });
+        $modal.on('click', '.rel-remove-added', function () {
+            st.added.splice(Number($(this).closest('tr').attr('data-idx')), 1);
+            renderAdded();
+            updateChangeState();
+        });
+        $modal.on('input focusin', '#relAddSearch', function () { showAddResults($(this).val()); });
+        $modal.on('click', '#relAddResults button[data-id]', function () { addCatalogItem($(this).attr('data-id')); });
+        $modal.on('click', function (e) { if (!$(e.target).closest('.rel-add-wrap').length) $('#relAddResults').removeClass('open'); });
+
+        $modal.on('click', '#relConfirmItems', function () {
+            const got = collectItems();
+            if (!got) return;
+            st.remarks = $('#relRemarks').val().trim();
+            st.items = got.items;
+            renderScan();
+        });
+        $modal.on('click', '#relBackBtn', function () {
+            stopCamera();
+            const kept = st.items;
+            renderItems();
+            // keep what the admin typed
+            kept.forEach(function (i) {
+                if (i.added) return;
+                $('#relOrigBody tr[data-mid="' + i.materialRequestID + '"] .rel-qty').val(i.quantity);
+            });
+            updateChangeState();
+        });
+
+        // Keyboard-wedge scanner: types the digits fast, then Enter. A person types slower, so the
+        // timing tells 'scanner' from 'manual'.
+        $modal.on('keydown', '#relScanInput', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const val = $(this).val();
+                const n = keyTimes.length;
+                const avg = n > 1 ? (keyTimes[n - 1] - keyTimes[0]) / (n - 1) : 999;
+                keyTimes = [];
+                lookupReceiver(val, avg < 60 ? 'scanner' : 'manual');
+            } else if (e.key.length === 1) {
+                keyTimes.push(Date.now());
+            }
+        });
+        $modal.on('click', '#relLookupBtn', function () { lookupReceiver($('#relScanInput').val(), 'manual'); });
+        $modal.on('click', '#relCameraBtn', function () { if (cameraOn) stopCamera(); else startCamera(); });
+        $modal.on('click', '#relConfirmRelease', confirmRelease);
+        // Keep the scan field focused so a keyboard-wedge scanner always has somewhere to type
+        $modal.on('click', '.custom-modal-body', function (e) {
+            if ($('#relScanInput').length && !$(e.target).closest('input, textarea, button, select, a').length) {
+                $('#relScanInput').trigger('focus');
+            }
+        });
+
+        // ------------------------------------------------------------
+        // Cancel request
+        // ------------------------------------------------------------
+        const $cancel = $('#cancelRequestModal');
+        let cancelRow = null;
+        let cancelBusy = false;
+
+        $(document).on('click', '.cancel-req-btn', function () {
+            const row = $(this).data('request');
+            if (!row) return;
+            cancelRow = row;
+            cancelBusy = false;
+            const approved = String(row.statusScilabPersonnel || '').toLowerCase() === 'approved';
+            $('#cancelRequestId').text(pad(row.id));
+            $('#cancelSummary').html('<div class="detail-grid">' +
+                field('Requester', row.requesterName || row.requesterEmployeeID) +
+                field('Laboratory', row.scilabName) +
+                field('Date of Use', row.inclusiveDate + ' (' + row.inclusiveTime + ')') +
+                field('Status', row.statusScilabPersonnel) + '</div>' +
+                '<p class="custom-modal-section-title">Requested Materials</p><div style="margin-bottom:16px;">' + (row.materialsDetailed || '—') + '</div>');
+            $('#cancelNotice').html(approved
+                ? '<strong>This cannot be undone.</strong> The materials deducted from the inventory for this request will be returned to stock, its control numbers are cleared and the lab time slot is freed.'
+                : '<strong>This cannot be undone.</strong> The pending request will be cancelled. Nothing has been deducted from the inventory yet.');
+            $('#cancelReason').val('');
+            $('#confirmCancelRequest').prop('disabled', false).text('Yes, Cancel Request');
+            openOverlay($cancel);
+        });
+
+        function closeCancel() { closeOverlay($cancel); cancelRow = null; }
+        $('#cancelRequestCloseTop, #keepRequestBtn').on('click', closeCancel);
+        $cancel.on('click', function (e) { if (e.target === this && !cancelBusy) closeCancel(); });
+
+        $('#confirmCancelRequest').on('click', function () {
+            if (!cancelRow || cancelBusy) return;
+            cancelBusy = true;
+            const $btn = $(this).prop('disabled', true).text('Cancelling...');
+            $.post(RELEASE_URL, { action: 'cancel_request', id: cancelRow.id, reason: $('#cancelReason').val().trim() }, null, 'json').done(function (res) {
+                if (res && res.success) {
+                    showToast(esc(res.message), 'success', 4500);
+                    closeCancel();
+                    setTimeout(function () { location.reload(); }, 1800);
+                } else {
+                    cancelBusy = false;
+                    $btn.prop('disabled', false).text('Yes, Cancel Request');
+                    showToast(esc(res && res.message ? res.message : 'Could not cancel the request.'), 'error');
+                }
+            }).fail(function (xhr) {
+                cancelBusy = false;
+                $btn.prop('disabled', false).text('Yes, Cancel Request');
+                showToast(esc(xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Could not reach the server.'), 'error');
+            });
+        });
+    })();
     </script>
 </html>

@@ -3,6 +3,7 @@
 ob_start();
 
 require_once '../vendor/autoload.php';
+require_once __DIR__ . '/control_numbers.php';
 
 try {
     include('../../scilab/helperFiles/db_connection.php');
@@ -47,7 +48,11 @@ $sql = "
         st.middlename AS student_middlename,
         st.lastname AS student_lastname,
         fr.inclusiveDate,
-        fr.inclusiveTime
+        fr.inclusiveTime,
+        fr.control_equipment,
+        fr.control_reagent,
+        fr.control_permit,
+        fr.control_reservation
     FROM scilab_material_requests mr
     JOIN scilab_form_requests fr ON mr.formID = fr.id
     LEFT JOIN scilab_inventory si ON mr.item = si.item
@@ -235,6 +240,7 @@ if (empty($categorizedItems)) {
         $html .= "
         <table>
             <tr>
+                <th style='white-space: nowrap;'>Control #</th>
                 <th>Item</th>
                 <th>Description</th>
                 <th>Quantity Used</th>
@@ -254,6 +260,7 @@ if (empty($categorizedItems)) {
 
             $html .= "
             <tr>
+                <td style='white-space: nowrap;'>" . htmlspecialchars(scilab_control_for_classification($classification, $item)) . "</td>
                 <td>" . htmlspecialchars($item['item']) . "</td>
                 <td>" . $description . "</td>
                 <td>" . $item['quantity'] . $unit . "</td>
