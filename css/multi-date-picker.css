@@ -3,7 +3,7 @@
 .rdp {
     --rdp-primary: var(--color-primary-mid, #2B55C4);
     --rdp-deep: var(--color-primary, #0B1B62);
-    --rdp-border: var(--color-border, #E2E8F0);
+    --rdp-border: #dbe3f5; /* same line colour as the form sections it sits in */
     --rdp-soft: rgba(43, 85, 196, 0.10);
     display: grid;
     grid-template-columns: minmax(280px, 340px) 1fr;
@@ -17,8 +17,7 @@
 .rdp-side {
     background: #fff;
     border: 1px solid var(--rdp-border);
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    border-radius: 14px;
     padding: 16px;
 }
 
@@ -92,7 +91,7 @@
     border: 0; background: transparent;
     font-size: 14px; font-weight: 600;
     color: var(--rdp-deep);
-    border-radius: 12px;
+    border-radius: 10px;
     cursor: pointer;
     transition: background .12s ease, color .12s ease, transform .12s ease;
 }
@@ -138,8 +137,14 @@
 .rdp-dot-today { background: #fff; border: 2px solid var(--rdp-primary); width: 10px; height: 10px; box-sizing: border-box; }
 
 /* side panel */
+.rdp-side::before {
+    content: 'Selected dates';
+    display: block; margin-bottom: 6px;
+    font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+    color: #8a94a6;
+}
 .rdp-count { font-size: 15px; color: #6b7280; }
-.rdp-count strong { font-size: 28px; color: var(--rdp-deep); margin-right: 4px; }
+.rdp-count strong { font-size: 26px; color: var(--rdp-deep); margin-right: 4px; }
 .rdp-summary {
     margin-top: 6px;
     font-weight: 700; font-size: 15px;
@@ -174,6 +179,15 @@
 @media (max-width: 720px) {
     .rdp { grid-template-columns: minmax(0, 1fr); }
     .rdp-day, .rdp-empty { height: 44px; } /* bigger touch targets */
+    .rdp-nav { width: 40px; height: 40px; }
+    .rdp-modes button { padding: 9px 10px; }
+    .rdp-chip button { width: 28px; height: 28px; }
+}
+
+/* narrow phones: seven columns in ~250px, so trim the cell padding and keep the legend on one line */
+@media (max-width: 380px) {
+    .rdp-cal, .rdp-side { padding: 12px; }
+    .rdp-legend { gap: 10px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

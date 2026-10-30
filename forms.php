@@ -391,6 +391,80 @@
                 font-weight: bold;
                 font-size: 1.2em;
             }
+
+            /* ---------- Form sections ----------
+               The form is split into numbered groups, one per decision the requester makes (class, teachers,
+               venue and time, materials, group). A soft tinted panel groups the fields; the white inputs and
+               calendar panels sit on it, so related fields read as one unit instead of one long column. */
+            .form-section {
+                background: #f7f9ff; border: 1px solid #dbe3f5; border-radius: 14px;
+                padding: 18px 20px 6px; margin-bottom: 18px;
+            }
+            .form-section-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+            .form-section-num {
+                flex: none; width: 28px; height: 28px; border-radius: 50%;
+                background: var(--main-blue); color: #fff; font-size: 14px; font-weight: 700;
+                display: flex; align-items: center; justify-content: center;
+            }
+            .form-section-head > div { min-width: 0; }
+            .form-section-title { margin: 3px 0 0; font-size: 17px; font-weight: 700; color: #0B1B62; }
+            .form-section-hint { margin: 2px 0 0; font-size: 12.5px; color: #6b7280; line-height: 1.4; }
+            .form-section-hint:empty { display: none; }
+            .form-section-opt { font-size: 12px; font-weight: 600; color: #6b7280; margin-left: 6px; }
+
+            /* Field rows. Columns are sized by content: the grade is only ever a one or two digit number, so it
+               stays narrow and the section picker (which may list many sections) gets the remaining width. */
+            .field-grid { display: grid; column-gap: 16px; }
+            .field-grid > .form-group { min-width: 0; }
+            .fg-class  { grid-template-columns: 150px minmax(0, 1fr); }
+            .fg-lesson { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); } /* subject names run long, units are short */
+            .fg-people { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .fg-people > .form-group:only-child, .fg-full { grid-column: 1 / -1; }
+
+            /* Venue + schedule: calendar on the left, selection summary and time on the right.
+               #date-picker is display:contents so the picker's two panels become cells of this grid. */
+            .sched {
+                display: grid; column-gap: 16px; align-items: start;
+                grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+                grid-template-rows: auto auto auto 1fr;
+                grid-template-areas: "label label" "cal side" "cal time" "cal .";
+            }
+            .sched-label { grid-area: label; }
+            .sched #date-picker { display: contents; }
+            .sched .rdp-cal  { grid-area: cal; margin-bottom: 16px; }
+            .sched .rdp-side { grid-area: side; margin-bottom: 16px; }
+            .sched-time {
+                grid-area: time; margin-bottom: 16px;
+                background: #fff; border: 1px solid #dbe3f5; border-radius: 14px; padding: 16px 16px 1px;
+            }
+            .sched-time-title { font-weight: 700; color: #0B1B62; margin-bottom: 10px; }
+            .sched-time-title small { display: block; font-size: 12px; font-weight: normal; color: #6b7280; margin-top: 2px; }
+            .sched-time-fields { display: grid; grid-template-columns: 1fr 1fr; column-gap: 12px; }
+            .sched-time-fields .form-group { min-width: 0; }
+
+            /* Tables inside a section: white on the tinted panel, with the per-category headings as sub-headings */
+            .form-section .table { background: #fff; }
+            #materials-container h5 { margin: 4px 0 8px; font-size: 14px; color: var(--main-blue); }
+            #materials-container > br:last-child { display: none; }
+
+            /* Tablet portrait and below: the lesson and teacher rows stack, the grade/section pair stays together */
+            @media (max-width: 767px) {
+                .form-section { padding: 14px 14px 2px; border-radius: 12px; margin-bottom: 14px; }
+                .form-section .material-table { background: transparent; border: 0; } /* rows are their own cards here */
+                .fg-lesson, .fg-people { grid-template-columns: minmax(0, 1fr); }
+                .fg-class { grid-template-columns: 130px minmax(0, 1fr); column-gap: 12px; }
+            }
+            /* Phones: calendar, then what was picked, then the time, each full width */
+            @media (max-width: 640px) {
+                .sched {
+                    grid-template-columns: minmax(0, 1fr); grid-template-rows: none;
+                    grid-template-areas: "label" "cal" "side" "time";
+                }
+            }
+            @media (max-width: 400px) {
+                .fg-class { grid-template-columns: 104px minmax(0, 1fr); }
+                .form-section-title { font-size: 16px; }
+            }
         </style>
     </head>
 
@@ -408,116 +482,159 @@
                     <input type="hidden" name="requestor_name" value="<?= htmlspecialchars($username) ?>">
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '') ?>">
 
-                    <!-- Venue Selection -->
-                    <div class="form-group">
-                        <label class="required">Facility:</label>
-                        <select id="venue_select" class="form-control liquid-input" name="venue" required>
-                            <?php foreach ($venues as $name => $label): ?>
-                                <option value="<?= htmlspecialchars($name) ?>" <?= $name == $defaultVenue ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($label) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
+                    <!-- 1. Class & subject: the grade drives the section list, the subject list and the academic unit,
+                         so everything that depends on the grade lives in one group. -->
+                    <section class="form-section">
+                        <header class="form-section-head">
+                            <span class="form-section-num" aria-hidden="true">1</span>
+                            <div>
+                                <h5 class="form-section-title">Class &amp; Subject</h5>
+                                <p class="form-section-hint">Choose the grade first. Sections, subjects and units load from it.</p>
+                            </div>
+                        </header>
 
-                    <!-- Grade and Section -->
-                    <div class="form-row row">
-                        <div class="form-group col-md-6">
-                            <label class="required">Grade Level:</label>
-                            <select id="grade_select" name="grade_level" class="form-control liquid-input" required>
-                                <option value="">Select Grade</option>
-                                <?php ksort($sectionOptions); foreach ($sectionOptions as $grade => $sections): ?>
-                                    <option value="<?= $grade ?>"><?= $grade ?></option>
+                        <div class="field-grid fg-class">
+                            <div class="form-group">
+                                <label class="required" for="grade_select">Grade Level:</label>
+                                <select id="grade_select" name="grade_level" class="form-control liquid-input" required>
+                                    <option value="">Select</option>
+                                    <?php ksort($sectionOptions); foreach ($sectionOptions as $grade => $sections): ?>
+                                        <option value="<?= $grade ?>"><?= $grade ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="required">Section:</label>
+                                <select id="sections-checkboxes" name="sections[]" multiple="multiple" disabled>
+                                </select>
+                                <div id="section-checkboxes" class="checkbox-list"></div>
+                            </div>
+                        </div>
+
+                        <div class="field-grid fg-lesson">
+                            <div class="form-group">
+                                <label class="required" for="subject_select">Subject:</label>
+                                <select id="subject_select" name="subject" class="form-control liquid-input" required disabled>
+                                    <option value="">Select Grade First</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="required" for="unit-select">Academic Unit:</label>
+                                <select class="form-control liquid-input" name="unit" id="unit-select" required disabled>
+                                    <option value="">Select Grade First</option>
+                                    <?php $units = array_unique(array_column($subjectOptions, 'subjectAcademicUnit'));
+                                    foreach ($units as $unit): ?>
+                                        <option value="<?= htmlspecialchars($unit) ?>"><?= htmlspecialchars($unit) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="form-group fg-full">
+                                <label class="required" for="topic_input">Concurrent Topic:</label>
+                                <input type="text" id="topic_input" class="form-control liquid-input" name="topic" required>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 2. Teachers, listed in approval order (the Subject Teacher approves first). -->
+                    <section class="form-section">
+                        <header class="form-section-head">
+                            <span class="form-section-num" aria-hidden="true">2</span>
+                            <div>
+                                <h5 class="form-section-title">Teachers</h5>
+                                <?php if ($showSubjectTeacher): ?>
+                                <p class="form-section-hint">The Subject Teacher approves first, then the Teacher In-Charge.</p>
+                                <?php endif; ?>
+                            </div>
+                        </header>
+
+                        <div class="field-grid fg-people">
+                            <?php if ($showSubjectTeacher): ?>
+                            <!-- Subject Teacher (students only): approves first, before the Teacher In-Charge -->
+                            <div class="form-group">
+                                <label class="required">Subject Teacher:</label>
+                                <select id="subject-teacher-select" class="form-control" name="subject_teacher" required>
+                                    <option value="">Select Subject Teacher</option>
+                                    <?php foreach ($teacherOptions as $t): ?>
+                                        <option value="<?= htmlspecialchars(trim($t['name'])) ?>"><?= htmlspecialchars(trim($t['name'])) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <?php endif; ?>
+                            <div class="form-group">
+                                <label class="required">Teacher In-Charge:</label>
+                                <select id="teacher-checkboxes" class="form-control" name="teacher[]" multiple="multiple" required>
+                                    <?php foreach ($teacherOptions as $t): ?>
+                                        <option value="<?= htmlspecialchars($t['name']) ?>"><?= htmlspecialchars($t['name']) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 3. Venue & schedule: the venue decides which days are bookable, so it sits right above the calendar.
+                         #date-picker is display:contents here, so its calendar and summary panels share one grid
+                         with the time card (see .sched in the stylesheet). -->
+                    <section class="form-section">
+                        <header class="form-section-head">
+                            <span class="form-section-num" aria-hidden="true">3</span>
+                            <div>
+                                <h5 class="form-section-title">Venue &amp; Schedule</h5>
+                                <p class="form-section-hint">Days already booked for the venue are greyed out in the calendar.</p>
+                            </div>
+                        </header>
+
+                        <div class="form-group">
+                            <label class="required" for="venue_select">Facility:</label>
+                            <select id="venue_select" class="form-control liquid-input" name="venue" required>
+                                <?php foreach ($venues as $name => $label): ?>
+                                    <option value="<?= htmlspecialchars($name) ?>" <?= $name == $defaultVenue ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($label) ?>
+                                    </option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="form-group col-md-6">
-                            <label class="required">Section:</label>
-                            <select id="sections-checkboxes" name="sections[]" multiple="multiple" disabled>
-                            </select>
-                            <div id="section-checkboxes" class="checkbox-list"></div>
-                        </div>
-                    </div>
 
-                    <!-- Subject and Topic -->
-                    <div class="form-row row">
-                        <div class="form-group col-md-6">
-                            <label class="required">Subject:</label>
-                            <select id="subject_select" name="subject" class="form-control liquid-input" required disabled>
-                                <option value="">Select Grade First</option>
-                            </select>
-                        </div>
-                        <div class="form-group col-md-6">
-                            <label class="required">Concurrent Topic:</label>
-                            <input type="text" class="form-control liquid-input" name="topic" required>
-                        </div>
-                    </div>
-
-                    <!-- Unit and Teacher -->
-                    <div class="form-row row">
-                        <div class="form-group col-md-6">
-                            <label class="required">Academic Unit:</label>
-                            <select class="form-control liquid-input" name="unit" id="unit-select" required disabled>
-                                <option value="">Select Grade First</option>
-                                <?php $units = array_unique(array_column($subjectOptions, 'subjectAcademicUnit'));
-                                foreach ($units as $unit): ?>
-                                    <option value="<?= htmlspecialchars($unit) ?>"><?= htmlspecialchars($unit) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="form-group col-md-6">
-                            <label class="required">Teacher In-Charge:</label>
-                            <select id="teacher-checkboxes" class="form-control" name="teacher[]" multiple="multiple" required>
-                                <?php foreach ($teacherOptions as $t): ?>
-                                    <option value="<?= htmlspecialchars($t['name']) ?>"><?= htmlspecialchars($t['name']) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                    </div>
-
-                    <?php if ($showSubjectTeacher): ?>
-                    <!-- Subject Teacher (students only): approves first, before the Teacher In-Charge -->
-                    <div class="form-row row">
-                        <div class="form-group col-md-6">
-                            <label class="required">Subject Teacher:</label>
-                            <select id="subject-teacher-select" class="form-control" name="subject_teacher" required>
-                                <option value="">Select Subject Teacher</option>
-                                <?php foreach ($teacherOptions as $t): ?>
-                                    <option value="<?= htmlspecialchars(trim($t['name'])) ?>"><?= htmlspecialchars(trim($t['name'])) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                    </div>
-                    <?php endif; ?>
-
-                    <!-- Schedule -->
-                    <div class="form-row row">
-                        <div class="form-group col-md-12">
-                            <label class="required">Date/s:</label>
+                        <div class="sched">
+                            <label class="required sched-label">Date/s:</label>
                             <div id="date-picker"></div>
+                            <div class="sched-time">
+                                <div class="sched-time-title">Time <small>applies to every selected day</small></div>
+                                <div class="sched-time-fields">
+                                    <div class="form-group">
+                                        <label class="required" for="start_time">Start:</label>
+                                        <input type="time" id="start_time" class="form-control liquid-input" name="start_time" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="required" for="end_time">End:</label>
+                                        <input type="time" id="end_time" class="form-control liquid-input" name="end_time" required>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="form-row row">
-                        <div class="form-group col-md-4">
-                            <label class="required">Start Time:</label>
-                            <input type="time" class="form-control liquid-input" name="start_time" required>
-                        </div>
-                        <div class="form-group col-md-4">
-                            <label class="required">End Time:</label>
-                            <input type="time" class="form-control liquid-input" name="end_time" required>
-                        </div>
-                    </div>
-                    
-                    <div id="conflict-warning-container" style="display:none; margin-bottom: 20px;"></div>
+                        <div id="conflict-warning-container" style="display:none; margin-bottom: 14px;"></div>
+                    </section>
                         
-                    <!-- Inventory Tables -->
-                    <div id="materials-container"></div>
+                    <!-- 4. Inventory tables -->
+                    <section class="form-section">
+                        <header class="form-section-head">
+                            <span class="form-section-num" aria-hidden="true">4</span>
+                            <div>
+                                <h5 class="form-section-title">Materials<span class="form-section-opt">as needed</span></h5>
+                                <p class="form-section-hint">Rows left without an item are ignored.</p>
+                            </div>
+                        </header>
+                        <div id="materials-container"></div>
+                    </section>
 
-                    <br>
-
-                    <!-- Student List -->
-                    <h5><strong>Group Members (if applicable):</strong></h5>
+                    <!-- 5. Student List -->
+                    <section class="form-section">
+                        <header class="form-section-head">
+                            <span class="form-section-num" aria-hidden="true">5</span>
+                            <div>
+                                <h5 class="form-section-title">Group Members<span class="form-section-opt">if applicable</span></h5>
+                            </div>
+                        </header>
                     <div id="student-list-container">
                         <table class="table table-bordered" id="student-list-table">
                             <colgroup>
@@ -537,8 +654,8 @@
                             <span class="glyphicon glyphicon-plus"></span> Add Row
                         </button>
                     </div>
+                    </section>
 
-                    <br>
                     <hr class="image-divider">
                     <div style="width: 100%; text-align: right; margin-top: 15px;">
                         <button type="submit" class="btn-liquid" style="font-weight: bold;">
@@ -1565,4 +1682,4 @@
             $('input[type="date"]').attr('min', today);
         }
     </script>
-</html>
+</html>
