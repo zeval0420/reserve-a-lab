@@ -90,30 +90,34 @@
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['sql_query'])) {
         $sql = $_POST['sql_query'];
         
+        $done = 0;          // statements that finished before an error, if any
+        $affected = 0;
+        $resultSets = [];
+
         try {
-            // Check if it's a SELECT/SHOW/DESCRIBE query to fetch results
-            if (stripos(trim($sql), 'SELECT') === 0 || stripos(trim($sql), 'SHOW') === 0 || stripos(trim($sql), 'DESCRIBE') === 0) {
-                $result = $conn->query($sql);
+            // multi_query runs every ;-separated statement, in order, stopping at the first error
+            $conn->multi_query($sql);
+            do {
+                $result = $conn->store_result();
                 if ($result) {
-                    $queryResult = $result->fetch_all(MYSQLI_ASSOC);
-                    $message = "Query executed successfully. " . $result->num_rows . " rows returned.";
-                    $messageType = "success";
-                } else {
-                    $message = "Error: " . $conn->error;
-                    $messageType = "danger";
+                    $resultSets[] = $result->fetch_all(MYSQLI_ASSOC);
+                    $result->free();
+                } elseif ($conn->field_count === 0 && $conn->affected_rows > 0) {
+                    $affected += $conn->affected_rows;
                 }
-            } else {
-                // For INSERT, UPDATE, DELETE, etc.
-                if ($conn->query($sql) === TRUE) {
-                    $message = "Query executed successfully. Affected rows: " . $conn->affected_rows;
-                    $messageType = "success";
-                } else {
-                    $message = "Error: " . $conn->error;
-                    $messageType = "danger";
-                }
+                $done++;
+            } while ($conn->more_results() && $conn->next_result());
+
+            if ($conn->errno) {
+                throw new mysqli_sql_exception($conn->error, $conn->errno);
             }
+
+            $queryResult = $resultSets ?: null;
+            $message = "Executed $done statement(s) successfully. " . count($resultSets) . " result set(s), affected rows: $affected.";
+            $messageType = "success";
         } catch (Exception $e) {
-            $message = "Exception: " . $e->getMessage();
+            $queryResult = $resultSets ?: null;   // keep what the earlier statements returned
+            $message = "Statement " . ($done + 1) . " failed (" . $done . " before it ran): " . $e->getMessage();
             $messageType = "danger";
         }
 
@@ -355,19 +359,22 @@
             </div>
         <?php endif; ?>
 
-        <?php if ($queryResult !== null): ?>
+        <?php foreach ($queryResult ?? [] as $n => $rows): ?>
             <div class="table-container">
-                <?php if (count($queryResult) > 0): ?>
+                <?php if (count($queryResult) > 1): ?>
+                    <strong>Result <?= $n + 1 ?></strong>
+                <?php endif; ?>
+                <?php if (count($rows) > 0): ?>
                     <table class="table table-bordered table-striped table-hover" style="background: white;">
                         <thead>
                             <tr>
-                                <?php foreach (array_keys($queryResult[0]) as $col): ?>
+                                <?php foreach (array_keys($rows[0]) as $col): ?>
                                     <th><?= htmlspecialchars($col) ?></th>
                                 <?php endforeach; ?>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($queryResult as $row): ?>
+                            <?php foreach ($rows as $row): ?>
                                 <tr>
                                     <?php foreach ($row as $val): ?>
                                         <td><?= htmlspecialchars($val ?? 'NULL') ?></td>
@@ -380,7 +387,7 @@
                     <div class="alert alert-info" style="border-radius: 15px;">No results found.</div>
                 <?php endif; ?>
             </div>
-        <?php endif; ?>
+        <?php endforeach; ?>
 
         <div class="panel panel-default" style="margin-top: 30px;">
             <div class="panel-heading">
