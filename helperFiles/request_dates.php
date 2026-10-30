@@ -22,22 +22,34 @@ if (!function_exists('scilab_ensure_request_dates_table')) {
         if ($checked || !($conn instanceof mysqli)) return;
         $checked = true;
 
-        $res = $conn->query("SHOW TABLES LIKE 'scilab_request_dates'");
-        if ($res && $res->num_rows > 0) return;
+        // mysqli throws on failure (PHP 8.1+ default), and this runs on every request that loads the
+        // helper: it must never take the page or the ajax endpoint down with it.
+        try {
+            $res = $conn->query("SHOW TABLES LIKE 'scilab_request_dates'");
+            if ($res && $res->num_rows > 0) return;
 
-        $created = $conn->query("CREATE TABLE IF NOT EXISTS `scilab_request_dates` (
-            `formID`  int(11) NOT NULL,
-            `useDate` date    NOT NULL,
-            PRIMARY KEY (`formID`, `useDate`),
-            KEY `idx_request_dates_date` (`useDate`),
-            CONSTRAINT `fk_request_dates_form` FOREIGN KEY (`formID`) REFERENCES `scilab_form_requests` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
-        if ($created) {
+            $columns = "`formID`  int(11) NOT NULL,
+                `useDate` date    NOT NULL,
+                PRIMARY KEY (`formID`, `useDate`),
+                KEY `idx_request_dates_date` (`useDate`)";
+            $options = "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci";
+
+            try {
+                $conn->query("CREATE TABLE IF NOT EXISTS `scilab_request_dates` ($columns,
+                    CONSTRAINT `fk_request_dates_form` FOREIGN KEY (`formID`) REFERENCES `scilab_form_requests` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+                ) $options");
+            } catch (Throwable $e) {
+                // The foreign key is only a tidy-up (the queries join to scilab_form_requests anyway),
+                // so an older table that cannot be referenced still gets the date table.
+                error_log('scilab_request_dates: creating with a foreign key failed (' . $e->getMessage() . '), retrying without it');
+                $conn->query("CREATE TABLE IF NOT EXISTS `scilab_request_dates` ($columns) $options");
+            }
+
             $conn->query("INSERT IGNORE INTO `scilab_request_dates` (`formID`, `useDate`)
                 SELECT `id`, `inclusiveDate` FROM `scilab_form_requests`
                 WHERE `inclusiveDate` IS NOT NULL AND `inclusiveDate` <> '0000-00-00'");
-        } else {
-            error_log('scilab_request_dates could not be created: ' . $conn->error);
+        } catch (Throwable $e) {
+            error_log('scilab_request_dates could not be created: ' . $e->getMessage());
         }
     }
 }
