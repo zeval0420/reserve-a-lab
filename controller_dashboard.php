@@ -80,13 +80,6 @@
     $messageType = "";
     $queryResult = null;
 
-    // Tables for the Table Browser menu
-    $browseTables = [];
-    $tablesResult = $conn->query("SHOW TABLES");
-    while ($row = $tablesResult->fetch_row()) {
-        $browseTables[] = $row[0];
-    }
-
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['sql_query'])) {
         $sql = $_POST['sql_query'];
         
@@ -390,19 +383,15 @@
         <?php endforeach; ?>
 
         <div class="panel panel-default" style="margin-top: 30px;">
-            <div class="panel-heading">
+            <div class="panel-heading" style="display:flex; justify-content:space-between; align-items:center;">
                 <h3 class="panel-title" style="color: #2B55C4; font-weight:bold;"><i class="bi bi-table"></i> Table Browser</h3>
+                <button type="button" class="btn-liquid-secondary btn-sm" id="tbToggle" aria-expanded="false">Turn on</button>
             </div>
-            <div class="panel-body">
+            <div class="panel-body" id="tbBody" style="display:none;">
                 <div class="row">
                     <div class="col-md-3">
-                        <input type="text" id="tbTableFilter" class="form-control" placeholder="Filter tables (<?= count($browseTables) ?>)" autocomplete="off">
-                        <div class="list-group tb-menu" id="tbMenu">
-                            <?php foreach ($browseTables as $t): ?>
-                                <a class="list-group-item" data-table="<?= htmlspecialchars($t) ?>"><?= htmlspecialchars($t) ?></a>
-                            <?php endforeach; ?>
-                            <div class="list-group-item text-muted" id="tbMenuEmpty" style="display:none;">No matching tables</div>
-                        </div>
+                        <input type="text" id="tbTableFilter" class="form-control" placeholder="Filter tables" autocomplete="off">
+                        <div class="list-group tb-menu" id="tbMenu"></div>
                     </div>
                     <div class="col-md-9">
                         <div id="tbPlaceholder" class="text-muted" style="padding: 40px 0; text-align:center;">Select a table to open it.</div>
@@ -513,12 +502,14 @@
             smartIndent: true
         });
 
-        // Table Browser: pick a table from the menu, filter its rows, scroll (10 rows visible), edit or delete a row
+        // Table Browser: pick a table from the menu, filter its rows, scroll (10 rows visible), edit or delete a row.
+        // Off by default: nothing is fetched or kept in the DOM until it is turned on, and turning it off frees it again.
         (function () {
             var ENDPOINT = 'ajax/ajax_controller_tables.php';
             var state = { table: null, columns: [], pk: [], rows: [], total: 0, loading: false, seq: 0 };
             var $menu = $('#tbMenu'), $scroll = $('#tbScroll'), $table = $scroll.find('table');
             var editing = null; // { row, columns } while the edit modal is open
+            var searchTimer;
 
             function call(params) {
                 var body = new URLSearchParams();
@@ -612,6 +603,36 @@
                 });
             }
 
+            // On/off switch. Off cancels pending work (seq++), drops the loaded rows and empties the DOM.
+            function setActive(on) {
+                $('#tbBody').toggle(on);
+                $('#tbToggle').text(on ? 'Turn off' : 'Turn on').attr('aria-expanded', on);
+                if (on) {
+                    $menu.html('<div class="list-group-item text-muted">Loading…</div>');
+                    var seq = ++state.seq;
+                    call({ action: 'tables' }).then(function (j) {
+                        if (seq !== state.seq) return;
+                        $menu.html(j.tables.map(function (t) { return '<a class="list-group-item" data-table="' + ralEsc(t) + '">' + ralEsc(t) + '</a>'; }).join('')
+                            + '<div class="list-group-item text-muted" id="tbMenuEmpty" style="display:none;">No matching tables</div>');
+                        $('#tbTableFilter').attr('placeholder', 'Filter tables (' + j.tables.length + ')');
+                    }).catch(function (e) {
+                        if (seq === state.seq) $menu.html('<div class="list-group-item text-danger">' + ralEsc(e.message) + '</div>');
+                    });
+                } else {
+                    state.seq++;
+                    clearTimeout(searchTimer);
+                    state.table = null; state.columns = []; state.pk = []; state.rows = []; state.total = 0; state.loading = false;
+                    $menu.empty();
+                    $table.find('thead, tbody').empty();
+                    $('#tbTableFilter, #tbSearch').val('');
+                    $('#tbColumn').empty();
+                    $('#tbStatus').text('');
+                    $('#tbView').hide();
+                    $('#tbPlaceholder').show();
+                }
+            }
+            $('#tbToggle').on('click', function () { setActive($('#tbBody').is(':hidden')); });
+
             // Menu: click opens a table, the box above it filters the list
             $menu.on('click', '[data-table]', function () { openTable($(this).data('table')); });
             $('#tbTableFilter').on('input', function () {
@@ -625,7 +646,6 @@
             });
 
             // Row filter (debounced) and column choice
-            var searchTimer;
             $('#tbSearch').on('input', function () { clearTimeout(searchTimer); searchTimer = setTimeout(function () { load(false); }, 300); });
             $('#tbColumn').on('change', function () { if ($('#tbSearch').val() !== '') load(false); });
 

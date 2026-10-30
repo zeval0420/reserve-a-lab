@@ -93,6 +93,9 @@ try {
     }
 
     $action = $_POST['action'] ?? '';
+    if ($action === 'tables') {
+        tb_respond(['tables' => $tables]);
+    }
     $table = (string)($_POST['table'] ?? '');
     if (!in_array($table, $tables, true)) {
         ral_deny(404, 'Unknown table.');
