@@ -126,7 +126,21 @@ if (empty($scilab_secrets['approval_secret']) || empty($scilab_secrets['smtp_pas
     error_log('helperFiles/secrets.php is missing or incomplete; see secrets.example.php');
 }
 
-include('email_credentials.php');
+// email_credentials.php is gitignored, so a deployed server only has it if someone uploaded it.
+// Without it the page still has to load (dropdowns, forms...): only sending email is affected.
+if (is_file(__DIR__ . '/email_credentials.php')) {
+    include(__DIR__ . '/email_credentials.php');
+} else {
+    error_log('helperFiles/email_credentials.php is missing: emails cannot be sent until it is uploaded');
+}
+$email_sender       = $email_sender       ?? '';
+$email_sender_name  = $email_sender_name  ?? 'PSHS-IRC SciLab';
+$email_display_name = $email_display_name ?? $email_sender_name;
+$email_smtp_host    = $email_smtp_host    ?? 'smtp.gmail.com';
+$email_smtp_port    = $email_smtp_port    ?? 587;
+$email_smtp_user    = $email_smtp_user    ?? '';
+$email_smtp_password = $email_smtp_password ?? ($scilab_secrets['smtp_password'] ?? '');
+$email_smtp_secure  = $email_smtp_secure  ?? 'tls';
 
 // FRONTEND / SYSTEM PATHS
 $template_dir = __DIR__ . "/../emailTemplates/";
