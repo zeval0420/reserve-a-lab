@@ -1,0 +1,181 @@
+/* RalDatePicker (js/multi-date-picker.js): inline multi-date calendar. */
+
+.rdp {
+    --rdp-primary: var(--color-primary-mid, #2B55C4);
+    --rdp-deep: var(--color-primary, #0B1B62);
+    --rdp-border: var(--color-border, #E2E8F0);
+    --rdp-soft: rgba(43, 85, 196, 0.10);
+    display: grid;
+    grid-template-columns: minmax(280px, 340px) 1fr;
+    gap: 20px;
+    align-items: start;
+    font-family: var(--font-family, 'Inter', 'Raleway', system-ui, sans-serif);
+    color: var(--rdp-deep);
+}
+
+.rdp-cal,
+.rdp-side {
+    background: #fff;
+    border: 1px solid var(--rdp-border);
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    padding: 16px;
+}
+
+.rdp.is-invalid .rdp-cal {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+/* header */
+.rdp-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+.rdp-title { font-weight: 700; font-size: 16px; }
+.rdp-nav {
+    width: 34px; height: 34px;
+    border: 0; border-radius: 50%;
+    background: var(--rdp-soft);
+    color: var(--rdp-primary);
+    font-size: 22px; line-height: 1;
+    cursor: pointer;
+    transition: background .15s ease, transform .15s ease;
+}
+.rdp-nav:hover:not(:disabled) { background: rgba(43, 85, 196, 0.2); transform: scale(1.06); }
+.rdp-nav:disabled { opacity: .35; cursor: default; }
+
+/* mode switch */
+.rdp-modes {
+    display: flex;
+    background: var(--rdp-soft);
+    border-radius: 999px;
+    padding: 3px;
+    margin-bottom: 12px;
+}
+.rdp-modes button {
+    flex: 1;
+    border: 0; background: transparent;
+    border-radius: 999px;
+    padding: 6px 10px;
+    font-size: 13px; font-weight: 600;
+    color: var(--rdp-primary);
+    cursor: pointer;
+    transition: background .15s ease, color .15s ease, box-shadow .15s ease;
+}
+.rdp-modes button.is-on {
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(43, 85, 196, 0.2);
+    color: var(--rdp-deep);
+}
+
+/* grid */
+.rdp-week, .rdp-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+.rdp-week span {
+    text-align: center;
+    font-size: 11px; font-weight: 700; letter-spacing: .04em;
+    text-transform: uppercase;
+    color: #8a94a6;
+    padding-bottom: 6px;
+}
+.rdp-grid { row-gap: 3px; }
+.rdp-empty { height: 40px; }
+
+.rdp-day {
+    position: relative;
+    height: 40px;
+    border: 0; background: transparent;
+    font-size: 14px; font-weight: 600;
+    color: var(--rdp-deep);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background .12s ease, color .12s ease, transform .12s ease;
+}
+.rdp-day:hover:not([aria-disabled="true"]) { background: var(--rdp-soft); }
+.rdp-day:focus-visible { outline: 2px solid var(--rdp-primary); outline-offset: 1px; z-index: 1; }
+
+.rdp-day.is-today::after {
+    content: '';
+    position: absolute; left: 50%; bottom: 5px;
+    width: 5px; height: 5px; margin-left: -2.5px;
+    border-radius: 50%;
+    background: var(--rdp-primary);
+}
+.rdp-day.is-past { color: #c2c9d6; cursor: not-allowed; }
+.rdp-day.is-unavailable {
+    color: #b45353;
+    cursor: not-allowed;
+    background: repeating-linear-gradient(135deg, rgba(220, 53, 69, 0.10) 0 4px, transparent 4px 8px);
+    text-decoration: line-through;
+}
+
+/* selected days; neighbours in a row connect into a single band */
+.rdp-day.is-selected,
+.rdp-day.is-selected:hover {
+    background: var(--rdp-primary);
+    color: #fff;
+}
+.rdp-day.is-selected.is-single { box-shadow: 0 4px 12px rgba(43, 85, 196, 0.28); }
+.rdp-day.is-selected.is-today::after { background: #fff; }
+.rdp-day.is-start { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.rdp-day.is-mid   { border-radius: 0; }
+.rdp-day.is-end   { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+
+.rdp-day.is-anchor { box-shadow: 0 0 0 3px rgba(43, 85, 196, 0.35); background: var(--rdp-primary); color: #fff; }
+.rdp-day.is-preview { background: rgba(43, 85, 196, 0.16); border-radius: 0; }
+
+.rdp-hint { margin: 10px 0 8px; font-size: 12px; color: #6b7280; min-height: 18px; }
+.rdp-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: #6b7280; }
+.rdp-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.rdp-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.rdp-dot-sel { background: var(--rdp-primary); }
+.rdp-dot-off { background: repeating-linear-gradient(135deg, #e8a5ab 0 2px, #fbe4e6 2px 4px); }
+.rdp-dot-today { background: #fff; border: 2px solid var(--rdp-primary); width: 10px; height: 10px; box-sizing: border-box; }
+
+/* side panel */
+.rdp-count { font-size: 15px; color: #6b7280; }
+.rdp-count strong { font-size: 28px; color: var(--rdp-deep); margin-right: 4px; }
+.rdp-summary {
+    margin-top: 6px;
+    font-weight: 700; font-size: 15px;
+    color: var(--rdp-primary);
+    word-break: break-word;
+}
+.rdp-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.rdp-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 6px 5px 12px;
+    border-radius: 999px;
+    background: var(--rdp-soft);
+    color: var(--rdp-primary);
+    font-size: 13px; font-weight: 600;
+}
+.rdp-chip button {
+    width: 22px; height: 22px;
+    border: 0; border-radius: 50%;
+    background: transparent; color: inherit;
+    font-size: 16px; line-height: 1;
+    cursor: pointer;
+}
+.rdp-chip button:hover, .rdp-chip button:focus-visible { background: rgba(43, 85, 196, 0.2); }
+.rdp-clear {
+    margin-top: 14px;
+    border: 0; background: transparent;
+    color: #dc3545; font-weight: 600; font-size: 13px;
+    padding: 4px 0; cursor: pointer;
+}
+.rdp-clear:hover { text-decoration: underline; }
+
+@media (max-width: 720px) {
+    .rdp { grid-template-columns: minmax(0, 1fr); }
+    .rdp-day, .rdp-empty { height: 44px; } /* bigger touch targets */
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rdp * { transition: none !important; }
+}

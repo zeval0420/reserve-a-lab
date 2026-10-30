@@ -10,6 +10,38 @@ if (!defined('SCILAB_MAX_REQUEST_DATES')) {
     define('SCILAB_MAX_REQUEST_DATES', 62);
 }
 
+if (!function_exists('scilab_ensure_request_dates_table')) {
+    /**
+     * Create scilab_request_dates (and give existing requests their one row) if migration
+     * sql/2026-10-30_04_request_dates.sql has not been run, so a missing migration cannot break
+     * the request form. Costs one SHOW TABLES per PHP request, then nothing.
+     */
+    function scilab_ensure_request_dates_table($conn)
+    {
+        static $checked = false;
+        if ($checked || !($conn instanceof mysqli)) return;
+        $checked = true;
+
+        $res = $conn->query("SHOW TABLES LIKE 'scilab_request_dates'");
+        if ($res && $res->num_rows > 0) return;
+
+        $created = $conn->query("CREATE TABLE IF NOT EXISTS `scilab_request_dates` (
+            `formID`  int(11) NOT NULL,
+            `useDate` date    NOT NULL,
+            PRIMARY KEY (`formID`, `useDate`),
+            KEY `idx_request_dates_date` (`useDate`),
+            CONSTRAINT `fk_request_dates_form` FOREIGN KEY (`formID`) REFERENCES `scilab_form_requests` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+        if ($created) {
+            $conn->query("INSERT IGNORE INTO `scilab_request_dates` (`formID`, `useDate`)
+                SELECT `id`, `inclusiveDate` FROM `scilab_form_requests`
+                WHERE `inclusiveDate` IS NOT NULL AND `inclusiveDate` <> '0000-00-00'");
+        } else {
+            error_log('scilab_request_dates could not be created: ' . $conn->error);
+        }
+    }
+}
+
 if (!function_exists('scilab_normalize_dates')) {
     /**
      * Turn submitted dates into a sorted, unique list of 'Y-m-d' strings.
@@ -93,6 +125,7 @@ if (!function_exists('scilab_request_dates_map')) {
      */
     function scilab_request_dates_map($conn, array $formIds)
     {
+        scilab_ensure_request_dates_table($conn);
         $formIds = array_values(array_unique(array_filter(array_map('intval', $formIds))));
         $map = [];
         if (!$formIds) return $map;
@@ -156,6 +189,7 @@ if (!function_exists('scilab_save_request_dates')) {
     {
         $dates = scilab_normalize_dates($dates);
         if (!$dates) return false;
+        scilab_ensure_request_dates_table($conn);
         $formID = (int) $formID;
 
         $del = $conn->prepare("DELETE FROM scilab_request_dates WHERE formID = ?");
@@ -191,4 +225,10 @@ if (!function_exists('scilab_label_row')) {
         }
         return $row;
     }
+}
+
+// Pages load this file after db_connection.php, so $conn is already here: make sure the table exists
+// before any query joins it.
+if (isset($conn) && $conn instanceof mysqli) {
+    scilab_ensure_request_dates_table($conn);
 }
