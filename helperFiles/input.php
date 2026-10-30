@@ -110,6 +110,10 @@ if (!function_exists('ral_query')) {
             $res = ral_query($conn, 'SELECT firstname, middlename, lastname FROM student WHERE LRN = ?', 's', [$id]);
             $row = $res ? $res->fetch_assoc() : null;
         }
-        return $row ? $row['firstname'] . ' ' . $row['middlename'] . ' ' . $row['lastname'] : $id;
+        if (!$row) {
+            $res = ral_query($conn, 'SELECT firstname, middlename, lastname FROM scilab_new_accounts WHERE userID = ? OR username = ?', 'ss', [$id, $id]);
+            $row = $res ? $res->fetch_assoc() : null;
+        }
+        return $row ? trim(preg_replace('/\s+/', ' ', $row['firstname'] . ' ' . $row['middlename'] . ' ' . $row['lastname'])) : $id;
     }
 }
