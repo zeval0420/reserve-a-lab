@@ -13,8 +13,9 @@ if (!defined('SCILAB_MAX_REQUEST_DATES')) {
 if (!function_exists('scilab_ensure_request_dates_table')) {
     /**
      * Create scilab_request_dates (and give existing requests their one row) if migration
-     * sql/2026-10-30_04_request_dates.sql has not been run, so a missing migration cannot break
-     * the request form. Costs one SHOW TABLES per PHP request, then nothing.
+     * sql/2026-10-30_04_request_dates.sql has not been run. Called only by code that reads or
+     * writes that table, never at include time, so endpoints that do not deal with dates
+     * (sections, subjects, students...) cannot be affected. One SHOW TABLES per PHP request.
      */
     function scilab_ensure_request_dates_table($conn)
     {
@@ -34,16 +35,9 @@ if (!function_exists('scilab_ensure_request_dates_table')) {
                 KEY `idx_request_dates_date` (`useDate`)";
             $options = "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci";
 
-            try {
-                $conn->query("CREATE TABLE IF NOT EXISTS `scilab_request_dates` ($columns,
-                    CONSTRAINT `fk_request_dates_form` FOREIGN KEY (`formID`) REFERENCES `scilab_form_requests` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-                ) $options");
-            } catch (Throwable $e) {
-                // The foreign key is only a tidy-up (the queries join to scilab_form_requests anyway),
-                // so an older table that cannot be referenced still gets the date table.
-                error_log('scilab_request_dates: creating with a foreign key failed (' . $e->getMessage() . '), retrying without it');
-                $conn->query("CREATE TABLE IF NOT EXISTS `scilab_request_dates` ($columns) $options");
-            }
+            // No foreign key here (sql/2026-10-30_04_request_dates.sql adds it): a foreign key needs locks on
+            // scilab_form_requests, and the queries join to that table anyway.
+            $conn->query("CREATE TABLE IF NOT EXISTS `scilab_request_dates` ($columns) $options");
 
             $conn->query("INSERT IGNORE INTO `scilab_request_dates` (`formID`, `useDate`)
                 SELECT `id`, `inclusiveDate` FROM `scilab_form_requests`
@@ -237,10 +231,4 @@ if (!function_exists('scilab_label_row')) {
         }
         return $row;
     }
-}
-
-// Pages load this file after db_connection.php, so $conn is already here: make sure the table exists
-// before any query joins it.
-if (isset($conn) && $conn instanceof mysqli) {
-    scilab_ensure_request_dates_table($conn);
 }

@@ -16,6 +16,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'get_calendar_events') {
     $events = [];
 
     // One event per day of each approved request
+    scilab_ensure_request_dates_table($conn);
     $stmt = $conn->prepare("
         SELECT 
             sfr.id,

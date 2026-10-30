@@ -55,6 +55,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'get_day_snapshot') {
         exit();
     }
 
+    scilab_ensure_request_dates_table($conn);
     $syResult = $conn->query("SELECT MAX(value) AS currentSY FROM current WHERE description='School Year'");
     $currentSY = $syResult && $syResult->num_rows ? ($syResult->fetch_assoc()['currentSY'] ?? null) : null;
 
@@ -200,6 +201,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'notification_feed') {
 if (isset($_POST['action']) && $_POST['action'] === 'get_disabled_labs') {
     $date = $_POST['date'];
     $disabled = [];
+    scilab_ensure_request_dates_table($conn);
 
     $stmt = $conn->prepare("SELECT r.scilabName FROM scilab_form_requests r JOIN scilab_request_dates d ON d.formID = r.id WHERE d.useDate = ? AND r.statusScilabPersonnel = 'approved'");
     $stmt->bind_param("s", $date);
@@ -239,6 +241,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'get_pending_count' && isset
     $date = $_POST['date'];
 
     // Get current school year
+    scilab_ensure_request_dates_table($conn);
     $syResult = $conn->query("SELECT MAX(value) AS currentSY FROM current WHERE description='School Year'");
     $currentSY = $syResult->fetch_assoc()['currentSY'];
 

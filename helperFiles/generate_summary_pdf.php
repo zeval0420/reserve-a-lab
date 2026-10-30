@@ -35,6 +35,7 @@ if ($classificationFilter === 'all' || $classificationFilter === '') {
 $filterByClassification = !empty($classifications) && !in_array('all', $classifications);
 
 // Fetch item usage data
+scilab_ensure_request_dates_table($conn);
 $sql = "
     SELECT 
         COALESCE(si.classification, 'Uncategorized') as classification,

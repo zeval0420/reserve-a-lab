@@ -532,6 +532,7 @@ if (!function_exists('scilab_find_slot_conflict')) {
 
         $dates = array_values(array_filter(is_array($date) ? $date : [$date], 'strlen'));
         if (!$dates) return null;
+        scilab_ensure_request_dates_table($conn);
 
         $excludeId = intval($excludeId);
         $marks = implode(',', array_fill(0, count($dates), '?'));

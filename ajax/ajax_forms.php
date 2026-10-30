@@ -355,6 +355,7 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
 
     $scilabName = $_POST['scilabName'];
     $disabled = [];
+    scilab_ensure_request_dates_table($conn);
 
     $stmt = $conn->prepare("SELECT DISTINCT d.useDate FROM scilab_request_dates d JOIN scilab_form_requests r ON r.id = d.formID WHERE r.scilabName = ? AND r.statusScilabPersonnel = 'Approved'");
     if (!$stmt) {
@@ -479,6 +480,7 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
     $startTs = strtotime($startTime);
     $endTs = strtotime($endTime);
 
+    scilab_ensure_request_dates_table($conn);
     $marks = implode(',', array_fill(0, count($dates), '?'));
     $stmt = $conn->prepare("SELECT r.id, r.statusScilabPersonnel, r.inclusiveTime, r.requesterEmployeeID, r.subject, r.subjectTopic, d.useDate
         FROM scilab_form_requests r
