@@ -57,7 +57,8 @@ if ($userRow = $resUser->fetch_assoc()) {
 
 $grade = $request['gradeLevel'] ?? '';
 $section = $request['sections'] ?? '';
-$date = $request['inclusiveDate'] ?? '';
+$dateList = scilab_request_dates($conn, $request['id'], $request['inclusiveDate'] ?? '');
+$date = scilab_format_dates($dateList); // readable list of every day, e.g. "Nov 3, 5, 9, 10-14, 2026"
 $time = $request['inclusiveTime'] ?? '';
 $laboratoryName = $request['scilabName'] ?? '';
 $purpose = $request['subjectTopic'] ?? '';
@@ -1421,7 +1422,7 @@ function getStepIcon($class)
             }
 
             const scilabName = <?= json_encode($laboratoryName) ?>;
-            const inclusiveDate = <?= json_encode($date) ?>;
+            const inclusiveDates = <?= json_encode($dateList) ?>;
             const inclusiveTime = <?= json_encode($time) ?>;
 
             // Parse inclusiveTime (e.g. "09:30 to 11:30")
@@ -1430,7 +1431,7 @@ function getStepIcon($class)
             if (
                 timeParts.length !== 2 ||
                 !scilabName ||
-                !inclusiveDate
+                !inclusiveDates.length
             ) {
                 return;
             }
@@ -1438,7 +1439,7 @@ function getStepIcon($class)
             $.post('ajax/ajax_forms.php', {
                 action: 'check_conflict',
                 scilabName: scilabName,
-                date: inclusiveDate,
+                dates: JSON.stringify(inclusiveDates),
                 startTime: timeParts[0].trim(),
                 endTime: timeParts[1].trim(),
                 exclude_id: <?= json_encode($requestId) ?>

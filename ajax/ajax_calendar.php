@@ -1,6 +1,7 @@
 <?php
 include('../../scilab/helperFiles/db_connection.php');
 include('../helperFiles/session_handler.php');
+require_once __DIR__ . '/../helperFiles/request_dates.php';
 
 $email = $_SESSION['email'] ?? null;
 $username = $_SESSION['username'] ?? null;
@@ -14,14 +15,17 @@ if (isset($_POST['action']) && $_POST['action'] === 'get_calendar_events') {
 
     $events = [];
 
+    // One event per day of each approved request
     $stmt = $conn->prepare("
         SELECT 
             sfr.id,
             sfr.scilabName,
-            sfr.inclusiveDate,
+            d.useDate AS inclusiveDate,
             sfr.inclusiveTime,
             sa.color
         FROM scilab_form_requests sfr
+        JOIN scilab_request_dates d
+            ON d.formID = sfr.id
         JOIN scilab_availability sa
             ON sfr.scilabName = sa.scilabName
         WHERE sfr.statusScilabPersonnel = 'Approved'
@@ -73,7 +77,8 @@ if (isset($_POST['action']) && $_POST['action'] === 'get_request_details') {
     $stmt->execute();
     $result = $stmt->get_result();
     if ($row = $result->fetch_assoc()) {
-        echo json_encode($row);
+        // inclusiveDate becomes the readable list of all the request's days
+        echo json_encode(scilab_label_row($conn, $row));
     } else {
         echo json_encode(['error' => 'Not found']);
     }

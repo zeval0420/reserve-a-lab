@@ -2,6 +2,7 @@
     include('../scilab/helperFiles/db_connection.php');
     include('helperFiles/session_handler.php');
     require_once __DIR__ . '/helperFiles/input.php';
+    require_once __DIR__ . '/helperFiles/request_dates.php';
     require_once __DIR__ . '/helperFiles/image_optimizer.php';   // WebP mirror URLs for the lab cards
 
     if (!isset($_SESSION['role'])) {
@@ -51,6 +52,7 @@
                 $requests[] = $row;
             }
         }
+        $requests = scilab_attach_date_labels($conn, $requests);
 
         if (count($requests) > 0) {
             $pendingRequestsHtml .= '<div class="main-wrapper" style="margin-top: 20px; background: rgba(255,255,255,0.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: var(--radius-card); border: 1px solid var(--color-border); box-shadow: var(--shadow-card); padding: 20px; margin-bottom: 20px;">';
@@ -65,7 +67,7 @@
                 $pendingRequestsHtml .= '<tr>';
                 $pendingRequestsHtml .= '<td>' . htmlspecialchars($requesterName) . '</td>';
                 $pendingRequestsHtml .= '<td>' . htmlspecialchars($request['scilabName']) . '</td>';
-                $pendingRequestsHtml .= '<td>' . htmlspecialchars($request['inclusiveDate']) . '</td>';
+                $pendingRequestsHtml .= '<td>' . htmlspecialchars($request['dateLabel']) . '</td>';
                 $pendingRequestsHtml .= '<td>' . htmlspecialchars($request['inclusiveTime']) . '</td>';
                 if ($_SESSION['role'] === 'teacher') {
                     $pendingRequestsHtml .= '<td><a href="supervisor_approve.php?id=' . $request['id'] . '" class="btn-liquid">View</a></td>';

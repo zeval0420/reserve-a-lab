@@ -2,6 +2,7 @@
     include('../scilab/helperFiles/db_connection.php');
     include('helperFiles/session_handler.php');
     require_once __DIR__ . '/helperFiles/input.php';
+    require_once __DIR__ . '/helperFiles/request_dates.php';
 
     $email = $_SESSION['email'] ?? null;
 
@@ -124,6 +125,8 @@
         $requests[] = $r;
         $formIDs[] = $r['id'];
     }
+    // dateList / dateLabel: all the days of each request (inclusiveDate is the earliest)
+    $requests = scilab_attach_date_labels($conn, $requests);
 
     $materials = [];
     $materialsDetailed = [];
@@ -816,7 +819,7 @@
                                 <td><?= htmlspecialchars("Grade {$row['gradeLevel']} - {$row['sections']}") ?></td>
                                 <td><?= htmlspecialchars($row['subject']) ?></td>
                                 <td><?= htmlspecialchars($row['subjectTopic']) ?></td>
-                                <td><?= htmlspecialchars($row['inclusiveDate'] . " (" . $row['inclusiveTime'] . ")") ?></td>
+                                <td><?= htmlspecialchars($row['dateLabel'] . " (" . $row['inclusiveTime'] . ")") ?></td>
                                 <?php
                                     $allMats = $materials[$row['id']] ?? [];
                                     $totalMats = count($allMats);
@@ -1050,7 +1053,7 @@
                         <div class="detail-field">
                             <div class="detail-label">Date of Use</div>
                             <div class="detail-value">
-                                ${ralEsc(data.inclusiveDate) || '—'}
+                                ${ralEsc(data.dateLabel || data.inclusiveDate) || '—'}
                             </div>
                         </div>
 

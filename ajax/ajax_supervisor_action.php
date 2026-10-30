@@ -122,6 +122,7 @@ function sendNotificationToAdmins($conn, $requestID) {
     $res = $stmt->get_result();
     $data = $res->fetch_assoc();
     $stmt->close();
+    $data = scilab_label_row($conn, $data);
 
     if (!$data) return;
 
@@ -232,6 +233,7 @@ function sendNotificationToSubjectTeacher($conn, $requestID) {
     $res = $stmt->get_result();
     $data = $res->fetch_assoc();
     $stmt->close();
+    $data = scilab_label_row($conn, $data);
 
     if (!$data) return false;
 
@@ -346,6 +348,7 @@ function sendNotificationToCIDChief($conn, $requestID) {
     $res = $stmt->get_result();
     $data = $res->fetch_assoc();
     $stmt->close();
+    $data = scilab_label_row($conn, $data);
 
     if (!$data) return;
 
@@ -466,6 +469,7 @@ function scilab_dispatch_stage_notification($conn, $requestID, $stage)
     $data = $stmt->get_result()->fetch_assoc();
     $stmt->close();
     if (!$data) return false;
+    $data = scilab_label_row($conn, $data);
 
     $newFlow = scilab_is_subject_teacher_flow($data);
 
@@ -579,7 +583,17 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
 
     $teacher = implode(', ', $teachers);
 
-    $startDate = $_POST['inclusive_date'] ?? '';
+    // One or more days (forms.php sends inclusive_dates as a JSON list; inclusive_date is the old single field)
+    $requestDates = scilab_normalize_dates($_POST['inclusive_dates'] ?? ($_POST['inclusive_date'] ?? ''));
+    if (!$requestDates) {
+        echo "Please select at least one valid date.";
+        exit();
+    }
+    if (count($requestDates) > SCILAB_MAX_REQUEST_DATES) {
+        echo "A request can cover at most " . SCILAB_MAX_REQUEST_DATES . " dates.";
+        exit();
+    }
+    $startDate = $requestDates[0]; // inclusiveDate holds the earliest day
     $startTime = $_POST['start_time'] ?? '';
     $endTime = $_POST['end_time'] ?? '';
     $formattedTime = formatTime($startTime) . " to " . formatTime($endTime);
@@ -595,9 +609,9 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
     }
 
     // Refuse a slot an approved request already holds (approval checks again under a lock)
-    $slotConflict = scilab_find_slot_conflict($conn, $scilabName, $startDate, $formattedTime);
+    $slotConflict = scilab_find_slot_conflict($conn, $scilabName, $requestDates, $formattedTime);
     if ($slotConflict) {
-        echo $scilabName . " is already booked on " . date('F j, Y', strtotime($startDate)) . " from " . $slotConflict['inclusiveTime'] . ". Please choose another time or laboratory.";
+        echo $scilabName . " is already booked on " . date('F j, Y', strtotime($slotConflict['conflictDate'])) . " from " . $slotConflict['inclusiveTime'] . ". Please choose another time or laboratory.";
         exit();
     }
 
@@ -736,6 +750,13 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
     }
 
     $formID = $stmt->insert_id;
+
+    if (!scilab_save_request_dates($conn, $formID, $requestDates)) {
+        // Do not leave a request that the conflict checks cannot see
+        $conn->query("DELETE FROM scilab_form_requests WHERE id = " . (int) $formID);
+        echo "error";
+        exit();
+    }
 
     $materials = [];
     $stmt2 = $conn->prepare("INSERT INTO scilab_material_requests (formID, item, quantity, unit, description) VALUES (?, ?, ?, ?, ?)");

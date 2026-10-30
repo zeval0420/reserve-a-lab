@@ -73,6 +73,10 @@ if (!$formData) {
 
 $stmt->close();
 
+// inclusiveDate prints as the list of every day of the request
+require_once __DIR__ . '/../helperFiles/request_dates.php';
+$formData = scilab_label_row($conn, $formData);
+
 // Fetch materials/equipment
 $stmt = $conn->prepare("
     SELECT 

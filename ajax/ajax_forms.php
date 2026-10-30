@@ -356,7 +356,7 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
     $scilabName = $_POST['scilabName'];
     $disabled = [];
 
-    $stmt = $conn->prepare("SELECT inclusiveDate FROM scilab_form_requests WHERE scilabName = ? AND statusScilabPersonnel = 'Approved'");
+    $stmt = $conn->prepare("SELECT DISTINCT d.useDate FROM scilab_request_dates d JOIN scilab_form_requests r ON r.id = d.formID WHERE r.scilabName = ? AND r.statusScilabPersonnel = 'Approved'");
     if (!$stmt) {
         echo json_encode(['error' => 'Prepare failed']);
         exit();
@@ -367,7 +367,7 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
     $res = $stmt->get_result();
 
     while ($row = $res->fetch_assoc()) {
-        $disabled[] = $row['inclusiveDate'];
+        $disabled[] = $row['useDate'];
     }
 
     echo json_encode($disabled);
@@ -465,12 +465,13 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
     }
 
     $scilabName = $_POST['scilabName'] ?? '';
-    $date = $_POST['date'] ?? '';
+    // 'dates' is the JSON list sent by forms.php; 'date' is the old single value
+    $dates = scilab_normalize_dates($_POST['dates'] ?? ($_POST['date'] ?? ''));
     $startTime = $_POST['startTime'] ?? '';
     $endTime = $_POST['endTime'] ?? '';
     $exclude_id = isset($_POST['exclude_id']) ? intval($_POST['exclude_id']) : 0;
 
-    if (!$scilabName || !$date || !$startTime || !$endTime) {
+    if (!$scilabName || !$dates || !$startTime || !$endTime) {
         echo json_encode(['status' => 'error', 'message' => 'Missing parameters']);
         exit();
     }
@@ -478,13 +479,13 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
     $startTs = strtotime($startTime);
     $endTs = strtotime($endTime);
 
-    if ($exclude_id > 0) {
-        $stmt = $conn->prepare("SELECT id, statusScilabPersonnel, inclusiveTime, requesterEmployeeID, subject, subjectTopic FROM scilab_form_requests WHERE scilabName = ? AND inclusiveDate = ? AND statusScilabPersonnel NOT IN ('Rejected', 'Cancelled') AND id != ?");
-        $stmt->bind_param("ssi", $scilabName, $date, $exclude_id);
-    } else {
-        $stmt = $conn->prepare("SELECT id, statusScilabPersonnel, inclusiveTime, requesterEmployeeID, subject, subjectTopic FROM scilab_form_requests WHERE scilabName = ? AND inclusiveDate = ? AND statusScilabPersonnel NOT IN ('Rejected', 'Cancelled')");
-        $stmt->bind_param("ss", $scilabName, $date);
-    }
+    $marks = implode(',', array_fill(0, count($dates), '?'));
+    $stmt = $conn->prepare("SELECT r.id, r.statusScilabPersonnel, r.inclusiveTime, r.requesterEmployeeID, r.subject, r.subjectTopic, d.useDate
+        FROM scilab_form_requests r
+        JOIN scilab_request_dates d ON d.formID = r.id
+        WHERE r.scilabName = ? AND r.statusScilabPersonnel NOT IN ('Rejected', 'Cancelled') AND r.id != ? AND d.useDate IN ($marks)
+        ORDER BY d.useDate ASC");
+    $stmt->bind_param('si' . str_repeat('s', count($dates)), $scilabName, $exclude_id, ...$dates);
 
     $stmt->execute();
     $result = $stmt->get_result();
@@ -501,6 +502,7 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
                 $conflicts[] = [
                     'status' => $row['statusScilabPersonnel'],
                     'time' => $row['inclusiveTime'],
+                    'date' => $row['useDate'],
                     'subject' => $row['subject'] . ' - ' . $row['subjectTopic']
                 ];
             }

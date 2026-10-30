@@ -6,6 +6,7 @@
     include('../scilab/helperFiles/db_connection.php');
     include('helperFiles/session_handler.php');
     require_once __DIR__ . '/helperFiles/input.php';
+    require_once __DIR__ . '/helperFiles/request_dates.php';
 
     $email = $_SESSION['email'];
     $username = $_SESSION['username'];
@@ -72,6 +73,8 @@
         $requests[] = $row;
         $formIDs[] = $row['id'];
     }
+    // dateList / dateLabel: all the days of each request (inclusiveDate is the earliest)
+    $requests = scilab_attach_date_labels($conn, $requests);
 
     $counts = [
         'Pending' => 0,
@@ -1047,7 +1050,7 @@
                                         <td><?= htmlspecialchars("Grade ".$row['gradeLevel']." - ".$row['sections']) ?></td>
                                         <td><?= htmlspecialchars($row['subject']) ?></td>
                                         <td><?= htmlspecialchars($row['subjectTopic']) ?></td>
-                                        <td><?= htmlspecialchars($row['inclusiveDate']).' ('.htmlspecialchars($row['inclusiveTime']).')' ?></td>
+                                        <td><?= htmlspecialchars($row['dateLabel']).' ('.htmlspecialchars($row['inclusiveTime']).')' ?></td>
                                         <td><?= $materialText ?></td>
                                         <td><?= $teacherInCharge ?></td>
                                         <td><?= $flagged ? '<span class="request-flag-badge" title="Requested less than 3 days before lab use">FLAGGED</span><div class="request-flag-sub">' . $daysBeforeUse . ' day(s) before use</div>' : '<span class="request-flag-none">—</span>' ?></td>
@@ -1605,7 +1608,7 @@
                     detailField('Grade - Section/s', 'Grade ' + d.gradeLevel + ' - ' + d.sections) +
                     detailField('Subject', d.subject) +
                     detailField('Topic', d.subjectTopic) +
-                    detailField('Date of Use', d.inclusiveDate) +
+                    detailField('Date of Use', d.dateLabel || d.inclusiveDate) +
                     detailField('Time', d.inclusiveTime) +
                     detailField('Teacher-in-Charge', d.teacherInCharge) +
                     detailField('Flag', d.flagged ? 'Flagged: ' + d.daysBeforeUse + ' day(s) before use' : 'None') +
@@ -1709,7 +1712,7 @@
                 );
 
                 $('#approveDate').text(
-                    data.inclusiveDate || '—'
+                    data.dateLabel || data.inclusiveDate || '—'
                 );
 
                 $('#approveTime').text(
@@ -1765,7 +1768,7 @@
                         action: 'check_conflict',
                         csrf_token: $('meta[name="csrf-token"]').attr('content'),
                         scilabName: data.scilabName,
-                        date: data.inclusiveDate,
+                        dates: JSON.stringify(data.dateList && data.dateList.length ? data.dateList : [data.inclusiveDate]),
                         startTime: timeParts[0].trim(),
                         endTime: timeParts[1].trim(),
                         exclude_id: data.id
@@ -1906,7 +1909,7 @@
                     <p><strong>Requester:</strong> ${ralEsc(data.requesterName || data.requesterEmployeeID)}</p>
                     <p><strong>Subject:</strong> ${ralEsc(data.subject)}</p>
                     <p><strong>Topic:</strong> ${ralEsc(data.subjectTopic)}</p>
-                    <p><strong>Date of Use:</strong> ${ralEsc(data.inclusiveDate)}</p>
+                    <p><strong>Date of Use:</strong> ${ralEsc(data.dateLabel || data.inclusiveDate)}</p>
                     <p><strong>Time:</strong> ${ralEsc(data.inclusiveTime)}</p>
                     <p>
                         <strong>Requested Materials:</strong><br>
@@ -2567,7 +2570,7 @@
             $('#cancelSummary').html('<div class="detail-grid">' +
                 field('Requester', row.requesterName || row.requesterEmployeeID) +
                 field('Laboratory', row.scilabName) +
-                field('Date of Use', row.inclusiveDate + ' (' + row.inclusiveTime + ')') +
+                field('Date of Use', (row.dateLabel || row.inclusiveDate) + ' (' + row.inclusiveTime + ')') +
                 field('Status', row.statusScilabPersonnel) + '</div>' +
                 '<p class="custom-modal-section-title">Requested Materials</p><div style="margin-bottom:16px;">' + (row.materialsDetailed || '—') + '</div>');
             $('#cancelNotice').html(approved

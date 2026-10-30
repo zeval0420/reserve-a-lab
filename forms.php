@@ -340,6 +340,23 @@
                 box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
             }
 
+            /* Multiple dates: picker row + removable chips (one chip per run of days) */
+            .date-adder { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 6px; }
+            .date-adder .form-control { width: auto; flex: 1 1 160px; max-width: 220px; }
+            .date-adder-sep { color: #6b7280; }
+            .date-chips { display: flex; flex-wrap: wrap; gap: 8px; min-height: 34px; }
+            .date-chips-empty { color: #6b7280; font-style: italic; padding-top: 6px; }
+            .date-chip {
+                display: inline-flex; align-items: center; gap: 8px;
+                padding: 5px 6px 5px 12px; border-radius: 999px;
+                background: #e8eefc; color: #1f3f94; font-weight: 600;
+            }
+            .date-chip button {
+                border: 0; background: transparent; color: inherit; line-height: 1;
+                width: 22px; height: 22px; border-radius: 50%; cursor: pointer;
+            }
+            .date-chip button:hover, .date-chip button:focus { background: rgba(31, 63, 148, 0.18); }
+
             @media (max-width: 768px) {
                 .form-title { width: 95%; padding: 20px 5%; margin-top: 20px; }
                 .form-title h4 { font-size: 1.8rem; }
@@ -490,11 +507,20 @@
 
                     <!-- Schedule -->
                     <div class="form-row row">
-                        <div class="form-group col-md-4">
-                            <label class="required">Date:</label>
-                            <input id="datepicker" type="date" class="form-control liquid-input" name="inclusive_date" required
-                                value="<?= htmlspecialchars($_SESSION['selected_date'] ?? '') ?>">
+                        <div class="form-group col-md-12">
+                            <label class="required">Date/s:</label>
+                            <div class="date-adder">
+                                <input id="datepicker" type="date" class="form-control liquid-input" aria-label="Date, or first date of a range">
+                                <span class="date-adder-sep">until</span>
+                                <input id="datepicker-end" type="date" class="form-control liquid-input" aria-label="Last date of a range (optional)">
+                                <button type="button" id="add-date-btn" class="btn btn-primary"><span class="glyphicon glyphicon-plus"></span> Add</button>
+                            </div>
+                            <p class="help-block" style="margin-bottom:6px;">One day: pick it, then Add. Several days in a row (e.g. Nov 10-14): pick the first day, set "until" to the last day, then Add. Repeat for other days (e.g. Nov 3, 5, 9).</p>
+                            <div id="date-chips" class="date-chips" aria-live="polite"></div>
                         </div>
+                    </div>
+
+                    <div class="form-row row">
                         <div class="form-group col-md-4">
                             <label class="required">Start Time:</label>
                             <input type="time" class="form-control liquid-input" name="start_time" required>
@@ -854,9 +880,112 @@
             `);
         }
 
+        /* ---------- Dates of the request: one day, several days, or a range ---------- */
+        const MAX_REQUEST_DATES = 62; // same cap as the server (SCILAB_MAX_REQUEST_DATES)
+        let selectedDates = [];       // sorted 'YYYY-MM-DD' strings
+        let currentDisabledDates = []; // days the chosen venue already has approved
+
+        const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const dayMs = 86400000;
+        const toUtc = iso => { const p = iso.split('-'); return Date.UTC(+p[0], +p[1] - 1, +p[2]); };
+        const toIso = ms => new Date(ms).toISOString().slice(0, 10);
+
+        /* Runs of consecutive days: [{from, to}] */
+        function dateRuns(dates) {
+            const runs = [];
+            dates.forEach(d => {
+                const last = runs[runs.length - 1];
+                if (last && toUtc(d) - toUtc(last.to) === dayMs) last.to = d;
+                else runs.push({ from: d, to: d });
+            });
+            return runs;
+        }
+
+        function runLabel(run) {
+            const a = run.from.split('-'), b = run.to.split('-');
+            const start = MONTHS[+a[1] - 1] + ' ' + (+a[2]);
+            if (run.from === run.to) return start + ', ' + a[0];
+            if (a[1] === b[1] && a[0] === b[0]) return start + '-' + (+b[2]) + ', ' + a[0];
+            return start + ', ' + a[0] + ' - ' + MONTHS[+b[1] - 1] + ' ' + (+b[2]) + ', ' + b[0];
+        }
+
+        /* "Nov 3, 5, 9, 10-14, 2026" for the review summary (same wording as the server) */
+        function datesSummary(dates) {
+            if (!dates.length) return '';
+            if (dates.length === 1) return dates[0];
+            const months = {};
+            dates.forEach(d => { (months[d.slice(0, 7)] = months[d.slice(0, 7)] || []).push(+d.slice(8)); });
+            const years = new Set(Object.keys(months).map(k => k.slice(0, 4)));
+            const parts = Object.keys(months).map(ym => {
+                const days = months[ym], chunks = [];
+                for (let i = 0; i < days.length;) {
+                    let j = i;
+                    while (j + 1 < days.length && days[j + 1] === days[j] + 1) j++;
+                    if (j - i >= 2) chunks.push(days[i] + '-' + days[j]);
+                    else for (let k = i; k <= j; k++) chunks.push(String(days[k]));
+                    i = j + 1;
+                }
+                return MONTHS[+ym.slice(5) - 1] + ' ' + chunks.join(', ') + (years.size > 1 ? ', ' + ym.slice(0, 4) : '');
+            });
+            return parts.join('; ') + (years.size > 1 ? '' : ', ' + [...years][0]);
+        }
+
+        function renderDateChips() {
+            const $box = $('#date-chips').empty();
+            if (!selectedDates.length) {
+                $box.append('<span class="date-chips-empty">No date added yet.</span>');
+                return;
+            }
+            dateRuns(selectedDates).forEach(run => {
+                const $chip = $('<span class="date-chip"></span>').text(runLabel(run));
+                $('<button type="button" aria-label="Remove"></button>').html('&times;')
+                    .attr({ 'data-from': run.from, 'data-to': run.to, title: 'Remove ' + runLabel(run) })
+                    .appendTo($chip);
+                $box.append($chip);
+            });
+        }
+
+        /* Add days to the selection; days the venue already has approved are skipped and reported. */
+        function addSelectedDates(list) {
+            const set = new Set(selectedDates);
+            let skipped = 0, capped = false;
+            list.forEach(d => {
+                if (set.has(d)) return;
+                if (currentDisabledDates.includes(d)) { skipped++; return; }
+                if (set.size >= MAX_REQUEST_DATES) { capped = true; return; }
+                set.add(d);
+            });
+            selectedDates = [...set].sort();
+            renderDateChips();
+            $('#datepicker').removeClass('is-invalid');
+            if (skipped) showToast(skipped + ' date(s) skipped: unavailable for the selected venue.', 'warning');
+            if (capped) showToast('A request can cover at most ' + MAX_REQUEST_DATES + ' dates.', 'warning');
+            if (typeof checkRealtimeConflict === 'function') checkRealtimeConflict();
+        }
+
+        function addDateFromPickers() {
+            const start = $('#datepicker').val();
+            const end = $('#datepicker-end').val() || start;
+            const todayIso = new Date().toISOString().split('T')[0];
+            if (!start) { showToast('Pick a date first.', 'warning'); $('#datepicker').addClass('is-invalid'); return; }
+            if (end < start) { showToast('"Until" must not be before the first date.', 'warning'); $('#datepicker-end').addClass('is-invalid'); return; }
+            if (start < todayIso) { showToast('Dates cannot be in the past.', 'warning'); $('#datepicker').addClass('is-invalid'); return; }
+            if ((toUtc(end) - toUtc(start)) / dayMs + 1 > MAX_REQUEST_DATES) {
+                showToast('A request can cover at most ' + MAX_REQUEST_DATES + ' dates.', 'warning');
+                return;
+            }
+            const days = [];
+            for (let t = toUtc(start); t <= toUtc(end); t += dayMs) days.push(toIso(t));
+            addSelectedDates(days);
+            $('#datepicker, #datepicker-end').val('').removeClass('is-invalid');
+        }
+
         function resetForm() {
             const form = $('#reservationForm')[0];
             form.reset();
+
+            selectedDates = [];
+            renderDateChips();
 
             // Reset sections multiselect
             $('#sections-checkboxes').empty().multiselect('rebuild');
@@ -971,10 +1100,9 @@
                     isValid = false;
                 }
 
-                // Check that date is filled
-                const dateVal = $('#datepicker').val();
-                if (!dateVal) {
-                    showToast("Please select a date.", 'warning');
+                // Check that at least one date was added (a date picked but not added does not count)
+                if (!selectedDates.length) {
+                    showToast("Please add at least one date.", 'warning');
                     $('#datepicker').addClass('is-invalid');
                     isValid = false;
                 }
@@ -1024,7 +1152,6 @@
 
                 const form = $(this);
                 const venue = $('#venue_select').val();
-                const date = $('#datepicker').val();
                 const start = $('input[name="start_time"]').val();
                 const end = $('input[name="end_time"]').val();
 
@@ -1032,7 +1159,7 @@
                     action: 'check_conflict',
                     csrf_token: $('input[name="csrf_token"]', '#reservationForm').val(),
                     scilabName: venue,
-                    date: date,
+                    dates: JSON.stringify(selectedDates),
                     startTime: start,
                     endTime: end
                 }, function(res) {
@@ -1041,7 +1168,7 @@
                         const conflictWord = res.conflict_type === 'approved' ? 'approved' : 'pending';
                         conflictAlert = `
                             <div class="alert alert-warning" style="margin-bottom: 15px;">
-                                <strong>Schedule Conflict:</strong> An <b>${conflictWord}</b> request already exists for this timeframe (${ralEsc(res.details.time)} - ${ralEsc(res.details.subject)}). Approval is to the discretion of the Science Laboratory Personnel.
+                                <strong>Schedule Conflict:</strong> An <b>${conflictWord}</b> request already exists for this timeframe (${ralEsc(res.details.time)} - ${ralEsc(res.details.subject)}${res.details.date ? ' on ' + ralEsc(res.details.date) : ''}). Approval is to the discretion of the Science Laboratory Personnel.
                             </div>
                         `;
                     }
@@ -1084,8 +1211,8 @@
                                     <td>${ralEsc($('#subject-teacher-select').val() || '')}</td>
                                 </tr>` : ''}
                                 <tr>
-                                    <th>Date</th>
-                                    <td>${form.find('[name="inclusive_date"]').val()}</td>
+                                    <th>Date/s</th>
+                                    <td>${ralEsc(datesSummary(selectedDates))}</td>
                                 </tr>
                                 <tr>
                                     <th>Time</th>
@@ -1244,7 +1371,8 @@
                 formData.set('subject', $('#subject_select').val());
                 formData.set('topic', $('input[name="topic"]').val());
                 formData.set('unit', $('#unit-select').val());
-                formData.set('inclusive_date', $('#datepicker').val());
+                formData.delete('inclusive_date');
+                formData.set('inclusive_dates', JSON.stringify(selectedDates));
                 formData.set('start_time', $('input[name="start_time"]').val());
                 formData.set('end_time', $('input[name="end_time"]').val());
 
@@ -1368,18 +1496,17 @@
 
             function checkRealtimeConflict() {
                 const venue = $('#venue_select').val();
-                const date = $('#datepicker').val();
                 let start = $('input[name="start_time"]').val();
                 let end = $('input[name="end_time"]').val();
                 
                 $('#conflict-warning-container').hide().empty();
                 
-                if (venue && date && start && end && start < end) {
+                if (venue && selectedDates.length && start && end && start < end) {
                     $.post('ajax/ajax_forms.php', {
                         action: 'check_conflict',
                         csrf_token: $('input[name="csrf_token"]', '#reservationForm').val(),
                         scilabName: venue,
-                        date: date,
+                        dates: JSON.stringify(selectedDates),
                         startTime: start,
                         endTime: end
                     }, function(res) {
@@ -1387,13 +1514,13 @@
                             if (res.conflict_type === 'approved') {
                                 $('#conflict-warning-container').html(`
                                     <div class="alert alert-warning" style="margin-bottom:0; padding:10px; border-radius:8px;">
-                                        <strong><i class="glyphicon glyphicon-warning-sign"></i> Schedule Conflict:</strong> An <b>approved</b> request already exists for this timeframe (${ralEsc(res.details.time)}). Approval is to the discretion of the Science Laboratory Personnel.
+                                        <strong><i class="glyphicon glyphicon-warning-sign"></i> Schedule Conflict:</strong> An <b>approved</b> request already exists for this timeframe (${ralEsc(res.details.time)}${res.details.date ? ' on ' + ralEsc(res.details.date) : ''}). Approval is to the discretion of the Science Laboratory Personnel.
                                     </div>
                                 `).fadeIn();
                             } else if (res.conflict_type === 'pending') {
                                 $('#conflict-warning-container').html(`
                                     <div class="alert alert-warning" style="margin-bottom:0; padding:10px; border-radius:8px;">
-                                        <strong><i class="glyphicon glyphicon-warning-sign"></i> Pending Request Conflict:</strong> There is a pending request for this timeframe (${ralEsc(res.details.time)} - ${ralEsc(res.details.subject)}). Be aware when submitting.
+                                        <strong><i class="glyphicon glyphicon-warning-sign"></i> Pending Request Conflict:</strong> There is a pending request for this timeframe (${ralEsc(res.details.time)} - ${ralEsc(res.details.subject)}${res.details.date ? ' on ' + ralEsc(res.details.date) : ''}). Be aware when submitting.
                                     </div>
                                 `).fadeIn();
                             }
@@ -1402,7 +1529,9 @@
                 }
             }
 
-            $('input[name="start_time"], input[name="end_time"], #venue_select, #datepicker').on('change', function() {
+            window.checkRealtimeConflict = checkRealtimeConflict; // addSelectedDates() lives outside this ready handler
+
+            $('input[name="start_time"], input[name="end_time"], #venue_select').on('change', function() {
                 checkRealtimeConflict();
             });
 
@@ -1487,25 +1616,54 @@
             });
 
             /* Formulates dynamic lockout mechanisms querying API to restrict visually invalid form variables natively. */
-            let currentDisabledDates = [];
             const today = new Date().toISOString().split('T')[0];
             const datepicker = document.getElementById('datepicker');
+            const datepickerEnd = document.getElementById('datepicker-end');
             const sessionDate = <?= json_encode((string) ($_SESSION['selected_date'] ?? ''), JSON_HEX_TAG) ?>;
 
+            /* Picking a day the venue already has approved is refused right away. */
             function dateInputHandler() {
-                if(currentDisabledDates.includes(this.value)) { showToast('This date is unavailable for the selected venue.', 'warning'); this.value=''; }
+                if (currentDisabledDates.includes(this.value)) { showToast('This date is unavailable for the selected venue.', 'warning'); this.value = ''; }
+                else if (this === datepicker && datepickerEnd.value && datepickerEnd.value < this.value) { datepickerEnd.value = ''; }
+                if (this === datepicker) datepickerEnd.setAttribute('min', this.value || today);
             }
 
             // Already inside jQuery's ready handler, so this runs now (a DOMContentLoaded listener added here never fired).
             datepicker.setAttribute('min', today);
-            datepicker.value = sessionDate && sessionDate >= today ? sessionDate : '';
+            datepickerEnd.setAttribute('min', today);
             datepicker.addEventListener('input', dateInputHandler);
+            datepickerEnd.addEventListener('input', dateInputHandler);
+            $('#add-date-btn').on('click', addDateFromPickers);
+            $('#datepicker, #datepicker-end').on('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); addDateFromPickers(); } });
+            $('#date-chips').on('click', 'button[data-from]', function() {
+                const from = $(this).data('from'), to = $(this).data('to');
+                selectedDates = selectedDates.filter(d => d < from || d > to);
+                renderDateChips();
+                checkRealtimeConflict();
+            });
+
+            // A day picked on the home calendar arrives in the session
+            renderDateChips();
+            if (sessionDate && sessionDate >= today) addSelectedDates([sessionDate]);
             loadDisabledDates($('#venue_select').val());
 
-            $('#venue_select').on('change', function() { datepicker.value=''; loadDisabledDates($(this).val()); });
+            /* A different venue has different booked days: clear the pickers and drop chosen days it cannot take. */
+            $('#venue_select').on('change', function() {
+                datepicker.value = ''; datepickerEnd.value = '';
+                loadDisabledDates($(this).val());
+            });
 
             function loadDisabledDates(scilabName) {
-                $.post('ajax/ajax_forms.php', { action:'get_disabled_dates', scilabName }, function(dates) { currentDisabledDates = dates; }, 'json')
+                $.post('ajax/ajax_forms.php', { action:'get_disabled_dates', scilabName }, function(dates) {
+                    currentDisabledDates = Array.isArray(dates) ? dates : [];
+                    const kept = selectedDates.filter(d => !currentDisabledDates.includes(d));
+                    if (kept.length !== selectedDates.length) {
+                        showToast((selectedDates.length - kept.length) + ' selected date(s) removed: unavailable for this venue.', 'warning');
+                        selectedDates = kept;
+                        renderDateChips();
+                        checkRealtimeConflict();
+                    }
+                }, 'json')
                 .fail((xhr,status,error) => showToast('Failed to load disabled dates: '+error, 'error'));
             }
         });

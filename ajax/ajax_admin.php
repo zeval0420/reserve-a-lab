@@ -98,7 +98,9 @@
                 'sections' => $row['sections'] ?: 'N/A',
                 'subject' => $row['subject'] ?? 'N/A',
                 'topic' => $row['subjectTopic'] ?? '',
-                'date' => date('M d, Y', strtotime($row['inclusiveDate'])),
+                'date' => count($dateList = scilab_request_dates($conn, $row['id'], $row['inclusiveDate'])) > 1
+                    ? scilab_format_dates($dateList)
+                    : date('M d, Y', strtotime($row['inclusiveDate'])),
                 'time' => $row['inclusiveTime'],
                 'submitted' => date('M d, Y g:i A', strtotime($row['dateRequested'])),
                 'requester' => $row['requesterName'] ? trim($row['requesterName']) : 'Unknown',

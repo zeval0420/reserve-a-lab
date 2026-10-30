@@ -516,10 +516,11 @@ if (!function_exists('scilab_deduct_inventory')) {
 
 if (!function_exists('scilab_find_slot_conflict')) {
     /**
-     * Find an approved request for the same lab and date whose time range
-     * ("9:00 AM to 11:00 AM") overlaps the given one. Touching boundaries do
-     * not overlap, as in the check_conflict action of ajax/ajax_forms.php.
-     * Returns the conflicting row (id, inclusiveTime) or null.
+     * Find an approved request for the same lab whose time range ("9:00 AM to 11:00 AM")
+     * overlaps the given one on ANY of the given dates. $date is one 'Y-m-d' string or a list of
+     * them (a request can use several days, see helperFiles/request_dates.php). Touching
+     * boundaries do not overlap, as in the check_conflict action of ajax/ajax_forms.php.
+     * Returns the conflicting row (id, inclusiveTime, conflictDate) or null.
      */
     function scilab_find_slot_conflict($conn, $scilabName, $date, $timeRange, $excludeId = 0)
     {
@@ -529,10 +530,18 @@ if (!function_exists('scilab_find_slot_conflict')) {
         $end = strtotime($range[1]);
         if ($start === false || $end === false) return null;
 
+        $dates = array_values(array_filter(is_array($date) ? $date : [$date], 'strlen'));
+        if (!$dates) return null;
+
         $excludeId = intval($excludeId);
-        $stmt = $conn->prepare("SELECT id, inclusiveTime FROM scilab_form_requests WHERE scilabName = ? AND inclusiveDate = ? AND statusScilabPersonnel = 'Approved' AND id != ?");
+        $marks = implode(',', array_fill(0, count($dates), '?'));
+        $stmt = $conn->prepare("SELECT r.id, r.inclusiveTime, d.useDate AS conflictDate
+            FROM scilab_form_requests r
+            JOIN scilab_request_dates d ON d.formID = r.id
+            WHERE r.scilabName = ? AND r.statusScilabPersonnel = 'Approved' AND r.id != ? AND d.useDate IN ($marks)
+            ORDER BY d.useDate ASC");
         if (!$stmt) return null;
-        $stmt->bind_param("ssi", $scilabName, $date, $excludeId);
+        $stmt->bind_param('si' . str_repeat('s', count($dates)), $scilabName, $excludeId, ...$dates);
         $stmt->execute();
         $result = $stmt->get_result();
 
@@ -581,6 +590,7 @@ if (!function_exists('scilab_approve_request')) {
         if (!$request) {
             return ['ok' => false, 'reason' => 'not_found', 'message' => 'Request not found.'];
         }
+        $requestDates = scilab_request_dates($conn, $formID, $request['inclusiveDate']);
 
         $stmt = $conn->prepare("SELECT id FROM scilab_availability WHERE scilabName = ?");
         $stmt->bind_param("s", $request['scilabName']);
@@ -599,11 +609,11 @@ if (!function_exists('scilab_approve_request')) {
                 $lock->close();
             }
 
-            $conflict = scilab_find_slot_conflict($conn, $request['scilabName'], $request['inclusiveDate'], $request['inclusiveTime'], $formID);
+            $conflict = scilab_find_slot_conflict($conn, $request['scilabName'], $requestDates, $request['inclusiveTime'], $formID);
             if ($conflict) {
                 $conn->rollback();
                 return ['ok' => false, 'reason' => 'slot_conflict', 'message' => 'Cannot approve: ' . $request['scilabName']
-                    . ' is already booked on ' . date('F j, Y', strtotime($request['inclusiveDate']))
+                    . ' is already booked on ' . date('F j, Y', strtotime($conflict['conflictDate']))
                     . ' from ' . $conflict['inclusiveTime'] . ' (request #' . $conflict['id'] . ').'];
             }
 
@@ -639,7 +649,7 @@ if (!function_exists('scilab_approve_request')) {
 
 // Helpers added with the subject-teacher / control-number / material-release work.
 // Each file is owned by one feature; see tasks-subject-teacher-release.md.
-foreach (['stage_flow.php', 'control_numbers.php', 'material_release.php'] as $ral_helper) {
+foreach (['stage_flow.php', 'control_numbers.php', 'material_release.php', 'request_dates.php'] as $ral_helper) {
     if (is_file(__DIR__ . '/' . $ral_helper)) {
         require_once __DIR__ . '/' . $ral_helper;
     }

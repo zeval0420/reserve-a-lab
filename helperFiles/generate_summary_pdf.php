@@ -4,6 +4,7 @@ ob_start();
 
 require_once '../vendor/autoload.php';
 require_once __DIR__ . '/control_numbers.php';
+require_once __DIR__ . '/request_dates.php';
 
 try {
     include('../../scilab/helperFiles/db_connection.php');
@@ -49,6 +50,7 @@ $sql = "
         st.lastname AS student_lastname,
         fr.inclusiveDate,
         fr.inclusiveTime,
+        fr.id AS formID,
         fr.control_equipment,
         fr.control_reagent,
         fr.control_permit,
@@ -59,7 +61,7 @@ $sql = "
     LEFT JOIN accounts a ON fr.requesterEmployeeID = a.employeeID
     LEFT JOIN student st ON fr.requesterEmployeeID = st.LRN
     WHERE fr.statusScilabPersonnel = 'Approved'
-    AND fr.inclusiveDate BETWEEN ? AND ?
+    AND EXISTS (SELECT 1 FROM scilab_request_dates rd WHERE rd.formID = fr.id AND rd.useDate BETWEEN ? AND ?)
 ";
 
 if ($filterByClassification) {
@@ -93,7 +95,13 @@ $stmt->execute();
 $result = $stmt->get_result();
 
 $categorizedItems = [];
+$dateLabels = [];
 while ($row = $result->fetch_assoc()) {
+    // Label of all the request's days, read now because the connection closes below
+    if (!isset($dateLabels[$row['formID']])) {
+        $dateLabels[$row['formID']] = scilab_request_dates_label($conn, $row['formID'], $row['inclusiveDate']);
+    }
+    $row['dateLabel'] = $dateLabels[$row['formID']];
     $categorizedItems[$row['classification']][] = $row;
 }
 
@@ -265,7 +273,7 @@ if (empty($categorizedItems)) {
                 <td>" . $description . "</td>
                 <td>" . $item['quantity'] . $unit . "</td>
                 <td>" . htmlspecialchars($requestorName) . "</td>
-                <td>" . htmlspecialchars($item['inclusiveDate'] . ' (' . $item['inclusiveTime'] . ')') . "</td>
+                <td>" . htmlspecialchars($item['dateLabel'] . ' (' . $item['inclusiveTime'] . ')') . "</td>
             </tr>
             ";
         }

@@ -271,7 +271,7 @@ if (!function_exists('scilab_release_get_data')) {
                 'lab' => $req['scilabName'],
                 'subject' => $req['subject'],
                 'topic' => $req['subjectTopic'],
-                'date' => $req['inclusiveDate'],
+                'date' => scilab_request_dates_label($conn, $req['id'], $req['inclusiveDate']),
                 'time' => $req['inclusiveTime'],
                 'status' => $req['statusScilabPersonnel'],
                 'releaseStatus' => $req['releaseStatus'],

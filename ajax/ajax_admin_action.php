@@ -98,7 +98,7 @@
             $id = $_POST['id'];
 
             // Get the request's date and time
-            $stmt = $conn->prepare("SELECT inclusiveDate, inclusiveTime FROM scilab_form_requests WHERE id = ?");
+            $stmt = $conn->prepare("SELECT scilabName, inclusiveDate, inclusiveTime FROM scilab_form_requests WHERE id = ?");
             $stmt->bind_param("i", $id);
             $stmt->execute();
             $result = $stmt->get_result();
@@ -109,33 +109,17 @@
             $request = $result->fetch_assoc();
             $stmt->close();
 
-            $date = $request['inclusiveDate'];
             $timeRange = explode(' to ', $request['inclusiveTime']);
             if (count($timeRange) !== 2) {
                 echo "invalid_time_format";
                 exit();
             }
 
-            $startTime = strtotime($timeRange[0]);
-            $endTime = strtotime($timeRange[1]);
-
-            // Get all other approved requests on the same date
-            $stmt = $conn->prepare("SELECT inclusiveTime FROM scilab_form_requests WHERE id != ? AND statusScilabPersonnel = 'Approved' AND inclusiveDate = ?");
-            $stmt->bind_param("is", $id, $date);
-            $stmt->execute();
-            $result = $stmt->get_result();
-
-            while ($row = $result->fetch_assoc()) {
-                $otherTimeRange = explode(' to ', $row['inclusiveTime']);
-                if (count($otherTimeRange) !== 2) continue;
-
-                $otherStart = strtotime($otherTimeRange[0]);
-                $otherEnd = strtotime($otherTimeRange[1]);
-
-                if ($startTime < $otherEnd && $endTime > $otherStart) {
-                    echo "conflict";
-                    exit();
-                }
+            // Any of the request's days overlapping an approved request counts
+            $dates = scilab_request_dates($conn, $id, $request['inclusiveDate']);
+            if (scilab_find_slot_conflict($conn, $request['scilabName'], $dates, $request['inclusiveTime'], $id)) {
+                echo "conflict";
+                exit();
             }
 
             echo "no_conflict";
@@ -272,7 +256,7 @@
                 LEFT JOIN accounts a ON fr.requesterEmployeeID = a.employeeID
                 LEFT JOIN student st ON fr.requesterEmployeeID = st.LRN
                 WHERE fr.statusScilabPersonnel = 'Approved'
-                AND fr.inclusiveDate BETWEEN ? AND ?
+                AND EXISTS (SELECT 1 FROM scilab_request_dates rd WHERE rd.formID = fr.id AND rd.useDate BETWEEN ? AND ?)
             ";
 
             if ($filterByClassification) {
@@ -301,8 +285,12 @@
             $result = $stmt->get_result();
 
             $categorizedItems = [];
+            $dateLabels = [];
             while ($row = $result->fetch_assoc()) {
                 $classification = $row['classification'];
+                if (!isset($dateLabels[$row['formID']])) {
+                    $dateLabels[$row['formID']] = scilab_request_dates_label($conn, $row['formID'], $row['inclusiveDate']);
+                }
                 // Initialize the category array if it doesn't exist
                 if (!isset($categorizedItems[$classification])) {
                     $categorizedItems[$classification] = [];
@@ -321,7 +309,7 @@
                     'quantity' => $row['quantity'], 
                     'unit' => $row['unit'],
                     'requestor' => $requestorName,
-                    'date' => $row['inclusiveDate'],
+                    'date' => $dateLabels[$row['formID']],
                     'time' => $row['inclusiveTime'],
                     'formID' => $row['formID'],
                     'controlNumber' => scilab_control_for_classification($classification, $row)

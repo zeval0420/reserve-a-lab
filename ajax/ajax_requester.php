@@ -1,6 +1,7 @@
 <?php
 include('../../scilab/helperFiles/db_connection.php');
 include('../helperFiles/session_handler.php');
+require_once __DIR__ . '/../helperFiles/request_dates.php';
 
 // Any logged-in user; POSTs must carry a valid CSRF token
 ral_require_login();
@@ -58,14 +59,16 @@ if (isset($_POST['action']) && $_POST['action'] === 'get_day_snapshot') {
     $currentSY = $syResult && $syResult->num_rows ? ($syResult->fetch_assoc()['currentSY'] ?? null) : null;
 
     if ($currentSY) {
-        $stmt = $conn->prepare("SELECT id, scilabName, inclusiveTime, statusScilabPersonnel 
-            FROM scilab_form_requests 
-            WHERE inclusiveDate = ? AND sy = ?");
+        $stmt = $conn->prepare("SELECT r.id, r.scilabName, r.inclusiveTime, r.statusScilabPersonnel 
+            FROM scilab_form_requests r
+            JOIN scilab_request_dates d ON d.formID = r.id
+            WHERE d.useDate = ? AND r.sy = ?");
         $stmt->bind_param("ss", $date, $currentSY);
     } else {
-        $stmt = $conn->prepare("SELECT id, scilabName, inclusiveTime, statusScilabPersonnel 
-            FROM scilab_form_requests 
-            WHERE inclusiveDate = ?");
+        $stmt = $conn->prepare("SELECT r.id, r.scilabName, r.inclusiveTime, r.statusScilabPersonnel 
+            FROM scilab_form_requests r
+            JOIN scilab_request_dates d ON d.formID = r.id
+            WHERE d.useDate = ?");
         $stmt->bind_param("s", $date);
     }
 
@@ -176,7 +179,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'notification_feed') {
             'lab' => $row['scilabName'],
             'subject' => $row['subject'] ?? 'N/A',
             'status' => $status,
-            'date' => date('M d, Y', strtotime($row['inclusiveDate'])),
+            'date' => count($dateList = scilab_request_dates($conn, $row['id'], $row['inclusiveDate'])) > 1
+                ? scilab_format_dates($dateList)
+                : date('M d, Y', strtotime($row['inclusiveDate'])),
             'time' => $row['inclusiveTime'],
             'submitted' => date('M d, Y g:i A', strtotime($row['dateRequested']))
         ];
@@ -196,7 +201,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'get_disabled_labs') {
     $date = $_POST['date'];
     $disabled = [];
 
-    $stmt = $conn->prepare("SELECT scilabName FROM scilab_form_requests WHERE inclusiveDate = ? AND statusScilabPersonnel = 'approved'");
+    $stmt = $conn->prepare("SELECT r.scilabName FROM scilab_form_requests r JOIN scilab_request_dates d ON d.formID = r.id WHERE d.useDate = ? AND r.statusScilabPersonnel = 'approved'");
     $stmt->bind_param("s", $date);
     $stmt->execute();
     $res = $stmt->get_result();
@@ -237,7 +242,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'get_pending_count' && isset
     $syResult = $conn->query("SELECT MAX(value) AS currentSY FROM current WHERE description='School Year'");
     $currentSY = $syResult->fetch_assoc()['currentSY'];
 
-    $stmt = $conn->prepare("SELECT COUNT(*) AS pendingCount FROM scilab_form_requests WHERE scilabName = ? AND inclusiveDate = ? AND statusScilabPersonnel = 'Pending' AND sy = ?");
+    $stmt = $conn->prepare("SELECT COUNT(DISTINCT r.id) AS pendingCount FROM scilab_form_requests r JOIN scilab_request_dates d ON d.formID = r.id WHERE r.scilabName = ? AND d.useDate = ? AND r.statusScilabPersonnel = 'Pending' AND r.sy = ?");
     $stmt->bind_param("sss", $lab, $date, $currentSY);
     $stmt->execute();
     $res = $stmt->get_result();

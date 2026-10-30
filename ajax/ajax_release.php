@@ -85,5 +85,6 @@ try {
     }
 } catch (Throwable $e) {
     error_log('ajax_release.php: ' . $e->getMessage());
-    release_json(['success' => false, 'message' => 'Something went wrong. Nothing was changed.'], 500);
+    // Admin-only endpoint, so the cause is shown too (e.g. a migration that was not run on this database)
+    release_json(['success' => false, 'message' => 'Something went wrong. Nothing was changed. (' . $e->getMessage() . ')'], 500);
 }

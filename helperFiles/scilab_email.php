@@ -384,6 +384,7 @@ function scilab_send_submission_confirmation($conn, $requestId) {
     $data = $stmt->get_result()->fetch_assoc();
     $stmt->close();
     if (!$data) return;
+    $data = scilab_label_row($conn, $data);
 
     $requesterEmail = scilab_resolve_requester_email($conn, $data['requesterEmployeeID'] ?? '', $requestId);
     if (!$requesterEmail && !empty($_SESSION['email'])) {
@@ -586,7 +587,7 @@ function scilab_notify_unresolved_stage($conn, $request, $stage, $detail) {
             'Teacher In-Charge' => $request['teacherInCharge'] ?? '',
             'Subject Teacher' => scilab_is_subject_teacher_flow($request) ? $request['subjectTeacher'] : 'N/A',
             'Academic Unit' => $request['subjectAcademicUnit'] ?? '',
-            'Date/Time' => trim(($request['inclusiveDate'] ?? '') . ' ' . ($request['inclusiveTime'] ?? '')),
+            'Date/Time' => trim(scilab_request_dates_label($conn, $id, $request['inclusiveDate'] ?? '') . ' ' . ($request['inclusiveTime'] ?? '')),
         ],
         'Open Request',
         $actionLink
@@ -631,7 +632,7 @@ function scilab_notify_stage_status($conn, $request, $currentStage, $event, $rea
             $freshRow = $freshStmt->get_result()->fetch_assoc();
             $freshStmt->close();
             if ($freshRow) {
-                $request = $freshRow;
+                $request = scilab_label_row($conn, $freshRow);
             }
         }
     }
