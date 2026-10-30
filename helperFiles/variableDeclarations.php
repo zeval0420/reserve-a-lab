@@ -460,11 +460,11 @@ if (!function_exists('scilab_deduct_inventory')) {
         $upd = $conn->prepare("UPDATE scilab_inventory SET quantity = quantity - ? WHERE id = ? AND quantity >= ?");
         if (!$upd) return ['ok' => false, 'message' => 'Could not update the inventory.'];
 
-        // Ledger of what was taken out of stock (scilab_inventory_deductions): one row per
+        // Ledger of what was taken out of stock (scilab_request_deductions): one row per
         // form + inventory row, so a later cancel or release can put back / adjust exactly this.
         // A row already restored by a cancel starts over; otherwise quantities add up, in step
         // with the stock changes made here.
-        $ledger = $conn->prepare("INSERT INTO scilab_inventory_deductions (formID, inventoryID, quantity) VALUES (?, ?, ?)
+        $ledger = $conn->prepare("INSERT INTO scilab_request_deductions (formID, inventoryID, quantity) VALUES (?, ?, ?)
             ON DUPLICATE KEY UPDATE quantity = IF(restoredAt IS NULL, quantity + VALUES(quantity), VALUES(quantity)), restoredAt = NULL");
         if (!$ledger) {
             $upd->close();
@@ -582,7 +582,7 @@ if (!function_exists('scilab_approve_request')) {
      *  2. refuse if an approved request for the same lab and date overlaps;
      *  3. run $markApproved($conn), the caller's status UPDATE (returns bool);
      *  4. deduct the materials (scilab_deduct_inventory), refusing if stock is short, and
-     *     record them in the scilab_inventory_deductions ledger;
+     *     record them in the scilab_request_deductions ledger;
      *  5. assign blank control numbers (scilab_assign_control_numbers, when available).
      * A refusal rolls everything back. Low-stock alerts are sent after the commit.
      * Refusal messages avoid the word "approved": admin_approve.php treats a

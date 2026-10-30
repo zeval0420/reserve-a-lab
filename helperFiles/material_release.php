@@ -3,7 +3,7 @@
 //
 // Release Materials and Cancel Request for admin_approve.php (endpoint: ajax/ajax_release.php).
 //
-// Stock bookkeeping: scilab_inventory_deductions holds, per request + inventory row, the net
+// Stock bookkeeping: scilab_request_deductions holds, per request + inventory row, the net
 // quantity currently taken out of stock for that request. It is written when the request is
 // approved (scilab_deduct_inventory), adjusted here when materials are released with changed
 // quantities, and read by the cancel so exactly that quantity is put back.
@@ -169,7 +169,7 @@ if (!function_exists('scilab_release_ledger')) {
     /** inventoryID => quantity currently deducted for the form (rows not yet restored). */
     function scilab_release_ledger($conn, $formID, $lock = false)
     {
-        $stmt = $conn->prepare("SELECT inventoryID, quantity FROM scilab_inventory_deductions WHERE formID = ? AND restoredAt IS NULL ORDER BY inventoryID" . ($lock ? ' FOR UPDATE' : ''));
+        $stmt = $conn->prepare("SELECT inventoryID, quantity FROM scilab_request_deductions WHERE formID = ? AND restoredAt IS NULL ORDER BY inventoryID" . ($lock ? ' FOR UPDATE' : ''));
         $stmt->bind_param("i", $formID);
         $stmt->execute();
         $out = [];
@@ -185,7 +185,7 @@ if (!function_exists('scilab_release_has_ledger_rows')) {
     /** True when the form has any ledger row at all (restored or not): false means a legacy approval. */
     function scilab_release_has_ledger_rows($conn, $formID)
     {
-        $stmt = $conn->prepare("SELECT COUNT(*) AS c FROM scilab_inventory_deductions WHERE formID = ?");
+        $stmt = $conn->prepare("SELECT COUNT(*) AS c FROM scilab_request_deductions WHERE formID = ?");
         $stmt->bind_param("i", $formID);
         $stmt->execute();
         $c = intval($stmt->get_result()->fetch_assoc()['c'] ?? 0);
@@ -451,7 +451,7 @@ if (!function_exists('scilab_release_confirm')) {
             $inc->close();
 
             // 8. Ledger: net quantity now held by this request, per inventory row
-            $led = $conn->prepare("INSERT INTO scilab_inventory_deductions (formID, inventoryID, quantity) VALUES (?, ?, ?)
+            $led = $conn->prepare("INSERT INTO scilab_request_deductions (formID, inventoryID, quantity) VALUES (?, ?, ?)
                 ON DUPLICATE KEY UPDATE quantity = VALUES(quantity), restoredAt = NULL");
             foreach ($invIds as $inv) {
                 $want = $desired[$inv] ?? 0;
@@ -545,7 +545,7 @@ if (!function_exists('scilab_cancel_request')) {
                 // Lock the inventory rows in id order, then put the stock back
                 scilab_release_fetch_rows($conn, array_keys($ledger), true);
                 $inc = $conn->prepare("UPDATE scilab_inventory SET quantity = quantity + ? WHERE id = ?");
-                $mark = $conn->prepare("UPDATE scilab_inventory_deductions SET restoredAt = NOW() WHERE formID = ? AND inventoryID = ? AND restoredAt IS NULL");
+                $mark = $conn->prepare("UPDATE scilab_request_deductions SET restoredAt = NOW() WHERE formID = ? AND inventoryID = ? AND restoredAt IS NULL");
                 foreach ($ledger as $inv => $qty) {
                     if ($qty > 0) {
                         $inc->bind_param("ii", $qty, $inv);

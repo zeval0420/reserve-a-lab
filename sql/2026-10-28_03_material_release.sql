@@ -14,7 +14,7 @@ ALTER TABLE `scilab_form_requests`
 -- Ledger of what was actually taken out of stock for a request. Written when the
 -- request is approved (scilab_deduct_inventory), adjusted on release, and read on
 -- cancel so exactly what was deducted is put back.
-CREATE TABLE IF NOT EXISTS `scilab_inventory_deductions` (
+CREATE TABLE IF NOT EXISTS `scilab_request_deductions` (
   `id`          int(11)  NOT NULL AUTO_INCREMENT,
   `formID`      int(11)  NOT NULL,
   `inventoryID` int(11)  NOT NULL,
