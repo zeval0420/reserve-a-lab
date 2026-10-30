@@ -80,6 +80,13 @@
     $messageType = "";
     $queryResult = null;
 
+    // Tables for the Table Browser menu
+    $browseTables = [];
+    $tablesResult = $conn->query("SHOW TABLES");
+    while ($row = $tablesResult->fetch_row()) {
+        $browseTables[] = $row[0];
+    }
+
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['sql_query'])) {
         $sql = $_POST['sql_query'];
         
@@ -174,7 +181,25 @@
             padding: 20px;
         }
 
+        /* Table Browser */
+        .tb-menu { max-height: 440px; overflow-y: auto; margin-top: 10px; border-radius: 10px; }
+        .tb-menu .list-group-item { cursor: pointer; padding: 7px 12px; font-family: monospace; font-size: 13px; background: transparent; }
+        .tb-menu .list-group-item.active { background: #2B55C4; border-color: #2B55C4; color: #fff; }
+        /* 10 rows (36px) + header (~40px); anything beyond scrolls */
+        .tb-scroll { max-height: 402px; overflow: auto; border: 1px solid rgba(0,0,0,0.1); border-radius: 10px; background: white; }
+        .tb-scroll .table { margin-bottom: 0; }
+        .tb-scroll thead th { position: sticky; top: 0; z-index: 2; }
+        .tb-scroll td { height: 36px; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle !important; }
+        .tb-scroll td.tb-actions { width: 1%; white-space: nowrap; overflow: visible; }
+        .tb-null { color: #999; font-style: italic; }
+        .tb-status { font-size: 13px; margin: 8px 2px 0; color: #666; }
+        #tbEditFields .form-group label { font-family: monospace; }
+        #tbEditFields .tb-type { color: #888; font-weight: normal; font-size: 11px; margin-left: 6px; }
+
         /* Dark Mode Styles */
+        body.dark-mode .tb-scroll { background: #1e1e1e; border-color: rgba(255,255,255,0.1); }
+        body.dark-mode .tb-menu .list-group-item { color: #e0e0e0; border-color: rgba(255,255,255,0.1); }
+        body.dark-mode .tb-status { color: #aaa; }
         body.dark-mode {
             background: #121212 !important;
             color: #e0e0e0;
@@ -358,6 +383,42 @@
         <?php endif; ?>
 
         <div class="panel panel-default" style="margin-top: 30px;">
+            <div class="panel-heading">
+                <h3 class="panel-title" style="color: #2B55C4; font-weight:bold;"><i class="bi bi-table"></i> Table Browser</h3>
+            </div>
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <input type="text" id="tbTableFilter" class="form-control" placeholder="Filter tables (<?= count($browseTables) ?>)" autocomplete="off">
+                        <div class="list-group tb-menu" id="tbMenu">
+                            <?php foreach ($browseTables as $t): ?>
+                                <a class="list-group-item" data-table="<?= htmlspecialchars($t) ?>"><?= htmlspecialchars($t) ?></a>
+                            <?php endforeach; ?>
+                            <div class="list-group-item text-muted" id="tbMenuEmpty" style="display:none;">No matching tables</div>
+                        </div>
+                    </div>
+                    <div class="col-md-9">
+                        <div id="tbPlaceholder" class="text-muted" style="padding: 40px 0; text-align:center;">Select a table to open it.</div>
+                        <div id="tbView" style="display:none;">
+                            <div class="row" style="margin-bottom: 10px;">
+                                <div class="col-sm-4"><h4 id="tbTitle" style="margin: 6px 0; font-family: monospace; font-weight: bold;"></h4></div>
+                                <div class="col-sm-4"><select id="tbColumn" class="form-control"></select></div>
+                                <div class="col-sm-4"><input type="text" id="tbSearch" class="form-control" placeholder="Filter rows" autocomplete="off"></div>
+                            </div>
+                            <div class="tb-scroll" id="tbScroll">
+                                <table class="table table-bordered table-striped table-hover">
+                                    <thead></thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                            <div class="tb-status" id="tbStatus"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel panel-default" style="margin-top: 30px;">
             <div class="panel-heading" style="display:flex; justify-content:space-between; align-items:center;">
                 <h3 class="panel-title" style="color: #2B55C4; font-weight:bold;"><i class="bi bi-clock-history"></i> Query History</h3>
                 <form method="POST" style="margin:0;">
@@ -395,6 +456,25 @@
         </div>
     </div>
 
+    <div class="modal fade" id="tbEditModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">Edit row <small id="tbEditTitle" style="font-family: monospace;"></small></h4>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger" id="tbEditError" style="display:none;"></div>
+                    <div id="tbEditFields"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-liquid-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn-liquid" id="tbEditSave">Save changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <?php include('helperFiles/footer.php'); ?>
 
     <script>
@@ -425,6 +505,201 @@
             indentWithTabs: true,
             smartIndent: true
         });
+
+        // Table Browser: pick a table from the menu, filter its rows, scroll (10 rows visible), edit or delete a row
+        (function () {
+            var ENDPOINT = 'ajax/ajax_controller_tables.php';
+            var state = { table: null, columns: [], pk: [], rows: [], total: 0, loading: false, seq: 0 };
+            var $menu = $('#tbMenu'), $scroll = $('#tbScroll'), $table = $scroll.find('table');
+            var editing = null; // { row, columns } while the edit modal is open
+
+            function call(params) {
+                var body = new URLSearchParams();
+                Object.keys(params).forEach(function (k) { body.append(k, params[k]); });
+                return fetch(ENDPOINT, { method: 'POST', body: body, credentials: 'same-origin' })
+                    .then(function (r) { return r.json().catch(function () { return { success: false, message: 'Unexpected response (HTTP ' + r.status + ').' }; }); })
+                    .then(function (j) { if (!j.success) throw new Error(j.message || 'Request failed.'); return j; });
+            }
+
+            function pkOf(row) {
+                var pk = {};
+                state.pk.forEach(function (n) { pk[n] = row[n]; });
+                return JSON.stringify(pk);
+            }
+
+            function cell(v) {
+                return v === null ? '<span class="tb-null">NULL</span>' : ralEsc(v);
+            }
+
+            function status() {
+                var text = state.total === 0 ? 'No rows.' : 'Showing ' + state.rows.length + ' of ' + state.total + ' rows' + (state.rows.length < state.total ? ' (scroll for more)' : '');
+                if (!state.pk.length && state.table) text += ' This table has no primary key, so rows are read-only.';
+                $('#tbStatus').text(text);
+            }
+
+            function rowHtml(row, i) {
+                var canAct = state.pk.length > 0;
+                var tds = state.columns.map(function (c) {
+                    var v = row[c.name];
+                    return '<td title="' + (v === null ? 'NULL' : ralEsc(v)) + '">' + cell(v) + '</td>';
+                }).join('');
+                var disabled = canAct ? '' : ' disabled title="No primary key"';
+                tds += '<td class="tb-actions">'
+                    + '<button type="button" class="btn-liquid-info btn-sm tb-edit" data-i="' + i + '"' + disabled + '><i class="bi bi-pencil"></i> Edit</button> '
+                    + '<button type="button" class="btn-liquid-danger btn-sm tb-delete" data-i="' + i + '"' + disabled + '><i class="bi bi-trash"></i> Delete</button>'
+                    + '</td>';
+                return '<tr data-i="' + i + '">' + tds + '</tr>';
+            }
+
+            // append: fetch the next page; otherwise start over, with `limit` rows (default one page)
+            function load(append, limit) {
+                var seq = ++state.seq;
+                state.loading = true;
+                if (!append) $('#tbStatus').text('Loading…');
+                return call({
+                    action: 'rows',
+                    table: state.table,
+                    offset: append ? state.rows.length : 0,
+                    limit: limit || 50,
+                    search: $('#tbSearch').val(),
+                    column: $('#tbColumn').val()
+                }).then(function (j) {
+                    if (seq !== state.seq) return; // a newer request replaced this one
+                    if (!append) {
+                        state.columns = j.columns;
+                        state.pk = j.pk;
+                        state.rows = [];
+                        $table.find('thead').html('<tr>' + j.columns.map(function (c) { return '<th title="' + ralEsc(c.type) + '">' + ralEsc(c.name) + (c.pk ? ' <i class="bi bi-key-fill"></i>' : '') + '</th>'; }).join('') + '<th>Actions</th></tr>');
+                        $table.find('tbody').empty();
+                        $scroll.scrollTop(0);
+                    }
+                    var start = state.rows.length;
+                    state.rows = state.rows.concat(j.rows);
+                    state.total = j.total;
+                    $table.find('tbody').append(j.rows.map(function (r, k) { return rowHtml(r, start + k); }).join(''));
+                    status();
+                }).catch(function (e) {
+                    if (seq === state.seq) $('#tbStatus').text('Error: ' + e.message);
+                }).then(function () {
+                    if (seq === state.seq) state.loading = false;
+                });
+            }
+
+            // After an edit or delete: re-fetch everything already on screen, keeping the scroll position
+            function reloadLoaded() {
+                var top = $scroll.scrollTop();
+                return load(false, Math.max(50, state.rows.length)).then(function () { $scroll.scrollTop(top); });
+            }
+
+            function openTable(name) {
+                state.table = name;
+                $menu.find('.list-group-item').removeClass('active').filter(function () { return $(this).data('table') === name; }).addClass('active');
+                $('#tbPlaceholder').hide();
+                $('#tbView').show();
+                $('#tbTitle').text(name);
+                $('#tbSearch').val('');
+                $('#tbColumn').html('<option value="">All columns</option>');
+                load(false).then(function () {
+                    var opts = state.columns.filter(function (c) { return !c.binary; }).map(function (c) { return '<option value="' + ralEsc(c.name) + '">' + ralEsc(c.name) + '</option>'; });
+                    $('#tbColumn').append(opts.join(''));
+                });
+            }
+
+            // Menu: click opens a table, the box above it filters the list
+            $menu.on('click', '[data-table]', function () { openTable($(this).data('table')); });
+            $('#tbTableFilter').on('input', function () {
+                var q = this.value.toLowerCase().trim(), shown = 0;
+                $menu.find('[data-table]').each(function () {
+                    var match = String($(this).data('table')).toLowerCase().indexOf(q) !== -1;
+                    $(this).toggle(match);
+                    if (match) shown++;
+                });
+                $('#tbMenuEmpty').toggle(shown === 0);
+            });
+
+            // Row filter (debounced) and column choice
+            var searchTimer;
+            $('#tbSearch').on('input', function () { clearTimeout(searchTimer); searchTimer = setTimeout(function () { load(false); }, 300); });
+            $('#tbColumn').on('change', function () { if ($('#tbSearch').val() !== '') load(false); });
+
+            // Next page when scrolled near the bottom
+            $scroll.on('scroll', function () {
+                if (!state.loading && state.rows.length < state.total && this.scrollTop + this.clientHeight >= this.scrollHeight - 80) load(true);
+            });
+
+            // Delete
+            $table.on('click', '.tb-delete', function () {
+                var i = +$(this).data('i'), row = state.rows[i];
+                var label = state.pk.map(function (n) { return n + '=' + row[n]; }).join(', ');
+                if (!confirm('Delete the row (' + label + ') from ' + state.table + '? This cannot be undone.')) return;
+                var $btn = $(this).prop('disabled', true);
+                call({ action: 'delete', table: state.table, pk: pkOf(row) }).then(reloadLoaded).catch(function (e) {
+                    $btn.prop('disabled', false);
+                    alert('Delete failed: ' + e.message);
+                });
+            });
+
+            // Edit: load the full row, show a form, send back only the changed fields
+            $table.on('click', '.tb-edit', function () {
+                var i = +$(this).data('i'), row = state.rows[i], $btn = $(this).prop('disabled', true);
+                call({ action: 'get', table: state.table, pk: pkOf(row) }).then(function (j) {
+                    openEditor(i, j.row);
+                }).catch(function (e) {
+                    alert('Could not load the row: ' + e.message);
+                }).then(function () { $btn.prop('disabled', false); });
+            });
+
+            function openEditor(i, full) {
+                editing = { i: i, row: full, columns: state.columns };
+                $('#tbEditTitle').text(state.table + ' — ' + state.pk.map(function (n) { return n + '=' + full[n]; }).join(', '));
+                $('#tbEditError').hide();
+                var html = state.columns.map(function (c, k) {
+                    var locked = c.pk || c.binary || c.generated;
+                    var v = full[c.name];
+                    var note = c.pk ? 'primary key' : c.binary ? 'binary' : c.generated ? 'generated' : '';
+                    var long = !locked && v !== null && (String(v).length > 80 || /\n/.test(v) || /text|json/i.test(c.type));
+                    var field = long
+                        ? '<textarea class="form-control tb-field" rows="4" data-k="' + k + '">' + ralEsc(v) + '</textarea>'
+                        : '<input type="text" class="form-control tb-field" data-k="' + k + '" value="' + ralEsc(v) + '">';
+                    if (locked) field = field.replace('class="form-control', 'readonly class="form-control');
+                    var nullBox = (!locked && c.nullable)
+                        ? '<label class="checkbox-inline" style="margin-top:4px;"><input type="checkbox" class="tb-null-box" data-k="' + k + '"' + (v === null ? ' checked' : '') + '> NULL</label>'
+                        : '';
+                    return '<div class="form-group"><label>' + ralEsc(c.name) + '<span class="tb-type">' + ralEsc(c.type) + (note ? ' · ' + note : '') + '</span></label>' + field + nullBox + '</div>';
+                }).join('');
+                $('#tbEditFields').html(html);
+                $('#tbEditFields .tb-null-box').each(function () { syncNull($(this)); });
+                $('#tbEditModal').modal('show');
+            }
+
+            function syncNull($box) {
+                $('#tbEditFields .tb-field[data-k="' + $box.data('k') + '"]').prop('disabled', $box.prop('checked'));
+            }
+            $('#tbEditFields').on('change', '.tb-null-box', function () { syncNull($(this)); });
+
+            $('#tbEditSave').on('click', function () {
+                if (!editing) return;
+                var changes = {}, any = false;
+                editing.columns.forEach(function (c, k) {
+                    if (c.pk || c.binary || c.generated) return;
+                    var isNull = c.nullable && $('#tbEditFields .tb-null-box[data-k="' + k + '"]').prop('checked');
+                    var val = $('#tbEditFields .tb-field[data-k="' + k + '"]').val();
+                    var orig = editing.row[c.name];
+                    if (isNull ? orig !== null : (orig === null || val !== orig)) {
+                        changes[c.name] = isNull ? null : val;
+                        any = true;
+                    }
+                });
+                if (!any) { $('#tbEditModal').modal('hide'); return; }
+                var $save = $(this).prop('disabled', true);
+                call({ action: 'update', table: state.table, pk: pkOf(editing.row), values: JSON.stringify(changes) }).then(function () {
+                    $('#tbEditModal').modal('hide');
+                    return reloadLoaded();
+                }).catch(function (e) {
+                    $('#tbEditError').text(e.message).show();
+                }).then(function () { $save.prop('disabled', false); });
+            });
+        })();
     </script>
 </body>
 </html>
