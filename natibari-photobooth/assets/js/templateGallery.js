@@ -21,10 +21,7 @@ export class TemplateGallery {
     this.container.innerHTML = '<div class="center-col" style="padding:48px"><div class="spinner"></div></div>';
     const { templates, default_template } = await SessionClient.getTemplates();
     this.templates = templates;
-    // The configured default may have been deleted/renamed: fall back to the first frame.
-    this.selectedId = templates.some((t) => t.id === default_template)
-      ? default_template
-      : (templates[0] && templates[0].id) || null;
+    this.selectedId = default_template || (templates[0] && templates[0].id) || null;
     this.render();
     return templates;
   }

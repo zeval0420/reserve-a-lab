@@ -10,15 +10,12 @@
  * ------------------------------------------------------------------
  */
 import { $, el, toast, wait } from './utils.js?v=1';
-import { CameraController } from './camera.js?v=2';
-import { TemplateGallery } from './templateGallery.js?v=2';
+import { CameraController } from './camera.js?v=1';
+import { TemplateGallery } from './templateGallery.js?v=1';
 import { CaptureFlow } from './captureFlow.js?v=2';
 import { ReviewGrid } from './review.js?v=1';
 import { SessionClient } from './sessionClient.js?v=4';
 import { printImage } from './browserPrint.js?v=1';
-import { KioskSettings } from './kioskSettings.js?v=1';
-
-const STEPS = ['Frame', 'Pose', 'Review', 'Print'];
 
 class PhotoboothApp {
   constructor() {
@@ -43,8 +40,6 @@ class PhotoboothApp {
     this.camera = new CameraController($('#camera-video'));
     this.gallery = new TemplateGallery($('#template-grid'));
     this.reviewGrid = new ReviewGrid($('#review-grid'));
-    this.kioskSettings = new KioskSettings();
-    this.gallery.onSelect = () => this.updateSelectedLabel();
   }
 
   async init() {
@@ -53,7 +48,7 @@ class PhotoboothApp {
       this.config = config;
     } catch (e) {
       this.config = {
-        countdown_seconds: 3, countdown_play_sound: true,
+        countdown_seconds: 3, countdown_play_sound: true, mirror_preview: true,
         countdown_sound: 'assets/sounds/beep.wav', shutter_sound: 'assets/sounds/shutter.wav',
         volume: 0.8, idle_return_seconds: 300,
       };
@@ -90,7 +85,6 @@ class PhotoboothApp {
       localStorage.removeItem('photobooth_camera');
     }
 
-    this.renderSteppers();
     this.bindEvents();
     this.resetIdleTimer();
     this.goToGallery();
@@ -105,27 +99,6 @@ class PhotoboothApp {
     });
   }
 
-  /** Fill every top bar's .stepper-slot with the 4-step progress pill. */
-  renderSteppers() {
-    document.querySelectorAll('.stepper-slot').forEach((slot) => {
-      const current = Number(slot.dataset.step);
-      const list = el('ol', { class: 'stepper', 'aria-label': 'Progress' });
-      STEPS.forEach((label, i) => {
-        const n = i + 1;
-        const state = n < current ? 'is-done' : n === current ? 'is-current' : '';
-        list.appendChild(el('li', { class: `stepper__item ${state}`.trim(), ...(n === current ? { 'aria-current': 'step' } : {}) }, [
-          el('span', { class: 'stepper__dot' }, n < current ? '✓' : String(n)),
-          el('span', { class: 'stepper__label' }, label),
-        ]));
-      });
-      slot.appendChild(list);
-    });
-  }
-
-  updateSelectedLabel() {
-    $('#gallery-selected-name').textContent = this.gallery.getSelected()?.name || '—';
-  }
-
   /* ---------------------------------------------------------------- */
   /* Start camera early when gallery loads                             */
   /* ---------------------------------------------------------------- */
@@ -136,6 +109,7 @@ class PhotoboothApp {
       const w = template?.photos[0]?.width || 1280;
       const h = template?.photos[0]?.height || 720;
       await this.camera.start();
+      this.camera.setMirrored(this.config.mirror_preview);
       this.attachModalVideo();
     } catch (_) { /* Camera will start when user clicks Continue */ }
   }
@@ -185,6 +159,7 @@ class PhotoboothApp {
     localStorage.setItem('photobooth_camera', deviceId);
     try {
       await this.camera.switchDevice(deviceId);
+      this.camera.setMirrored(this.config.mirror_preview);
       this.attachModalVideo();
       this.populateCameraModalList();
     } catch (e) {
@@ -291,7 +266,6 @@ class PhotoboothApp {
 
     $('#btn-gallery-continue').addEventListener('click', () => this.startCameraScreen());
 
-    $('#btn-settings').addEventListener('click', () => this.kioskSettings.open());
     $('#btn-print-picker').addEventListener('click', () => this.openPrintModal());
     $('#btn-print-modal-close').addEventListener('click', () => this.closePrintModal());
     $('#print-modal-backdrop').addEventListener('click', () => this.closePrintModal());
@@ -318,7 +292,6 @@ class PhotoboothApp {
     this.showScreen('gallery');
     try {
       await this.gallery.load();
-      this.updateSelectedLabel();
       this.startCamera();
     } catch (e) {
       toast('Could not load templates: ' + e.message, 'error');
@@ -346,6 +319,7 @@ class PhotoboothApp {
 
     this.showScreen('camera');
     this.captureFlow.setTemplate(this.template);
+    this.camera.setMirrored(this.config.mirror_preview);
     this.renderProgressDots(0);
     $('#camera-title').textContent = `Get Ready — Photo 1 of ${this.template.photos.length}`;
     $('#btn-camera-start').disabled = false;
@@ -357,6 +331,8 @@ class PhotoboothApp {
       } catch (e) {
         toast('Camera access was denied or unavailable: ' + e.message, 'error');
       }
+    } else {
+      this.camera.setMirrored(this.config.mirror_preview);
     }
   }
 
@@ -414,6 +390,7 @@ class PhotoboothApp {
     this.renderProgressDots(slotNumber - 1);
 
     try {
+      this.camera.setMirrored(this.config.mirror_preview);
       const dataUrl = await this.captureFlow.captureOne(this.sessionId, slotNumber, this.config.countdown_seconds);
       this.photoDataUrls[slotNumber - 1] = dataUrl;
       this.showScreen('review');

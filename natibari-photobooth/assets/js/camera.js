@@ -87,15 +87,18 @@ export class CameraController {
     }
   }
 
+  get isMirrored() {
+    return this.video.classList.contains('is-mirrored');
+  }
+
+  setMirrored(mirrored) {
+    this.video.classList.toggle('is-mirrored', !!mirrored);
+  }
+
   /**
    * Grab the current video frame as a JPEG data URL.
-   *
-   * The booth always behaves like a mirror: the live feed is flipped in CSS
-   * (see `.camera-stage video` / `.camera-modal__video-wrap video`) and the
-   * frame saved here is flipped to match, so the photo, the review screen,
-   * the final strip and the emailed files all show exactly what the guest
-   * saw of themselves. The flip is baked into the pixels at capture time;
-   * nothing downstream (server, compositor, email) flips again.
+   * If the preview is mirrored on screen, the capture is mirrored too
+   * so the saved photo matches exactly what the user saw of themselves.
    */
   captureFrame(quality = 0.95, targetAspect = null) {
     const video = this.video;
@@ -121,8 +124,10 @@ export class CameraController {
     const ctx = this.captureCanvas.getContext('2d');
     ctx.imageSmoothingQuality = 'high';
 
-    ctx.translate(w, 0);
-    ctx.scale(-1, 1);
+    if (this.isMirrored) {
+      ctx.translate(w, 0);
+      ctx.scale(-1, 1);
+    }
     ctx.drawImage(video, sx, sy, w, h, 0, 0, w, h);
 
     return this.captureCanvas.toDataURL('image/jpeg', quality);

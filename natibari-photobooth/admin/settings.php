@@ -86,7 +86,7 @@ $authenticated = admin_is_authenticated();
   </div>
 
   <div id="toast-stack"></div>
-  <script type="module" src="../assets/js/admin/settingsPage.js?v=<?= time() ?>"></script>
+  <script type="module" src="../assets/js/admin/settingsPage.js"></script>
 <?php endif; ?>
 
 </body>

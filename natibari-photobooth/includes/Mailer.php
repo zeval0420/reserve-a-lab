@@ -30,13 +30,10 @@ class Mailer
     {
         $smtp = self::smtp();
         if (!Settings::get('email.enabled', false)) {
-            return 'Email is turned off.';
+            return 'Email is turned off (email.enabled in settings.json).';
         }
         if (self::recipients() === []) {
-            return 'No valid recipient addresses — add at least one in Settings.';
-        }
-        if (!array_filter(self::attachments())) {
-            return 'Nothing is set to be attached — turn on at least one attachment in Settings.';
+            return 'No valid addresses in email.to (settings.json).';
         }
         if ($smtp['user'] === '') {
             return 'No SMTP user (email.smtp_user in settings.json).';
@@ -99,23 +96,6 @@ class Mailer
             'port' => (int)Settings::get('email.smtp_port', 465),
             'user' => trim((string)Settings::get('email.smtp_user', '')),
             'pass' => (string)Settings::get('email.smtp_pass', '') ?: (string)($secrets['smtp_password'] ?? ''),
-        ];
-    }
-
-    /** The sending account for the settings UI (never the password). */
-    public static function account(): array
-    {
-        $smtp = self::smtp();
-        return ['user' => $smtp['user'], 'password_found' => $smtp['pass'] !== ''];
-    }
-
-    /** Which files go in each email, from Settings -> Email -> What to attach. */
-    public static function attachments(): array
-    {
-        return [
-            'strip' => (bool)Settings::get('email.attach.strip', true),
-            'print' => (bool)Settings::get('email.attach.print', true),
-            'raw' => (bool)Settings::get('email.attach.raw', true),
         ];
     }
 
@@ -185,23 +165,20 @@ class Mailer
     public static function sendSession(string $sessionId, bool $dryRun = false): string
     {
         $meta = SessionManager::getMetadata($sessionId);
-        $attach = self::attachments();
-        // The print layout is always the side-by-side strip, even when the printer layout is a single strip.
-        if ($attach['print'] && !empty($meta['strip']) && (empty($meta['strip_print']) || $meta['strip_print'] === $meta['strip'])) {
+        // Always attach the side-by-side strip, even when the print layout is a single strip.
+        if (!empty($meta['strip']) && (empty($meta['strip_print']) || $meta['strip_print'] === $meta['strip'])) {
             $meta['strip_print'] = Compositor::generateSideBySide($sessionId, $meta['strip']);
             SessionManager::saveMetadata($sessionId, $meta);
         }
         $files = [];
-        foreach (['strip' => 'strip', 'strip_print' => 'print'] as $key => $flag) {
-            if ($attach[$flag] && !empty($meta[$key]) && is_file(SessionManager::abs($meta[$key]))) {
+        foreach (['strip', 'strip_print'] as $key) {
+            if (!empty($meta[$key]) && is_file(SessionManager::abs($meta[$key]))) {
                 $files[] = SessionManager::abs($meta[$key]);
             }
         }
-        if ($attach['raw']) {
-            $raw = glob(SessionManager::rawDir($sessionId) . '/photo*.jpg') ?: [];
-            sort($raw, SORT_NATURAL);
-            $files = array_merge($files, $raw);
-        }
+        $raw = glob(SessionManager::rawDir($sessionId) . '/photo*.jpg') ?: [];
+        sort($raw, SORT_NATURAL);
+        $files = array_merge($files, $raw);
         if (!$files) {
             throw new RuntimeException('Nothing to email for this session');
         }
@@ -209,13 +186,8 @@ class Mailer
         $day = substr($sessionId, 0, 10);                       // YYYY-MM-DD
         $time = str_replace('-', ':', substr($sessionId, 11));  // HH:MM:SS
         $subject = trim((string)Settings::get('email.subject', 'Natibari Photobooth')) . ' - ' . $day;
-        $labels = array_filter([
-            $attach['strip'] ? 'final strip' : null,
-            $attach['print'] ? 'print layout (double strip)' : null,
-            $attach['raw'] ? 'raw photos' : null,
-        ]);
         $body = "New photobooth session accepted.\r\n\r\nSession: {$sessionId}\r\nTime: {$day} {$time}\r\n"
-            . 'Template: ' . ($meta['template'] ?? '-') . "\r\n\r\nAttached: " . implode(', ', $labels) . ".\r\n";
+            . 'Template: ' . ($meta['template'] ?? '-') . "\r\n\r\nAttached: final strip, print layout (double strip) and raw photos.\r\n";
 
         $rootId = '<natibari-photobooth-' . $day . '@' . self::DOMAIN . '>';
         $stateFile = CONFIG_PATH . '/mail_threads.json';
