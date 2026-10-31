@@ -1,7 +1,6 @@
 {
     "camera": {
         "preferred_device_label": "",
-        "mirror_preview": true,
         "resolution": {
             "width": 1280,
             "height": 720

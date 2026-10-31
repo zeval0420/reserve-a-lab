@@ -3,7 +3,7 @@
  * api/settings_get.php
  * GET -> { success: true, settings: {...}, available_printers: [...] }
  * Admin-only: the public kiosk app only ever needs a few individual
- * values (countdown seconds, sound paths, mirror flag) which are
+ * values (countdown seconds, sound paths) which are
  * already exposed inline by api/session_create.php / api/templates.php,
  * so the full settings tree (including the admin passcode hash) stays
  * behind the admin gate.

@@ -2,7 +2,7 @@
 /**
  * api/session_create.php
  * POST { template: "01-classic-strip" }
- * -> { success: true, session_id, photos_needed, countdown_seconds, mirror_preview }
+ * -> { success: true, session_id, photos_needed, countdown_seconds }
  */
 require_once __DIR__ . '/../includes/bootstrap.php';
 
@@ -27,5 +27,4 @@ json_response([
     'template' => $template['id'],
     'photos_needed' => count($template['photos']),
     'countdown_seconds' => (int)Settings::get('countdown.seconds', 3),
-    'mirror_preview' => (bool)Settings::get('camera.mirror_preview', true),
 ]);

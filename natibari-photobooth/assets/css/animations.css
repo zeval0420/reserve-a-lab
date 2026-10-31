@@ -18,25 +18,27 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ---- Welcome screen ambient glow drift ---- */
-.welcome__glow {
-  animation: glowDrift 12s ease-in-out infinite alternate;
-}
-@keyframes glowDrift {
-  0%   { transform: translate(-6%, -4%) scale(1); }
-  100% { transform: translate(6%, 4%) scale(1.08); }
-}
-
-.welcome__title, .welcome__subtitle, .welcome__cta, .welcome__badge {
+/* ---- Screen headings float up when a screen opens ---- */
+.screen--active .screen-heading,
+.done > * {
   animation: floatUp var(--duration-slow) var(--ease-out) both;
 }
-.welcome__badge { animation-delay: 0ms; }
-.welcome__title { animation-delay: 60ms; }
-.welcome__subtitle { animation-delay: 120ms; }
-.welcome__cta { animation-delay: 180ms; }
+.done > :nth-child(2) { animation-delay: 60ms; }
+.done > :nth-child(3) { animation-delay: 120ms; }
+.done > :nth-child(4) { animation-delay: 180ms; }
 @keyframes floatUp {
   from { opacity: 0; transform: translateY(18px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- Modals + chips ---- */
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes chipIn {
+  from { opacity: 0; transform: scale(0.85); }
+  to   { opacity: 1; transform: scale(1); }
 }
 
 /* ---- Template cards staggered entrance ---- */
@@ -122,3 +124,13 @@
   animation: spin 800ms linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---- Live indicator + success rings ---- */
+@keyframes livePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.35; transform: scale(0.8); }
+}
+@keyframes ringOut {
+  0%   { opacity: 0.7; transform: scale(0.9); }
+  100% { opacity: 0; transform: scale(1.6); }
+}

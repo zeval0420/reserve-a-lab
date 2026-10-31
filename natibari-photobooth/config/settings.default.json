@@ -1,7 +1,6 @@
 {
   "camera": {
     "preferred_device_label": "",
-    "mirror_preview": true,
     "resolution": {
       "width": 1280,
       "height": 720
@@ -42,6 +41,11 @@
   "email": {
     "enabled": true,
     "subject": "Natibari Photobooth",
+    "attach": {
+      "strip": true,
+      "print": true,
+      "raw": true
+    },
     "to": ["mikaela.daus@irc.pshs.edu.ph"],
     "smtp_host": "smtp.gmail.com",
     "smtp_port": 465,

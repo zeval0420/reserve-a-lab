@@ -15,7 +15,6 @@ json_response([
     'config' => [
         'countdown_seconds' => (int)Settings::get('countdown.seconds', 3),
         'countdown_play_sound' => (bool)Settings::get('countdown.play_sound', true),
-        'mirror_preview' => (bool)Settings::get('camera.mirror_preview', true),
         'countdown_sound' => Settings::get('audio.countdown_sound', 'assets/sounds/beep.wav'),
         'shutter_sound' => Settings::get('audio.shutter_sound', 'assets/sounds/shutter.wav'),
         'volume' => (float)Settings::get('audio.volume', 0.8),

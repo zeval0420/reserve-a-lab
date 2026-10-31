@@ -1,49 +1,72 @@
 /* ==========================================================================
    assets/css/variables.css
-   Design tokens for the Opening of Classes Photobooth.
-   Theme: modern minimalist kiosk — white surfaces, confident blue accent,
-   generous rounding, big touch targets. Dark mode overrides the same
-   token names so every component file only ever reads variables.
+   Design tokens for the Natibari Photobooth.
+   Two palettes share the same token names, so component files only ever
+   read variables:
+     - :root        light, used by the admin pages (settings, gallery, creator)
+     - body.kiosk   deep-ink theme for the guest-facing kiosk (index.php),
+                    where the photos and the camera feed should be the
+                    brightest things on screen.
    ========================================================================== */
+
+/* Self-hosted variable fonts (latin) so the kiosk works offline. */
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("../fonts/plus-jakarta-sans-latin.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("../fonts/inter-latin.woff2") format("woff2");
+}
 
 :root {
   /* ---- Brand & accent ---- */
-  --color-accent: #2563eb;          /* primary blue */
-  --color-accent-strong: #1d4ed8;
-  --color-accent-soft: #eaf1ff;
+  --color-accent: #6d4aff;
+  --color-accent-strong: #5634e6;
+  --color-accent-soft: #efeaff;
   --color-accent-contrast: #ffffff;
+  --color-pink: #ff5fa2;
+  --gradient-accent: linear-gradient(135deg, #7c5cff 0%, #ff5fa2 100%);
 
   /* ---- Surfaces ---- */
-  --color-bg: #FFFDF5;              /* app backdrop, warm cream */
-  --color-surface: #ffffff;         /* cards, panels */
+  --color-bg: #f6f4fb;
+  --color-surface: #ffffff;
   --color-surface-raised: #ffffff;
-  --color-surface-sunken: #f1f4f9;
-  --color-border: #e3e8f0;
+  --color-surface-sunken: #efedf6;
+  --color-border: #e2dff0;
+  --color-glass: rgba(255, 255, 255, 0.72);
 
   /* ---- Text ---- */
-  --color-text: #14181f;
-  --color-text-muted: #5b6472;
-  --color-text-faint: #92989f;
+  --color-text: #17142b;
+  --color-text-muted: #5d5877;
+  --color-text-faint: #8f8aa6;
   --color-on-accent: #ffffff;
 
   /* ---- Status ---- */
-  --color-success: #16a34a;
-  --color-success-soft: #e9f8ef;
-  --color-danger: #dc2626;
-  --color-danger-soft: #fdecec;
+  --color-success: #12a150;
+  --color-success-soft: #e6f7ee;
+  --color-danger: #dc2f45;
+  --color-danger-soft: #fdebee;
   --color-warning: #d97706;
+  --color-warning-soft: #fff4e0;
 
   /* ---- Shape ---- */
-  --radius-sm: 10px;
-  --radius-md: 18px;
-  --radius-lg: 28px;
+  --radius-sm: 12px;
+  --radius-md: 20px;
+  --radius-lg: 32px;
   --radius-pill: 999px;
 
   /* ---- Elevation ---- */
-  --shadow-sm: 0 1px 2px rgba(20, 24, 31, 0.06), 0 1px 1px rgba(20,24,31,0.04);
-  --shadow-md: 0 8px 24px rgba(20, 24, 31, 0.08);
-  --shadow-lg: 0 20px 48px rgba(20, 24, 31, 0.16);
-  --shadow-accent: 0 12px 28px rgba(37, 99, 235, 0.28);
+  --shadow-sm: 0 1px 2px rgba(23, 20, 43, 0.06), 0 1px 1px rgba(23, 20, 43, 0.04);
+  --shadow-md: 0 10px 28px rgba(23, 20, 43, 0.09);
+  --shadow-lg: 0 24px 56px rgba(23, 20, 43, 0.18);
+  --shadow-accent: 0 14px 32px rgba(109, 74, 255, 0.32);
 
   /* ---- Spacing scale ---- */
   --space-1: 4px;
@@ -56,7 +79,7 @@
   --space-8: 64px;
 
   /* ---- Typography ---- */
-  --font-display: "Plus Jakarta Sans", "Segoe UI", "Inter", system-ui, sans-serif;
+  --font-display: "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
   --font-body: "Inter", "Segoe UI", system-ui, sans-serif;
 
   /* ---- Motion ---- */
@@ -71,35 +94,66 @@
 }
 
 /* ==========================================================================
-   Dark mode — same token names, kiosk-friendly low-glare palette.
-   Triggered by .theme-dark on <html>, set by ui-theme.js (manual toggle)
-   or automatically from Settings ui.dark_mode = "auto" (prefers-color-scheme).
+   Kiosk theme — applied by <body class="kiosk"> in index.php.
    ========================================================================== */
-html.theme-dark {
-  --color-accent: #4f8bff;
-  --color-accent-strong: #6f9fff;
-  --color-accent-soft: #16233f;
-  --color-accent-contrast: #0b1220;
+body.kiosk {
+  --color-accent: #9a85ff;
+  --color-accent-strong: #b3a3ff;
+  --color-accent-soft: rgba(154, 133, 255, 0.16);
+  --color-accent-contrast: #12102b;
 
-  --color-bg: #0b0e14;
-  --color-surface: #141925;
-  --color-surface-raised: #1b2230;
-  --color-surface-sunken: #0f131c;
-  --color-border: #262e3d;
+  --color-bg: #0c0b1d;
+  --color-surface: #16143a;
+  --color-surface-raised: #1e1b4b;
+  --color-surface-sunken: #110f2c;
+  --color-border: rgba(255, 255, 255, 0.12);
+  --color-glass: rgba(22, 20, 58, 0.62);
 
-  --color-text: #f2f4f8;
-  --color-text-muted: #aab2c2;
-  --color-text-faint: #717a8c;
+  --color-text: #f6f4ff;
+  --color-text-muted: #b9b4de;
+  --color-text-faint: #837eb0;
   --color-on-accent: #ffffff;
 
-  --color-success: #34d399;
-  --color-success-soft: #0f2a20;
-  --color-danger: #f87171;
-  --color-danger-soft: #2a1414;
-  --color-warning: #fbbf24;
+  --color-success: #3ddc97;
+  --color-success-soft: rgba(61, 220, 151, 0.14);
+  --color-danger: #ff7a8a;
+  --color-danger-soft: rgba(255, 122, 138, 0.14);
+  --color-warning: #ffc15e;
+  --color-warning-soft: rgba(255, 193, 94, 0.14);
 
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
-  --shadow-md: 0 8px 24px rgba(0,0,0,0.45);
-  --shadow-lg: 0 20px 48px rgba(0,0,0,0.55);
-  --shadow-accent: 0 12px 28px rgba(79, 139, 255, 0.35);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 28px 64px rgba(0, 0, 0, 0.55);
+  --shadow-accent: 0 14px 36px rgba(124, 92, 255, 0.45);
+}
+
+/* ==========================================================================
+   Dark mode for the admin pages — same token names (html.theme-dark).
+   ========================================================================== */
+html.theme-dark {
+  --color-accent: #9a85ff;
+  --color-accent-strong: #b3a3ff;
+  --color-accent-soft: rgba(154, 133, 255, 0.16);
+  --color-accent-contrast: #12102b;
+
+  --color-bg: #0c0b1d;
+  --color-surface: #16143a;
+  --color-surface-raised: #1e1b4b;
+  --color-surface-sunken: #110f2c;
+  --color-border: #2b2860;
+
+  --color-text: #f6f4ff;
+  --color-text-muted: #b9b4de;
+  --color-text-faint: #837eb0;
+
+  --color-success: #3ddc97;
+  --color-success-soft: rgba(61, 220, 151, 0.14);
+  --color-danger: #ff7a8a;
+  --color-danger-soft: rgba(255, 122, 138, 0.14);
+  --color-warning: #ffc15e;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.55);
+  --shadow-accent: 0 12px 28px rgba(124, 92, 255, 0.4);
 }

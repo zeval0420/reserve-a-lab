@@ -66,10 +66,17 @@ photobooth/
 ## 3. The Workflow (matches the brief exactly)
 
 ```
-Welcome → Template Gallery → Camera Preview → 3s Countdown → Capture
+Frame Gallery → Camera Preview → 3s Countdown → Capture
    → (repeat x4) → Review (retake any photo) → Generate Strip → Preview
-   → Accept → Auto-save (already done) → Auto-print (if enabled) → Welcome
+   → Accept → Auto-save (already done) → Auto-print (if enabled)
+   → Email (if enabled) → back to the Frame Gallery
 ```
+
+The camera behaves like a **mirror**: the live feed (including the camera picker
+preview) is flipped, and each photo is flipped at capture time, so photos, the
+review screen, the final strip and the emailed files all match what the guest
+saw. This is always on (there is no setting for it) and nothing downstream
+flips again.
 
 Every step is its own `<section class="screen">` in `index.php`; `assets/js/app.js`
 is the state machine that shows/hides them and calls the right module at each step.
@@ -165,8 +172,23 @@ and the failure reason is stored on the session (visible in the Gallery).
 ## 7. Settings
 
 `config/settings.json` (merged over `settings.default.json`), edited from the
-tabbed Settings page: **Printing, Photo Storage, Camera & Capture, Templates,
-Security**. The passcode hash never leaves the server.
+tabbed Settings page: **Printing, Photo Storage, Camera & Capture, Email,
+Templates, Security**. The passcode hash never leaves the server.
+
+### Email recipients
+
+Who receives each accepted session is editable in two places, both backed by
+`api/email_settings.php` (admin-only):
+
+- the **gear button** on the kiosk's frame screen (`index.php`) — asks for the
+  admin passcode, shows the email panel, and logs out again when closed;
+- the **Email tab** of `admin/settings.php` (it has its own Save button).
+
+Options: on/off, recipient list (up to 20 addresses), which files to attach
+(final strip, two-strip print layout, raw photos), subject and sender name.
+**Check connection** logs in to the mail server; **Send latest session** emails
+the newest accepted session to the saved recipients. The SMTP account and
+password are not editable from the browser.
 
 ---
 

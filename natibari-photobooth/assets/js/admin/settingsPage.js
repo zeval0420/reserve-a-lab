@@ -6,13 +6,16 @@
  * ------------------------------------------------------------------
  */
 import { $, el, toast, apiFetch, apiPost } from '../utils.js';
-import { CameraController } from '../camera.js';
+import { CameraController } from '../camera.js?v=2';
+import { switchRow, field, isOn as isOnIn } from '../formControls.js?v=1';
+import { mountEmailSettings } from '../emailSettings.js?v=1';
 
 const root = $('#settings-form');
 const TABS = [
   { id: 'printing', icon: '🖨️', label: 'Printing' },
   { id: 'storage', icon: '💾', label: 'Photo Storage' },
   { id: 'capture', icon: '📷', label: 'Camera & Capture' },
+  { id: 'email', icon: '✉️', label: 'Email' },
   { id: 'templates', icon: '🖼️', label: 'Templates' },
   { id: 'security', icon: '🔒', label: 'Security' },
 ];
@@ -34,23 +37,6 @@ async function load() {
 /* ------------------------------------------------------------------ */
 /* Small UI builders                                                    */
 /* ------------------------------------------------------------------ */
-function switchRow(label, hint, checked, key) {
-  return el('div', { class: 'switch-row' }, [
-    el('div', {}, [el('div', { style: 'font-weight:600' }, label), hint ? el('div', { class: 'faint', style: 'font-size:12px;margin-top:2px' }, hint) : null]),
-    el('div', {
-      class: `switch${checked ? ' is-on' : ''}`, role: 'switch', tabindex: '0', dataset: { key },
-      onClick: (e) => e.currentTarget.classList.toggle('is-on'),
-    }, el('div', { class: 'switch__knob' })),
-  ]);
-}
-
-function field(labelText, inputNode, hint, full = false) {
-  return el('div', { class: `field${full ? ' field--full' : ''}` }, [
-    el('label', {}, labelText), inputNode,
-    hint ? el('div', { class: 'faint', style: 'font-size:12px' }, hint) : null,
-  ]);
-}
-
 /** Big selectable cards (radio behaviour). Read back with choiceValue(name). */
 function choiceCards(name, options, value) {
   return el('div', { class: 'choice-grid field--full', dataset: { choice: name } }, options.map((o) =>
@@ -69,7 +55,7 @@ function choiceCards(name, options, value) {
     ])));
 }
 const choiceValue = (name) => root.querySelector(`[data-choice="${name}"] .choice.is-selected`)?.dataset.value;
-const isOn = (key) => !!root.querySelector(`.switch[data-key="${key}"]`)?.classList.contains('is-on');
+const isOn = (key) => isOnIn(root, key);
 
 function card(title, hint, children) {
   return el('section', { class: 'card admin-section' }, [
@@ -174,7 +160,10 @@ function captureTab(s) {
   return [
     card('Camera', null, [
       field('Camera device', el('select', { id: 'f-camera-device' }, cameraOptions)),
-      el('div', {}, switchRow('Mirror preview', 'Selfie-style flip of the live preview.', s.camera.mirror_preview, 'mirror_preview')),
+      el('div', { class: 'field' }, [
+        el('label', {}, 'Mirror'),
+        el('div', { class: 'faint', style: 'font-size:13px;line-height:1.5' }, 'Always on: the live preview and every saved photo are mirrored, like looking in a mirror.'),
+      ]),
     ]),
     card('Countdown & sound', null, [
       field('Countdown (seconds)', el('input', { type: 'number', id: 'f-countdown-seconds', min: '1', max: '10', value: s.countdown.seconds })),
@@ -187,6 +176,14 @@ function captureTab(s) {
       field('Return to start after idle (seconds)', el('input', { type: 'number', id: 'f-idle-seconds', min: '5', max: '600', value: s.ui.idle_return_seconds })),
     ]),
   ];
+}
+
+function emailTab() {
+  return [el('section', { class: 'card admin-section', id: 'email-section' }, [
+    el('h2', {}, 'Email'),
+    el('p', { class: 'section-hint' }, 'Who receives each finished session. Saved separately with its own Save button below.'),
+    el('div', { id: 'email-panel-host' }),
+  ])];
 }
 
 function templatesTab(s) {
@@ -224,7 +221,7 @@ function render() {
       onClick: () => { activeTab = t.id; try { localStorage.setItem('pb_settings_tab', t.id); } catch { /* optional */ } showTab(); },
     }, [el('span', {}, t.icon), el('span', {}, t.label)])));
 
-  const builders = { printing: printingTab, storage: storageTab, capture: captureTab, templates: templatesTab, security: securityTab };
+  const builders = { printing: printingTab, storage: storageTab, capture: captureTab, email: emailTab, templates: templatesTab, security: securityTab };
   // Render every tab (hidden ones stay in the DOM so Save reads all values).
   const panels = TABS.map((t) => el('div', { class: 'tab-panel', dataset: { tab: t.id } }, builders[t.id](s)));
 
@@ -235,6 +232,10 @@ function render() {
     el('button', { type: 'button', class: 'btn btn--primary btn--xl', id: 'btn-save', onClick: save }, 'Save settings'),
   ]));
   showTab();
+  mountEmailSettings($('#email-panel-host'), {
+    apiBase: '../api/',
+    onLocked: () => window.location.reload(),
+  });
 }
 
 function showTab() {
@@ -314,7 +315,6 @@ async function save() {
   const settings = {
     camera: {
       preferred_device_label: $('#f-camera-device').selectedOptions[0]?.value ? $('#f-camera-device').selectedOptions[0].textContent : '',
-      mirror_preview: isOn('mirror_preview'),
     },
     templates: { default_template: $('#f-default-template').value },
     printing: {
