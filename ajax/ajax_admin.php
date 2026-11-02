@@ -157,6 +157,10 @@
             echo "Missing required fields.";
             exit;
         }
+        if (mb_strlen($labName) > 30) {
+            echo "Laboratory name must be 30 characters or fewer.";
+            exit;
+        }
 
         $safeLabName = ral_lab_folder_name($labName);
         if ($safeLabName === '') {
@@ -231,6 +235,11 @@
             echo 'Missing lab name or location.';
             exit;
         }
+        // scilabName is varchar(30); a longer name would be cut off and stop matching its requests.
+        if (mb_strlen($newLabName) > 30) {
+            echo 'Laboratory name must be 30 characters or fewer.';
+            exit;
+        }
 
         $safeLabName = ral_lab_folder_name($newLabName);
         if ($safeLabName === '') {
@@ -271,12 +280,15 @@
         }
 
         // The main image and the gallery folder are named after the lab, so they follow a rename.
+        $movedMain = $movedFolder = false;
         if ($folderChanged) {
             if (is_file($oldImagePath) && rename($oldImagePath, $fullImagePath)) {
+                $movedMain = true;
                 ral_img_delete_mirror($oldImagePath);
                 ral_img_write_mirror($fullImagePath, true);
             }
             if (is_dir($oldFolder) && rename($oldFolder, $newFolder)) {
+                $movedFolder = true;
                 ral_img_rename_mirror_dir($oldFolder, $newFolder);
             }
         }
@@ -294,16 +306,41 @@
 
         // Only point at the main image when it exists, so a lab with a legacy path keeps it.
         $newMainPath = is_file($fullImagePath) ? $imagePath : null;
-        $stmt = $conn->prepare("UPDATE scilab_availability SET scilabName = ?, location = ?, mainImagePath = COALESCE(?, mainImagePath) WHERE scilabName = ?");
-        $stmt->bind_param("ssss", $newLabName, $labLocation, $newMainPath, $oldLabName);
+        // Requests store the lab name as text (no foreign key), so they are renamed in the same transaction.
+        $saved = false;
+        try {
+            $conn->begin_transaction();
+            $stmt = $conn->prepare("UPDATE scilab_availability SET scilabName = ?, location = ?, mainImagePath = COALESCE(?, mainImagePath) WHERE scilabName = ?");
+            $stmt->bind_param("ssss", $newLabName, $labLocation, $newMainPath, $oldLabName);
+            $stmt->execute();
+            $stmt->close();
+            if ($oldLabName !== $newLabName) {
+                $reqStmt = $conn->prepare("UPDATE scilab_form_requests SET scilabName = ? WHERE scilabName = ?");
+                $reqStmt->bind_param("ss", $newLabName, $oldLabName);
+                $reqStmt->execute();
+                $reqStmt->close();
+            }
+            $conn->commit();
+            $saved = true;
+        } catch (Throwable $e) {
+            $conn->rollback();
+            error_log('[edit_lab_image] ' . $e->getMessage());
+        }
 
-        if ($stmt->execute()) {
+        if ($saved) {
             echo 'success';
         } else {
+            // Put the files back so they still match the unchanged DB row.
+            if ($movedFolder && rename($newFolder, $oldFolder)) {
+                ral_img_rename_mirror_dir($newFolder, $oldFolder);
+            }
+            if ($movedMain && rename($fullImagePath, $oldImagePath)) {
+                ral_img_delete_mirror($fullImagePath);
+                ral_img_write_mirror($oldImagePath, true);
+            }
             echo 'Failed to update lab.';
         }
 
-        $stmt->close();
         $conn->close();
         exit();
     }

@@ -630,7 +630,7 @@
         $(document).on('click', '.lab-card__image', function() {
             const card = $(this).closest('[data-lab-id]');
             const lab  = card.data('lab-id');
-            const main = `img/labimages/${lab}.jpg`;
+            const main = `img/labimages/${String(lab).replace(/[^a-zA-Z0-9 \-_]/g, '')}.jpg`; // same cleanup as ral_lab_folder_name()
             $.post('ajax/ajax_admin.php', { action: 'get_lab_images', lab }, imgs => {
                 imgs.length ? showGallery(imgs, lab) : showGallery([main], lab, true);
             }, 'json').fail(() => showToast('Failed to load gallery.', 'error'));

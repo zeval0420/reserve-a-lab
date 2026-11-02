@@ -491,7 +491,7 @@
                     data: { action: 'get_lab_images', lab: lab },
                     dataType: 'json',
                     success: function(images) {
-                        const main = `img/labimages/${lab}.jpg`;
+                        const main = `img/labimages/${String(lab).replace(/[^a-zA-Z0-9 \-_]/g, '')}.jpg`; // same cleanup as ral_lab_folder_name()
                         images.length ? showGallery(images, lab) : showGallery([main], lab);
                     },
                     error: function() {
