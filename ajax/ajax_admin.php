@@ -272,8 +272,22 @@
             $checkStmt->fetch();
             $checkStmt->close();
 
-            // The file test catches different names that clean up to the same folder name.
-            if ($count > 0 || ($folderChanged && (file_exists($newFolder) || file_exists($fullImagePath)))) {
+            // Another lab whose name cleans up to the same folder name would share this lab's folder and image.
+            // A leftover folder that no lab owns (e.g. renamed by hand) is simply adopted.
+            $sharesFolder = false;
+            if ($folderChanged) {
+                $others = $conn->prepare("SELECT scilabName FROM scilab_availability WHERE scilabName <> ?");
+                $others->bind_param("s", $oldLabName);
+                $others->execute();
+                $others->bind_result($otherName);
+                while ($others->fetch()) {
+                    if (ral_lab_folder_name($otherName) === $safeLabName) {
+                        $sharesFolder = true;
+                    }
+                }
+                $others->close();
+            }
+            if ($count > 0 || $sharesFolder) {
                 echo "Lab name already exists.";
                 exit;
             }
@@ -287,10 +301,11 @@
                 ral_img_delete_mirror($oldImagePath);
                 ral_img_write_mirror($fullImagePath, true);
             }
-            if (is_dir($oldFolder) && rename($oldFolder, $newFolder)) {
+            if (is_dir($oldFolder) && !file_exists($newFolder) && rename($oldFolder, $newFolder)) {
                 $movedFolder = true;
-                ral_img_rename_mirror_dir($oldFolder, $newFolder);
             }
+            // Also covers a folder already renamed by hand: its WebP mirror folder still has the old name.
+            ral_img_rename_mirror_dir($oldFolder, $newFolder);
         }
         if (!is_dir($newFolder)) {
             mkdir($newFolder, 0755, true);
@@ -331,7 +346,10 @@
             echo 'success';
         } else {
             // Put the files back so they still match the unchanged DB row.
-            if ($movedFolder && rename($newFolder, $oldFolder)) {
+            if ($movedFolder) {
+                rename($newFolder, $oldFolder);
+            }
+            if ($folderChanged) {
                 ral_img_rename_mirror_dir($newFolder, $oldFolder);
             }
             if ($movedMain && rename($fullImagePath, $oldImagePath)) {
