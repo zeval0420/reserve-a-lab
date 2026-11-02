@@ -172,6 +172,21 @@
 
         $fileName = $safeLabName . '.jpg';
         $targetPath = "../img/labimages/" . $fileName;
+        $galleryFolder = "../img/labimages/" . $safeLabName;
+
+        // Checked before any file is written, so a refused lab never overwrites another lab's image.
+        // The folder/image test also catches different names that clean up to the same folder name.
+        $checkStmt = $conn->prepare("SELECT COUNT(*) FROM scilab_availability WHERE scilabName = ?");
+        $checkStmt->bind_param("s", $labName);
+        $checkStmt->execute();
+        $checkStmt->bind_result($count);
+        $checkStmt->fetch();
+        $checkStmt->close();
+
+        if ($count > 0 || file_exists($targetPath) || file_exists($galleryFolder)) {
+            echo "Lab name already exists.";
+            exit;
+        }
 
         if (!move_uploaded_file($_FILES["lab_image"]["tmp_name"], $targetPath)) {
             echo "Failed to move uploaded image.";
@@ -181,28 +196,15 @@
 
         $relativePath = "img/labimages/" . $fileName;
 
-        $checkStmt = $conn->prepare("SELECT COUNT(*) FROM scilab_availability WHERE scilabName = ?");
-        $checkStmt->bind_param("s", $labName);
-        $checkStmt->execute();
-        $checkStmt->bind_result($count);
-        $checkStmt->fetch();
-        $checkStmt->close();
-
-        if ($count > 0) {
-            echo "Lab name already exists.";
-            exit;
-        }
-
         $stmt = $conn->prepare("INSERT INTO scilab_availability (scilabName, mainImagePath, location, availability, status) VALUES (?, ?, ?, 'Available', 'active')");
         $stmt->bind_param("sss", $labName, $relativePath, $labLocation);
 
         if ($stmt->execute()) {
-            $galleryFolder = "../img/labimages/" . $safeLabName;
-            if (!file_exists($galleryFolder)) {
-                mkdir($galleryFolder, 0755, true);
-            }
+            mkdir($galleryFolder, 0755, true);
             echo "Success";
         } else {
+            unlink($targetPath);
+            ral_img_delete_mirror($targetPath);
             echo "Error: " . $stmt->error;
         }
 
@@ -237,19 +239,20 @@
         }
         $imagePath = "img/labimages/" . $safeLabName . ".jpg";
         $fullImagePath = "../" . $imagePath;
+        $oldSafeName = ral_lab_folder_name($oldLabName);
+        $oldFolder = "../img/labimages/" . $oldSafeName;
+        $newFolder = "../img/labimages/" . $safeLabName;
+        $oldImagePath = $oldFolder . ".jpg";
+        $folderChanged = $oldSafeName !== $safeLabName;
+        $hasUpload = isset($_FILES['lab_image']) && $_FILES['lab_image']['error'] !== UPLOAD_ERR_NO_FILE;
 
-        if (isset($_FILES['lab_image']) && $_FILES['lab_image']['error'] !== UPLOAD_ERR_NO_FILE) {
+        // All checks first, so a refused edit leaves the files untouched.
+        if ($hasUpload) {
             $upload = ral_validate_image_upload($_FILES['lab_image'], ['image/jpeg' => 'jpg']);
             if (!$upload['ok']) {
                 echo $upload['error'];
                 exit;
             }
-
-            if (!move_uploaded_file($_FILES['lab_image']['tmp_name'], $fullImagePath)) {
-                echo 'Failed to move uploaded image.';
-                exit;
-            }
-            ral_img_process_upload($fullImagePath);
         }
 
         if ($oldLabName !== $newLabName) {
@@ -260,22 +263,39 @@
             $checkStmt->fetch();
             $checkStmt->close();
 
-            if ($count > 0) {
+            // The file test catches different names that clean up to the same folder name.
+            if ($count > 0 || ($folderChanged && (file_exists($newFolder) || file_exists($fullImagePath)))) {
                 echo "Lab name already exists.";
                 exit;
             }
-
-            $oldFolder = "../img/labimages/" . ral_lab_folder_name($oldLabName);
-            $newFolder = "../img/labimages/" . $safeLabName;
-            if (file_exists($oldFolder)) {
-                if (rename($oldFolder, $newFolder)) {
-                    ral_img_rename_mirror_dir($oldFolder, $newFolder);
-                }
-            }
         }
 
-        $stmt = $conn->prepare("UPDATE scilab_availability SET scilabName = ?, location = ?, mainImagePath = ? WHERE scilabName = ?");
-        $stmt->bind_param("ssss", $newLabName, $labLocation, $imagePath, $oldLabName);
+        // The main image and the gallery folder are named after the lab, so they follow a rename.
+        if ($folderChanged) {
+            if (is_file($oldImagePath) && rename($oldImagePath, $fullImagePath)) {
+                ral_img_delete_mirror($oldImagePath);
+                ral_img_write_mirror($fullImagePath, true);
+            }
+            if (is_dir($oldFolder) && rename($oldFolder, $newFolder)) {
+                ral_img_rename_mirror_dir($oldFolder, $newFolder);
+            }
+        }
+        if (!is_dir($newFolder)) {
+            mkdir($newFolder, 0755, true);
+        }
+
+        if ($hasUpload) {
+            if (!move_uploaded_file($_FILES['lab_image']['tmp_name'], $fullImagePath)) {
+                echo 'Failed to move uploaded image.';
+                exit;
+            }
+            ral_img_process_upload($fullImagePath);
+        }
+
+        // Only point at the main image when it exists, so a lab with a legacy path keeps it.
+        $newMainPath = is_file($fullImagePath) ? $imagePath : null;
+        $stmt = $conn->prepare("UPDATE scilab_availability SET scilabName = ?, location = ?, mainImagePath = COALESCE(?, mainImagePath) WHERE scilabName = ?");
+        $stmt->bind_param("ssss", $newLabName, $labLocation, $newMainPath, $oldLabName);
 
         if ($stmt->execute()) {
             echo 'success';
@@ -378,7 +398,7 @@
             exit;
         }
     }
-    if ($_POST['action'] === 'delete_gallery_image' && isset($_POST['labName'], $_POST['fileName'])) {
+    if (isset($_POST['action']) && $_POST['action'] === 'delete_gallery_image' && isset($_POST['labName'], $_POST['fileName'])) {
         $lab = ral_lab_folder_name($_POST['labName']);
         $file = basename(str_replace(chr(92), '/', $_POST['fileName']));
         $labDir = "../img/labimages/$lab/";
