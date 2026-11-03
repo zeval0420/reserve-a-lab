@@ -493,14 +493,19 @@
         });
 
         // Initialize CodeMirror
-        window.editor = CodeMirror.fromTextArea(document.getElementById("sql_query"), {
-            mode: "text/x-sql",
-            theme: "dracula",
-            lineNumbers: true,
-            matchBrackets: true,
-            indentWithTabs: true,
-            smartIndent: true
-        });
+        // The editor files come from a CDN; if they fail to load, the plain textarea still works and the rest of the page keeps running
+        try {
+            window.editor = CodeMirror.fromTextArea(document.getElementById("sql_query"), {
+                mode: "text/x-sql",
+                theme: "dracula",
+                lineNumbers: true,
+                matchBrackets: true,
+                indentWithTabs: true,
+                smartIndent: true
+            });
+        } catch (e) {
+            console.warn('CodeMirror not available:', e);
+        }
 
         // Table Browser: pick a table from the menu, filter its rows, scroll (10 rows visible), edit or delete a row.
         // Off by default: nothing is fetched or kept in the DOM until it is turned on, and turning it off frees it again.
