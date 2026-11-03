@@ -86,18 +86,21 @@ function tb_pk_where(array $pkCols, $pkVals, array &$params)
 }
 
 try {
-    $tables = [];
-    $res = $conn->query('SHOW TABLES');
-    while ($row = $res->fetch_row()) {
-        $tables[] = $row[0];
-    }
-
     $action = $_POST['action'] ?? '';
     if ($action === 'tables') {
+        // Only the menu needs the full list
+        $tables = [];
+        $res = $conn->query('SHOW TABLES');
+        while ($row = $res->fetch_row()) {
+            $tables[] = $row[0];
+        }
         tb_respond(['tables' => $tables]);
     }
+    // Every other action checks just the selected table instead of listing them all
     $table = (string)($_POST['table'] ?? '');
-    if (!in_array($table, $tables, true)) {
+    $found = tb_run($conn, 'SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?', [$table])
+        ->get_result()->fetch_all(MYSQLI_NUM);
+    if (!$found || $found[0][0] !== $table) {
         ral_deny(404, 'Unknown table.');
     }
     $qt = tb_quote($table);
