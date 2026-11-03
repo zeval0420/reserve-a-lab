@@ -191,7 +191,7 @@
         .tb-null { color: #999; font-style: italic; }
         .tb-status { font-size: 13px; margin: 8px 2px 0; color: #666; }
         #tbEditFields .form-group label { font-family: monospace; }
-        #tbEditFields .tb-type { color: #888; font-weight: normal; font-size: 11px; margin-left: 6px; }
+        #tbEditFields .tb-type, #tbAddFields .tb-type { color: #888; font-weight: normal; font-size: 11px; margin-left: 6px; }
 
         /* Dark Mode Styles */
         body.dark-mode .tb-scroll { background: #1e1e1e; border-color: rgba(255,255,255,0.1); }
@@ -397,9 +397,10 @@
                         <div id="tbPlaceholder" class="text-muted" style="padding: 40px 0; text-align:center;">Select a table to open it.</div>
                         <div id="tbView" style="display:none;">
                             <div class="row" style="margin-bottom: 10px;">
-                                <div class="col-sm-4"><h4 id="tbTitle" style="margin: 6px 0; font-family: monospace; font-weight: bold;"></h4></div>
-                                <div class="col-sm-4"><select id="tbColumn" class="form-control"></select></div>
+                                <div class="col-sm-3"><h4 id="tbTitle" style="margin: 6px 0; font-family: monospace; font-weight: bold;"></h4></div>
+                                <div class="col-sm-3"><select id="tbColumn" class="form-control"></select></div>
                                 <div class="col-sm-4"><input type="text" id="tbSearch" class="form-control" placeholder="Filter rows" autocomplete="off"></div>
+                                <div class="col-sm-2"><button type="button" class="btn-liquid btn-sm btn-block" id="tbAdd"><i class="bi bi-plus-lg"></i> Add row</button></div>
                             </div>
                             <div class="tb-scroll" id="tbScroll">
                                 <table class="table table-bordered table-striped table-hover">
@@ -466,6 +467,25 @@
                 <div class="modal-footer">
                     <button type="button" class="btn-liquid-secondary" data-dismiss="modal">Cancel</button>
                     <button type="button" class="btn-liquid" id="tbEditSave">Save changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="tbAddModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">Add row to <small id="tbAddTitle" style="font-family: monospace;"></small></h4>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger" id="tbAddError" style="display:none;"></div>
+                    <div id="tbAddFields"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-liquid-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn-liquid" id="tbAddSave">Add row</button>
                 </div>
             </div>
         </div>
@@ -708,6 +728,67 @@
                 $('#tbEditFields .tb-field[data-k="' + $box.data('k') + '"]').prop('disabled', $box.prop('checked'));
             }
             $('#tbEditFields').on('change', '.tb-null-box', function () { syncNull($(this)); });
+
+            // Add: one field per column. Columns MySQL can fill in (default, auto-increment, nullable) start on "Use default" and are left out of the INSERT.
+            function enumOptions(type) {
+                if (!/^enum\(/i.test(type)) return null;
+                var out = [], re = /'((?:[^']|'')*)'/g, m;
+                while ((m = re.exec(type))) out.push(m[1].replace(/''/g, "'"));
+                return out;
+            }
+
+            $('#tbAdd').on('click', function () {
+                if (!state.table) return;
+                $('#tbAddTitle').text(state.table);
+                $('#tbAddError').hide();
+                var html = state.columns.map(function (c, k) {
+                    if (c.binary || c.generated) return '';
+                    var note = c.auto ? 'auto-increment' : c.hasDefault ? (c.default !== null ? 'default: ' + c.default : 'default: NULL') : 'required';
+                    var opts = enumOptions(c.type);
+                    var field = opts
+                        ? '<select class="form-control tb-add-field" data-k="' + k + '">' + opts.map(function (o) { return '<option>' + ralEsc(o) + '</option>'; }).join('') + '</select>'
+                        : '<input type="text" class="form-control tb-add-field" data-k="' + k + '" placeholder="' + ralEsc(c.type) + '">';
+                    var useDef = c.hasDefault
+                        ? '<label class="checkbox-inline" style="margin-top:4px;"><input type="checkbox" class="tb-add-default" data-k="' + k + '" checked> Use default</label> '
+                        : '';
+                    var nullBox = c.nullable
+                        ? '<label class="checkbox-inline" style="margin-top:4px;"><input type="checkbox" class="tb-add-null" data-k="' + k + '"> NULL</label>'
+                        : '';
+                    return '<div class="form-group"><label>' + ralEsc(c.name) + '<span class="tb-type">' + ralEsc(c.type) + ' · ' + ralEsc(note) + '</span></label>' + field + useDef + nullBox + '</div>';
+                }).join('');
+                $('#tbAddFields').html(html);
+                $('#tbAddFields .tb-add-default').each(function () { syncAdd($(this).data('k')); });
+                $('#tbAddModal').modal('show');
+            });
+
+            // A field is editable only when neither "Use default" nor NULL is ticked
+            function syncAdd(k) {
+                var off = $('#tbAddFields .tb-add-default[data-k="' + k + '"]').prop('checked') || $('#tbAddFields .tb-add-null[data-k="' + k + '"]').prop('checked');
+                $('#tbAddFields .tb-add-field[data-k="' + k + '"]').prop('disabled', !!off);
+            }
+            $('#tbAddFields').on('change', '.tb-add-default, .tb-add-null', function () {
+                var k = $(this).data('k');
+                // Ticking one clears the other, so the choice is never ambiguous
+                if ($(this).prop('checked')) $('#tbAddFields .tb-add-default, #tbAddFields .tb-add-null').filter('[data-k="' + k + '"]').not(this).prop('checked', false);
+                syncAdd(k);
+            });
+
+            $('#tbAddSave').on('click', function () {
+                var values = {};
+                state.columns.forEach(function (c, k) {
+                    if (c.binary || c.generated) return;
+                    var $f = $('#tbAddFields');
+                    if ($f.find('.tb-add-default[data-k="' + k + '"]').prop('checked')) return;
+                    values[c.name] = $f.find('.tb-add-null[data-k="' + k + '"]').prop('checked') ? null : $f.find('.tb-add-field[data-k="' + k + '"]').val();
+                });
+                var $save = $(this).prop('disabled', true);
+                call({ action: 'insert', table: state.table, values: JSON.stringify(values) }).then(function () {
+                    $('#tbAddModal').modal('hide');
+                    return reloadLoaded();
+                }).catch(function (e) {
+                    $('#tbAddError').text(e.message).show();
+                }).then(function () { $save.prop('disabled', false); });
+            });
 
             $('#tbEditSave').on('click', function () {
                 if (!editing) return;

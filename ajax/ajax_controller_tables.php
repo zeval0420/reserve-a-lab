@@ -117,6 +117,9 @@ try {
             'auto'      => stripos($c['Extra'], 'auto_increment') !== false,
             'binary'    => (bool)preg_match('/blob|binary|geometry|point|polygon|linestring/i', $c['Type']),
             'generated' => (bool)preg_match('/(VIRTUAL|STORED) GENERATED/i', $c['Extra']),
+            // A new row may leave the column out when MySQL can fill it in
+            'hasDefault' => $c['Default'] !== null || $c['Null'] === 'YES' || stripos($c['Extra'], 'auto_increment') !== false || stripos($c['Extra'], 'DEFAULT_GENERATED') !== false,
+            'default'   => $c['Default'],
         ];
         if ($c['Key'] === 'PRI') {
             $pkCols[] = $c['Field'];
@@ -153,6 +156,41 @@ try {
         $rows = tb_run($conn, $sql, $params)->get_result()->fetch_all(MYSQLI_ASSOC);
 
         tb_respond(['columns' => $cols, 'pk' => $pkCols, 'rows' => tb_strings($rows), 'total' => $total, 'offset' => $offset]);
+    }
+
+    if ($action === 'insert') {
+        $values = json_decode((string)($_POST['values'] ?? '{}'), true);
+        if (!is_array($values)) {
+            ral_deny(400, 'Invalid values.');
+        }
+        $insertable = [];
+        foreach ($cols as $c) {
+            if (!$c['binary'] && !$c['generated']) {
+                $insertable[$c['name']] = $c;
+            }
+        }
+        $names = [];
+        $marks = [];
+        $insertParams = [];
+        foreach ($values as $name => $value) {
+            if (!isset($insertable[$name])) {
+                ral_deny(400, "Column `$name` cannot be set.");
+            }
+            $names[] = tb_quote($name);
+            if ($value === null) {
+                if (!$insertable[$name]['nullable']) {
+                    ral_deny(400, "Column `$name` cannot be NULL.");
+                }
+                $marks[] = 'NULL';
+            } else {
+                $marks[] = '?';
+                $insertParams[] = (string)$value;
+            }
+        }
+        // No values at all inserts a row of defaults
+        $sql = $names ? "INSERT INTO $qt (" . implode(', ', $names) . ') VALUES (' . implode(', ', $marks) . ')' : "INSERT INTO $qt () VALUES ()";
+        tb_run($conn, $sql, $insertParams);
+        tb_respond(['message' => 'Row added.']);
     }
 
     $pkVals = json_decode((string)($_POST['pk'] ?? ''), true);
