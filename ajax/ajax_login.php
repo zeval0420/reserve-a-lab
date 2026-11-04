@@ -190,8 +190,10 @@ if (isset($_POST["action"]) && $_POST["action"] === "loginUser") {
             session_regenerate_id(true);
             $_SESSION[$session_role] = "guest";
             
-            $resolvedEmail = '';
-            if (filter_var($new_user['username'], FILTER_VALIDATE_EMAIL)) {
+            $resolvedEmail = trim($new_user['email'] ?? '');
+            if ($resolvedEmail !== '') {
+                // saved at registration
+            } elseif (filter_var($new_user['username'], FILTER_VALIDATE_EMAIL)) {
                 $resolvedEmail = $new_user['username'];
             } elseif (!empty($new_user['userID'])) {
                 $sdStmt = $conn->prepare("SELECT studentEmail FROM student_directory WHERE LRN = ?");
@@ -263,8 +265,17 @@ if (isset($_POST["action"]) && $_POST["action"] === "guestLogin") {
     // Insert into scilab_new_accounts
     $userID = !empty($studentid) ? $studentid : ('GUEST-' . time());
     
-    $stmt = $conn->prepare("INSERT INTO {$db_table_new_accounts} (userID, firstname, middlename, lastname, username, password, institution) VALUES (?, ?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("sssssss", $userID, $firstname, $middlename, $lastname, $username, $password, $institution);
+    $email = trim($email);
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        echo "Please enter a valid email address.";
+        exit();
+    }
+
+    // shortcut: self-migrating column so already-deployed DBs keep working; drop once every DB has it.
+    $conn->query("ALTER TABLE {$db_table_new_accounts} ADD COLUMN IF NOT EXISTS email VARCHAR(255) DEFAULT NULL");
+
+    $stmt = $conn->prepare("INSERT INTO {$db_table_new_accounts} (userID, firstname, middlename, lastname, username, password, institution, email) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("ssssssss", $userID, $firstname, $middlename, $lastname, $username, $password, $institution, $email);
     
     if ($stmt->execute()) {
         session_regenerate_id(true);

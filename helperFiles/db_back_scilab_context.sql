@@ -311,6 +311,7 @@ CREATE TABLE `scilab_new_accounts` (
   `username` varchar(100) NOT NULL,
   `password` varchar(255) NOT NULL,
   `institution` varchar(150) NOT NULL,
+  `email` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `userID` (`userID`),
   UNIQUE KEY `username` (`username`)

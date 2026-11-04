@@ -146,9 +146,10 @@ function scilab_resolve_requester_email($conn, $requesterID, $formID = null) {
 
     // 3. scilab_new_accounts table (for registered student accounts).
     if (!empty($requesterID)) {
+        // SELECT * so a DB without the `email` column yet still works.
         $stmt = $conn->prepare("
-            SELECT username, userID 
-            FROM scilab_new_accounts 
+            SELECT *
+            FROM scilab_new_accounts
             WHERE userID = ? OR username = ? OR id = ?
         ");
         if ($stmt) {
@@ -160,6 +161,12 @@ function scilab_resolve_requester_email($conn, $requesterID, $formID = null) {
             if ($row = $result->fetch_assoc()) {
                 $username = trim($row['username'] ?? '');
                 $userID = trim($row['userID'] ?? '');
+
+                $storedEmail = trim($row['email'] ?? '');
+                if (filter_var($storedEmail, FILTER_VALIDATE_EMAIL)) {
+                    $stmt->close();
+                    return $storedEmail;
+                }
 
                 if (filter_var($username, FILTER_VALIDATE_EMAIL)) {
                     error_log("SciLab DEBUG - scilab_new_accounts username is email: [" . $username . "]");
@@ -225,7 +232,7 @@ function scilab_resolve_requester_email($conn, $requesterID, $formID = null) {
         }
 
         $stmt = $conn->prepare("
-            SELECT username, userID
+            SELECT *
             FROM scilab_new_accounts
             WHERE CONCAT(firstname, ' ', lastname) = ?
                OR CONCAT(lastname, ', ', firstname) = ?
@@ -239,6 +246,8 @@ function scilab_resolve_requester_email($conn, $requesterID, $formID = null) {
                 $username = trim($row['username'] ?? '');
                 $userID = trim($row['userID'] ?? '');
                 $stmt->close();
+                $storedEmail = trim($row['email'] ?? '');
+                if (filter_var($storedEmail, FILTER_VALIDATE_EMAIL)) return $storedEmail;
                 if (filter_var($username, FILTER_VALIDATE_EMAIL)) return $username;
                 if ($userID !== '') {
                     $sdStmt = $conn->prepare("SELECT studentEmail FROM student_directory WHERE LRN = ?");
