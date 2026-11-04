@@ -314,6 +314,13 @@
             .multiselect-container .filter .multiselect-clear-filter {
                 display: none !important;
             }
+            /* Centre the search box: equal side padding, full-width input, stays visible while the list scrolls. */
+            .multiselect-container > li.filter { position: sticky; top: 0; z-index: 1; padding: 4px 10px; background: #fff; }
+            .multiselect-container .filter .input-group { display: block; width: 100%; margin: 0; }
+            .multiselect-container .filter .multiselect-search { float: none; display: block; width: 100%; margin: 0; }
+            /* Single-select dropdowns (item/description): the highlighted row already shows the choice. */
+            .multiselect-container input[type="radio"] { display: none; }
+            .material-table .btn-group { width: 100%; }
             .multiselect-container .filter .multiselect-search {
                 border: 2px solid #2B55C4 !important;
                 border-radius: 10px !important;
@@ -848,6 +855,7 @@
             /* Fallback minimum sanity assignment for inputs failing parser standards. */
             if (!$qty.val() || isNaN($qty.val()) || parseInt($qty.val()) < 1) $qty.val(1);
 
+            if ($descSelect.length) msInit($descSelect);
             applyAvailability($row);
         });
 
@@ -859,6 +867,20 @@
         $(document).on('input', '.description-input', function () {
             applyAvailability($(this).closest('tr'));
         });
+
+        /* Give an item/description <select> the same searchable dropdown as the teacher fields.
+         * rebuild() re-enables the select, so the disabled state is re-applied afterwards. */
+        function msInit($s) {
+            const off = $s.prop('disabled');
+            if ($s.data('multiselect')) $s.multiselect('rebuild');
+            else $s.multiselect({
+                enableFiltering: true,
+                enableCaseInsensitiveFiltering: true,
+                filterPlaceholder: 'Search...',
+                buttonWidth: '100%'
+            });
+            $s.multiselect(off ? 'disable' : 'enable');
+        }
 
         /* Setup generic locked initializations for UI table components upon appending to the DOM. */
         function initRowDefaults($row) {
@@ -877,6 +899,8 @@
             const $unit = $row.find('.unit-input');
             if ($unit.length && !$unit.val()) $unit.val('');
             $unit.prop('disabled', true);
+
+            $row.find('.item-select, .description-select').each(function () { msInit($(this)); });
         }
 
         function createRowHtml(itemsObj, classification) {
