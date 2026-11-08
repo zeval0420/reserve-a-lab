@@ -4,6 +4,9 @@
     require_once __DIR__ . '/helperFiles/input.php';
     require_once __DIR__ . '/helperFiles/request_dates.php';
     require_once __DIR__ . '/helperFiles/image_optimizer.php';   // WebP mirror URLs for the lab cards
+    require_once __DIR__ . '/helperFiles/holidays.php';
+    $thisYear = (int) date('Y');
+    $holidays = ral_holidays([$thisYear, $thisYear + 1, $thisYear + 2]);
 
     if (!isset($_SESSION['role'])) {
         header("Location: index.php");
@@ -92,6 +95,8 @@
         <?php include('helperFiles/headData.php'); ?>
         <link rel="stylesheet" href="css/laboratory-card.css?v=<?= filemtime(__DIR__ . '/css/laboratory-card.css') ?>">
         <link rel="stylesheet" href="css/home-heading.css?v=<?= filemtime(__DIR__ . '/css/home-heading.css') ?>">
+        <link rel="stylesheet" href="css/multi-date-picker.css?v=<?= filemtime(__DIR__ . '/css/multi-date-picker.css') ?>">
+        <script src="js/multi-date-picker.js?v=<?= filemtime(__DIR__ . '/js/multi-date-picker.js') ?>"></script>
         <style>
             .main-wrapper {
                 width: 80%;
@@ -99,6 +104,18 @@
             }
             @media (max-width: 768px) {
                 .main-wrapper { width: 95%; }
+            }
+
+            /* Date picker section: left column on laptops and larger tablets, above the labs on mobile. */
+            .home-layout { display: block; }
+            .home-date { margin-bottom: 20px; }
+            .home-date__title { font-size: 14px; font-weight: 700; color: var(--color-primary); margin: 0 0 10px; }
+            .home-date .rdp-cal { max-width: 360px; margin: 0 auto; }
+            .home-main { min-width: 0; }
+            @media (min-width: 992px) {
+                .home-layout { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 20px; align-items: start; }
+                .home-date { position: sticky; top: 90px; margin-bottom: 0; }
+                .home-date .rdp-cal { max-width: none; }
             }
 
             /* ─── HEADING ROW ───────────────────────────────────── */
@@ -271,13 +288,16 @@
         <?= $pendingRequestsHtml ?>
 
         <div class="main-wrapper">
-            <!-- Header actions (Date selector + View Selector) -->
-            <div class="heading">
-                <div class="d-inline-flex align-items-center gap-2 flex-wrap">
-                    <label for="datepicker" class="form-label fw-bold mb-0" style="color: var(--color-primary); font-size: 14px; font-weight: 700;">Select Date of Use:</label>
-                    <input type="date" id="datepicker" class="form-control liquid-input" style="width:220px; display:inline-block; font-size:14px; padding: 6px 14px; margin-left: 8px;">
-                </div>
+          <div class="home-layout">
+            <!-- Date picker: left on laptops and up, top on mobile -->
+            <aside class="home-date">
+                <h3 class="home-date__title">Select Date of Use</h3>
+                <div id="date-picker"></div>
+            </aside>
 
+            <div class="home-main">
+            <!-- Header actions (View Selector) -->
+            <div class="heading" style="justify-content:flex-end;">
                 <div class="view-selector" role="group" aria-label="Card view selector">
                     <button class="view-selector__btn active" data-view="complete" onclick="switchView(this,'complete')" title="Complete view">
                         <i class="bi bi-grid-3x3-gap-fill"></i><span>Complete</span>
@@ -293,6 +313,8 @@
 
             <!-- Card gallery — populated by JS -->
             <div id="lab-gallery" class="lab-gallery--complete"></div>
+            </div>
+          </div>
         </div>
 
         <!-- Gallery Overlay (full-screen carousel) -->
@@ -326,6 +348,8 @@
            ═══════════════════════════════════════════════════════ */
 
         let currentVariant = 'complete';
+        let selectedDate = '';
+        const holidays = <?= json_encode($holidays, JSON_HEX_TAG) ?>; // closed days, besides Sundays
 
         function renderGallery(variant) {
             const container = document.getElementById('lab-gallery');
@@ -355,10 +379,7 @@
             });
 
             // Set the date and load the snapshot
-            const datepicker = document.getElementById('datepicker');
-            if (datepicker && datepicker.value) {
-                updateCardsForDate(datepicker.value);
-            }
+            if (selectedDate) updateCardsForDate(selectedDate);
 
             if (typeof AOS !== 'undefined') AOS.refresh();
         }
@@ -505,15 +526,29 @@
             $('.gallery-nav.right').click(nextImage);
             $(document).on('keydown', e => { if (e.key === 'Escape') $('#galleryOverlay').fadeOut(); });
 
-            // Initialize Date Picker input defaults
-            const today = new Date().toISOString().split('T')[0];
-            const datepicker = document.getElementById('datepicker');
-            datepicker.value = today;
-            datepicker.setAttribute('min', today);
-
-            $('#datepicker').on('change', function() {
-                updateCardsForDate($(this).val());
+            // Single-date picker: Sundays and holidays are shown as unavailable and cannot be picked
+            const datePicker = RalDatePicker.create('#date-picker', {
+                single: true,
+                offWeekdays: [0],
+                offDates: holidays,
+                notify: showToast,
+                onChange: function(dates) {
+                    if (!dates.length) return;
+                    selectedDate = dates[0];
+                    updateCardsForDate(selectedDate);
+                }
             });
+
+            // Start on the day chosen earlier (session) if still open, else the next open day from today
+            const pad = n => String(n).padStart(2, '0');
+            const fmt = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+            const isOpen = s => new Date(s + 'T00:00:00').getDay() !== 0 && !holidays[s];
+            const saved = <?= json_encode((string) ($_SESSION['selected_date'] ?? ''), JSON_HEX_TAG) ?>;
+            const cursor = new Date();
+            let start = saved && saved >= fmt(cursor) && isOpen(saved) ? saved : '';
+            while (!start) { if (isOpen(fmt(cursor))) start = fmt(cursor); else cursor.setDate(cursor.getDate() + 1); }
+            datePicker.add([start], true);
+            selectedDate = start;
 
             // Initial render
             renderGallery('complete');

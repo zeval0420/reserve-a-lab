@@ -5,7 +5,10 @@
  *       min: '2026-10-30',          // first selectable day (default: today)
  *       maxDates: 62,
  *       onChange: dates => {},      // sorted 'YYYY-MM-DD' list, after every user change
- *       notify: (message, type) => {}
+ *       notify: (message, type) => {},
+ *       single: true,               // one date only: no mode switch or summary panel, a click replaces the choice
+ *       offWeekdays: [0],           // weekdays (0 = Sunday) that can never be picked
+ *       offDates: { '2026-12-25': 'Christmas Day' }  // dates that can never be picked, with a label
  *   });
  *   picker.get() / picker.add(list) / picker.clear() / picker.setUnavailable(list)
  *
@@ -86,6 +89,9 @@
         var maxDates = options.maxDates || 62;
         var notify = options.notify || function () {};
         var onChange = options.onChange || function () {};
+        var single = !!options.single;
+        var offWeekdays = options.offWeekdays || [];
+        var offDates = options.offDates || {};
 
         var selected = [];          // sorted
         var unavailable = {};       // iso -> true (booked for the chosen venue)
@@ -98,6 +104,7 @@
         var wantFocus = false;
 
         root.classList.add('rdp');
+        if (single) root.classList.add('rdp-single');
         root.innerHTML =
             '<div class="rdp-cal">' +
                 '<div class="rdp-head">' +
@@ -135,7 +142,12 @@
         var $prev = root.querySelector('[data-nav="-1"]');
 
         function isPast(d) { return d < min; }
-        function isBlocked(d) { return isPast(d) || !!unavailable[d]; }
+        function offReason(d) {
+            if (offDates[d]) return offDates[d];
+            return offWeekdays.indexOf(new Date(utc(d)).getUTCDay()) !== -1 ? 'Closed on ' + ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays'][new Date(utc(d)).getUTCDay()] : '';
+        }
+        function isOff(d) { return !!offReason(d); }
+        function isBlocked(d) { return isPast(d) || !!unavailable[d] || isOff(d); }
         function has(d) { return selected.indexOf(d) !== -1; }
 
         function renderGrid() {
@@ -169,14 +181,14 @@
                 }
                 if (d === today) cls.push('is-today');
                 if (isPast(d)) cls.push('is-past');
-                else if (unavailable[d]) cls.push('is-unavailable');
+                else if (unavailable[d] || isOff(d)) cls.push('is-unavailable');
                 if (d === anchor) cls.push('is-anchor');
                 if (lo && d >= lo && d <= hi && !sel) cls.push('is-preview');
                 var blocked = isBlocked(d);
-                var label = day + ' ' + MONTHS[view.m] + ' ' + view.y + (sel ? ', selected' : '') + (unavailable[d] ? ', unavailable for this venue' : isPast(d) ? ', past date' : '');
+                var label = day + ' ' + MONTHS[view.m] + ' ' + view.y + (sel ? ', selected' : '') + (isOff(d) ? ', unavailable: ' + offReason(d) : unavailable[d] ? ', unavailable for this venue' : isPast(d) ? ', past date' : '');
                 html += '<button type="button" class="' + cls.join(' ') + '" data-date="' + d + '" role="gridcell"' +
                     ' tabindex="' + (d === tabIso ? 0 : -1) + '" aria-pressed="' + sel + '"' + (blocked ? ' aria-disabled="true"' : '') +
-                    ' aria-label="' + esc(label) + '"' + (unavailable[d] ? ' title="Already booked for this venue"' : '') + '>' + day + '</button>';
+                    ' aria-label="' + esc(label) + '"' + (isOff(d) ? ' title="' + esc(offReason(d)) + '"' : unavailable[d] ? ' title="Already booked for this venue"' : '') + '>' + day + '</button>';
             }
             $grid.innerHTML = html;
 
@@ -205,7 +217,7 @@
                 b.classList.toggle('is-on', on);
                 b.setAttribute('aria-pressed', on);
             });
-            $hint.textContent = mode === 'range'
+            $hint.textContent = single ? 'Greyed-out days are unavailable.' : mode === 'range'
                 ? (anchor ? 'Now click the last day of the range.' : 'Click the first day, then the last day.')
                 : 'Click days to pick or unpick them. Shift+click adds all days in between.';
         }
@@ -239,10 +251,12 @@
 
         function pick(d, shift) {
             if (isBlocked(d)) {
-                notify(isPast(d) ? 'That date has already passed.' : 'That date is already booked for this venue.', 'warning');
+                notify(isOff(d) ? 'Unavailable: ' + offReason(d) + '.' : isPast(d) ? 'That date has already passed.' : 'That date is already booked for this venue.', 'warning');
                 return;
             }
-            if (mode === 'range') {
+            if (single) {
+                selected = [d]; lastClicked = d; changed();
+            } else if (mode === 'range') {
                 if (!anchor) { anchor = d; hover = d; }
                 else { addList(rangeList(anchor, d)); anchor = null; hover = null; lastClicked = d; changed(); }
             } else if (shift && lastClicked) {

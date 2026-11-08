@@ -176,6 +176,10 @@
 }
 .rdp-clear:hover { text-decoration: underline; }
 
+/* single-date mode (home page): just the calendar */
+.rdp.rdp-single { display: block; }
+.rdp-single .rdp-side, .rdp-single .rdp-modes { display: none; }
+
 @media (max-width: 720px) {
     .rdp { grid-template-columns: minmax(0, 1fr); }
     .rdp-day, .rdp-empty { height: 44px; } /* bigger touch targets */
