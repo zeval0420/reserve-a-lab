@@ -764,6 +764,83 @@ function scilab_notify_stage_status($conn, $request, $currentStage, $event, $rea
     }
 }
 
+/** Email addresses of whoever acts at $stage for this request. */
+function scilab_stage_recipient_emails($conn, $request, $stage) {
+    switch ($stage) {
+        case 'supervisor':
+            return scilab_resolve_teacher_in_charge_emails($conn, $request['teacherInCharge'] ?? '');
+        case 'subject_teacher':
+            if (scilab_is_subject_teacher_flow($request)) {
+                return scilab_resolve_teacher_in_charge_emails($conn, $request['subjectTeacher'] ?? '');
+            }
+            return scilab_resolve_auh_emails($conn, $request['subjectAcademicUnit'] ?? '', $request['gradeLevel'] ?? null);
+        case 'lab_personnel':
+            return scilab_resolve_lab_personnel_emails($conn);
+        case 'cid_chief':
+            return scilab_resolve_cid_chief_emails($conn);
+    }
+    return [];
+}
+
+/**
+ * Tell everyone involved that an admin cancelled a request: the requester, every approver who
+ * already approved it, and the approver it was waiting on. Same subject as the other status
+ * emails ("SciLab Request SLR-[id]"), so it joins their thread. Never throws: a mail problem
+ * must not undo the cancellation.
+ */
+function scilab_notify_cancellation($conn, $formID) {
+    try {
+        global $active_server;
+        $id = (int)$formID;
+        $stmt = $conn->prepare("SELECT * FROM scilab_form_requests WHERE id = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        if (!$row) return;
+        $request = scilab_label_row($conn, $row);
+
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || ($_SERVER['SERVER_PORT'] ?? '') == 443) ? "https://" : "http://";
+        $trackerLink = $protocol . $_SERVER['HTTP_HOST'] . "/" . $active_server . "/supervisor_approve.php?id=" . $id;
+
+        $reason = trim((string)($request['cancelReason'] ?? ''));
+        $details = [
+            'Request ID' => 'SLR-' . $id,
+            'Requested By' => scilab_resolve_requester_name($conn, $request['requesterEmployeeID'] ?? ''),
+            'Facility' => $request['scilabName'] ?? '',
+            'Date of use' => $request['inclusiveDate'] ?? '',
+            'Time of use' => $request['inclusiveTime'] ?? '',
+            'Decision' => 'Cancelled by ' . ($request['cancelledBy'] ?: 'the Science Laboratory Personnel'),
+        ];
+        if ($reason !== '') $details['Reason'] = $reason;
+
+        $body = scilab_render_email_card(
+            'Request Cancelled',
+            '<p>Laboratory reservation request <strong>SLR-' . $id . '</strong> has been cancelled.</p>',
+            $details,
+            'View Request',
+            $trackerLink,
+            '<p><strong>Final status of this request: CANCELLED.</strong></p>'
+        );
+        $subject = 'SciLab Request SLR-' . $id;
+
+        $emails = [];
+        $requesterEmail = scilab_resolve_requester_email($conn, $request['requesterEmployeeID'] ?? '', $id);
+        if ($requesterEmail) $emails[] = $requesterEmail;
+
+        $current = scilab_current_stage($request);
+        foreach (scilab_stage_order($request) as $stage) {
+            $approved = strtolower(trim((string)($request[$stage . '_status'] ?? ''))) === 'approved';
+            if ($approved || $stage === $current) {
+                $emails = array_merge($emails, scilab_stage_recipient_emails($conn, $request, $stage));
+            }
+        }
+        scilab_send_status_email(array_values(array_unique($emails)), $subject, $body);
+    } catch (Throwable $e) {
+        error_log('Cancellation email failed: ' . $e->getMessage());
+    }
+}
+
 /**
  * Build a PHPMailer instance preconfigured with the system SMTP settings.
  */

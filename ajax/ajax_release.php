@@ -8,6 +8,7 @@ require_once __DIR__ . '/../helperFiles/input.php';   // ral_display_name()
 require_once __DIR__ . '/../PHPMailer/src/Exception.php';
 require_once __DIR__ . '/../PHPMailer/src/PHPMailer.php';
 require_once __DIR__ . '/../PHPMailer/src/SMTP.php';
+require_once __DIR__ . '/../helperFiles/scilab_email.php';   // cancellation notices
 
 // Admin-only endpoint: logged in with the admin role, and a valid CSRF token on POST
 ral_require_role(['admin']);
@@ -77,6 +78,7 @@ try {
             if ($formID <= 0) release_json(['success' => false, 'message' => 'Missing request.'], 400);
             $res = scilab_cancel_request($conn, $formID, $_POST['reason'] ?? '', $adminName);
             if (!$res['ok']) release_json(['success' => false, 'message' => $res['message']]);
+            scilab_notify_cancellation($conn, $formID); // after the commit; a mail failure is only logged
             release_json(['success' => true, 'message' => $res['message'], 'restored' => $res['restored']]);
             break;
 
