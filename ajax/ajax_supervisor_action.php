@@ -593,6 +593,14 @@ if (isset($_POST["action"]) && $_POST["action"] == "request_submission") {
         echo "A request can cover at most " . SCILAB_MAX_REQUEST_DATES . " dates.";
         exit();
     }
+    require_once __DIR__ . '/../helperFiles/holidays.php';
+    foreach ($requestDates as $d) {
+        $closed = ral_closed_reason($conn, $d);
+        if ($closed !== '') {
+            echo "$d is unavailable ($closed). Please remove it from your dates.";
+            exit();
+        }
+    }
     $startDate = $requestDates[0]; // inclusiveDate holds the earliest day
     $startTime = $_POST['start_time'] ?? '';
     $endTime = $_POST['end_time'] ?? '';

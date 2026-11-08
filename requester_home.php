@@ -5,8 +5,7 @@
     require_once __DIR__ . '/helperFiles/request_dates.php';
     require_once __DIR__ . '/helperFiles/image_optimizer.php';   // WebP mirror URLs for the lab cards
     require_once __DIR__ . '/helperFiles/holidays.php';
-    $thisYear = (int) date('Y');
-    $holidays = ral_holidays([$thisYear, $thisYear + 1, $thisYear + 2]);
+    $holidays = ral_closed_dates($conn); // public holidays + admin-set no-class days
 
     if (!isset($_SESSION['role'])) {
         header("Location: index.php");

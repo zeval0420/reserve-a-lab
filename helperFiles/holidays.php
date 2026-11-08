@@ -32,3 +32,51 @@ function ral_holidays(array $years): array
     }
     return $out + $movable;
 }
+
+/* ---- No-class days set by admins (no_class_days.php) ---- */
+
+/** Create scilab_no_class_days on first use. */
+function ral_ensure_no_class_table(mysqli $conn): void
+{
+    static $checked = false;
+    if ($checked) return;
+    $checked = true;
+    try {
+        $conn->query("CREATE TABLE IF NOT EXISTS `scilab_no_class_days` (
+            `noClassDate` date NOT NULL,
+            `reason` varchar(100) NOT NULL DEFAULT '',
+            `createdBy` varchar(100) NOT NULL DEFAULT '',
+            `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (`noClassDate`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+    } catch (Throwable $e) { /* never take a page down over this */ }
+}
+
+/** Admin-set no-class days: ['YYYY-MM-DD' => reason]. */
+function ral_no_class_days(mysqli $conn): array
+{
+    ral_ensure_no_class_table($conn);
+    $out = [];
+    try {
+        $res = $conn->query("SELECT noClassDate, reason FROM scilab_no_class_days ORDER BY noClassDate");
+        while ($res && ($row = $res->fetch_assoc())) {
+            $out[$row['noClassDate']] = $row['reason'] !== '' ? $row['reason'] : 'No classes';
+        }
+    } catch (Throwable $e) {}
+    return $out;
+}
+
+/** Every closed date the picker should grey out (holidays + admin no-class days), over the next few years. */
+function ral_closed_dates(mysqli $conn): array
+{
+    $y = (int) date('Y');
+    return ral_no_class_days($conn) + ral_holidays([$y, $y + 1, $y + 2]);
+}
+
+/** Reason a date can't be booked ('' if it can): Sunday, holiday or admin no-class day. */
+function ral_closed_reason(mysqli $conn, string $date): string
+{
+    $days = ral_closed_dates($conn);
+    if (isset($days[$date])) return $days[$date];
+    return date('w', strtotime($date)) === '0' ? 'Sunday' : '';
+}

@@ -370,6 +370,15 @@
                 if (removed) changed();
                 return removed;
             },
+            /* Replace the always-unavailable dates (holidays, no-class days) */
+            setOffDates: function (map) {
+                offDates = map || {};
+                var kept = selected.filter(function (d) { return !isOff(d); });
+                var removed = selected.length - kept.length;
+                selected = kept;
+                render();
+                if (removed) changed();
+            },
             invalid: function (on) { root.classList.toggle('is-invalid', !!on); },
             summary: summary
         };

@@ -28,6 +28,9 @@
         exit();
     }
 
+    require_once __DIR__ . '/helperFiles/holidays.php';
+    $closedDates = ral_closed_dates($conn);
+
     $selected_date = $_SESSION['selected_date'] ?? null;
     $defaultVenue = $_GET['scilabname'] ?? '';
 
@@ -1645,6 +1648,8 @@
 
             datePicker = RalDatePicker.create('#date-picker', {
                 maxDates: 62, // same cap as the server (SCILAB_MAX_REQUEST_DATES)
+                offWeekdays: [0],                 // Sundays
+                offDates: <?= json_encode($closedDates ?: new stdClass, JSON_HEX_TAG) ?>, // holidays + no-class days
                 notify: showToast,
                 onChange: function(dates) {
                     selectedDates = dates;
@@ -1706,4 +1711,4 @@
             $('input[type="date"]').attr('min', today);
         }
     </script>
-</html>
+</html>

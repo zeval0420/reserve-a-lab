@@ -89,6 +89,11 @@
         </li>
         <?php if ($role === 'admin'): ?>
             <li>
+                <a href="no_class_days.php" class="nav-link <?php echo ($currentPage === 'no_class_days.php') ? 'active' : ''; ?>">
+                    No Classes
+                </a>
+            </li>
+            <li>
                 <a href="inventory.php" class="nav-link <?php echo ($currentPage === 'inventory.php') ? 'active' : ''; ?>">
                     Inventory
                 </a>
