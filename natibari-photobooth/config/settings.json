@@ -42,7 +42,7 @@
     "email": {
         "enabled": true,
         "to": [
-            "mikaelasimeon.daus@irc.pshs.edu.ph"
+            "mikaela.daus@irc.pshs.edu.ph"
         ],
         "smtp_host": "smtp.gmail.com",
         "smtp_port": 587,
