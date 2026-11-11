@@ -42,7 +42,7 @@
     "email": {
         "enabled": true,
         "to": [
-            "steffenmarrion.ancheta@irc.pshs.edu.ph"
+            "mikaelasimeon.daus@irc.pshs.edu.ph"
         ],
         "smtp_host": "smtp.gmail.com",
         "smtp_port": 587,
