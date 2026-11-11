@@ -793,6 +793,7 @@
                         <thead>
                             <tr>
                                 <th>#</th>
+                                <th>Action</th>
                                 <?php if ($statusFilter === 'Approved'): ?>
                                     <th>Control #</th>
                                 <?php endif; ?>
@@ -803,7 +804,6 @@
                                 <th>Date of Use</th>
                                 <th>Requested Materials</th>
                                 <th>Teacher-in-Charge</th>
-                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -811,15 +811,6 @@
                             <tr>
                                 <td><?= $i++ ?></td>
 
-                                <?php if ($statusFilter === 'Approved'): ?>
-                                    <td><?= htmlspecialchars($row['controlNumber']) ?></td>
-                                <?php endif; ?>
-
-                                <td><?= htmlspecialchars($row['scilabName']) ?></td>
-                                <td><?= htmlspecialchars("Grade {$row['gradeLevel']} - {$row['sections']}") ?></td>
-                                <td><?= htmlspecialchars($row['subject']) ?></td>
-                                <td><?= htmlspecialchars($row['subjectTopic']) ?></td>
-                                <td><?= htmlspecialchars($row['dateLabel'] . " (" . $row['inclusiveTime'] . ")") ?></td>
                                 <?php
                                     $allMats = $materials[$row['id']] ?? [];
                                     $totalMats = count($allMats);
@@ -862,8 +853,6 @@
                                         ? implode("", $materialsDetailed[$row['id']]) 
                                         : '—';
                                 ?>
-                                <td><?= $materialText ?></td>
-                                <td><?= !empty($row['teacherInCharge']) ? htmlspecialchars($row['teacherInCharge']) : '—' ?></td>
 
                                 <td>
                                     <?php if ($statusFilter === 'Cancelled'): ?>
@@ -880,6 +869,18 @@
                                     </button>
                                     <?php endif; ?>
                                 </td>
+
+                                <?php if ($statusFilter === 'Approved'): ?>
+                                    <td><?= htmlspecialchars($row['controlNumber']) ?></td>
+                                <?php endif; ?>
+
+                                <td><?= htmlspecialchars($row['scilabName']) ?></td>
+                                <td><?= htmlspecialchars("Grade {$row['gradeLevel']} - {$row['sections']}") ?></td>
+                                <td><?= htmlspecialchars($row['subject']) ?></td>
+                                <td><?= htmlspecialchars($row['subjectTopic']) ?></td>
+                                <td><?= htmlspecialchars($row['dateLabel'] . " (" . $row['inclusiveTime'] . ")") ?></td>
+                                <td><?= $materialText ?></td>
+                                <td><?= !empty($row['teacherInCharge']) ? htmlspecialchars($row['teacherInCharge']) : '—' ?></td>
                             </tr>
                             <?php endforeach; ?>
                         </tbody>

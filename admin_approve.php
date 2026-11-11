@@ -1001,6 +1001,7 @@
                             <tr>
                                 <th>#</th>
                                 <th class="details-col">Details</th>
+                                <?php if ($statusFilter !== 'Rejected' && $statusFilter !== 'Cancelled'): ?><th>Action</th><?php endif; ?>
                                 <th>Requester Name</th>
                                 <?php if ($statusFilter === 'Approved'): ?><th>Control #</th><?php endif; ?>
                                 <th>Lab Name</th>
@@ -1015,7 +1016,6 @@
                                 <?php if ($statusFilter === 'Approved'): ?><th>Materials Released To</th><?php endif; ?>
                                 <?php if ($statusFilter === 'Rejected'): ?><th>Feedback</th><?php endif; ?>
                                 <?php if ($statusFilter === 'Cancelled'): ?><th>Cancelled</th><?php endif; ?>
-                                <?php if ($statusFilter !== 'Rejected' && $statusFilter !== 'Cancelled'): ?><th>Action</th><?php endif; ?>
                             </tr>
                         </thead>
                         <tbody>
@@ -1042,6 +1042,31 @@
                                         <td class="details-col">
                                             <button type="button" class="btn-liquid view-details-btn" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>View</button>
                                         </td>
+                                        <?php if ($statusFilter !== 'Rejected' && $statusFilter !== 'Cancelled'): ?>
+                                            <td>
+                                                <?php if ($statusFilter === 'Pending'): ?>
+                                                    <a href="supervisor_approve.php?id=<?= $row['id'] ?>" class="btn-liquid" style="width: 90%; margin-bottom: 10px; display:block; text-align:center; padding-left:0; padding-right:0;">Review</a>
+                                                    <button class="btn-liquid-success approve-btn" style="width: 90%; margin-bottom: 10px; padding-left:0; padding-right:0;" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>Force Approve</button>
+                                                    <button class="btn-liquid-danger reject-btn" style="width: 90%; padding-left:0; padding-right:0;" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>Reject</button>
+                                                    <button type="button" class="btn-liquid-secondary cancel-req-btn" style="width: 90%; margin-top: 10px; padding-left:0; padding-right:0;" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>Cancel Request</button>
+                                                <?php elseif ($statusFilter === 'Approved'): ?>
+                                                    <a href="templates/print_template.php?id=<?= $row['id'] ?>" target="_blank" class="btn-liquid" style="width: 90%; margin-bottom: 10px; display:block; text-align:center; padding-left:0; padding-right:0;">
+                                                        <i class="glyphicon glyphicon-print"></i> Print
+                                                    </a>
+                                                    <button class="btn-liquid edit-control-btn" style="width: 90%; padding-left:0; padding-right:0;" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>
+                                                        <i class="glyphicon glyphicon-edit"></i> Edit Control #'s
+                                                    </button>
+                                                    <button type="button" class="btn-liquid-success release-btn" style="width: 90%; margin-top: 10px; padding-left:0; padding-right:0;" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>
+                                                        <?= $isReleased ? 'View Release' : 'Release Materials' ?>
+                                                    </button>
+                                                    <?php if ($isReleased): ?>
+                                                        <button type="button" class="btn-liquid-secondary" style="width: 90%; margin-top: 10px; padding-left:0; padding-right:0;" disabled title="Materials were already released, so this request can no longer be cancelled.">Cancel Request</button>
+                                                    <?php else: ?>
+                                                        <button type="button" class="btn-liquid-secondary cancel-req-btn" style="width: 90%; margin-top: 10px; padding-left:0; padding-right:0;" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>Cancel Request</button>
+                                                    <?php endif; ?>
+                                                <?php endif; ?>
+                                            </td>
+                                        <?php endif; ?>
                                         <td><?= htmlspecialchars($fullName) ?></td>
                                         <?php if ($statusFilter === 'Approved'):
                                             $ctrlPrimary = ($row['control_equipment'] ?? '') ?: (($row['control_reagent'] ?? '') ?: (($row['control_permit'] ?? '') ?: (($row['control_reservation'] ?? '') ?: ($row['controlNumber'] ?? ''))));
@@ -1083,31 +1108,6 @@
                                             </td>
                                         <?php endif; ?>
 
-                                        <?php if ($statusFilter !== 'Rejected' && $statusFilter !== 'Cancelled'): ?>
-                                            <td>
-                                                <?php if ($statusFilter === 'Pending'): ?>
-                                                    <a href="supervisor_approve.php?id=<?= $row['id'] ?>" class="btn-liquid" style="width: 90%; margin-bottom: 10px; display:block; text-align:center; padding-left:0; padding-right:0;">Review</a>
-                                                    <button class="btn-liquid-success approve-btn" style="width: 90%; margin-bottom: 10px; padding-left:0; padding-right:0;" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>Force Approve</button>
-                                                    <button class="btn-liquid-danger reject-btn" style="width: 90%; padding-left:0; padding-right:0;" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>Reject</button>
-                                                    <button type="button" class="btn-liquid-secondary cancel-req-btn" style="width: 90%; margin-top: 10px; padding-left:0; padding-right:0;" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>Cancel Request</button>
-                                                <?php elseif ($statusFilter === 'Approved'): ?>
-                                                    <a href="templates/print_template.php?id=<?= $row['id'] ?>" target="_blank" class="btn-liquid" style="width: 90%; margin-bottom: 10px; display:block; text-align:center; padding-left:0; padding-right:0;">
-                                                        <i class="glyphicon glyphicon-print"></i> Print
-                                                    </a>
-                                                    <button class="btn-liquid edit-control-btn" style="width: 90%; padding-left:0; padding-right:0;" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>
-                                                        <i class="glyphicon glyphicon-edit"></i> Edit Control #'s
-                                                    </button>
-                                                    <button type="button" class="btn-liquid-success release-btn" style="width: 90%; margin-top: 10px; padding-left:0; padding-right:0;" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>
-                                                        <?= $isReleased ? 'View Release' : 'Release Materials' ?>
-                                                    </button>
-                                                    <?php if ($isReleased): ?>
-                                                        <button type="button" class="btn-liquid-secondary" style="width: 90%; margin-top: 10px; padding-left:0; padding-right:0;" disabled title="Materials were already released, so this request can no longer be cancelled.">Cancel Request</button>
-                                                    <?php else: ?>
-                                                        <button type="button" class="btn-liquid-secondary cancel-req-btn" style="width: 90%; margin-top: 10px; padding-left:0; padding-right:0;" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>Cancel Request</button>
-                                                    <?php endif; ?>
-                                                <?php endif; ?>
-                                            </td>
-                                        <?php endif; ?>
                                     </tr>
                                 <?php endforeach; ?>
                             <?php else: ?>
