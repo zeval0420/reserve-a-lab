@@ -1,6 +1,6 @@
 <?php
 // Table browser for controller_dashboard.php: list, load, edit and delete rows of any table in the database
-include_once(__DIR__ . '/../../scilab/helperFiles/db_connection.php');
+include_once(__DIR__ . '/../../credentials/db_connection.php');
 include_once(__DIR__ . '/../helperFiles/session_handler.php');
 
 // Same gate as controller_dashboard.php; every request is a POST carrying the CSRF token

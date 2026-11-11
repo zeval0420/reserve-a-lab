@@ -1,5 +1,5 @@
 <?php
-include('../../scilab/helperFiles/db_connection.php');
+include('../../credentials/db_connection.php');
 include('../helperFiles/session_handler.php');
 ral_require_login();
 

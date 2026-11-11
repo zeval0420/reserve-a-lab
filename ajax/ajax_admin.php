@@ -1,6 +1,6 @@
 <?php
     // centralized db_connection and session_handler
-    include('../../scilab/helperFiles/db_connection.php');
+    include('../../credentials/db_connection.php');
     include('../helperFiles/session_handler.php');
     include('../helperFiles/variableDeclarations.php');
     // Admin-only endpoint: logged in with the admin role, and a valid CSRF token on POST

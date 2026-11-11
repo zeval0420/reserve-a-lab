@@ -3,7 +3,7 @@
  * Load foundational resources:
  * Establishes database connections and handles session persistence automatically.
  */
-include('../scilab/helperFiles/db_connection.php');
+include('../credentials/db_connection.php');
 include('helperFiles/session_handler.php');
 include('helperFiles/variableDeclarations.php'); // $active_server is declared here
 $active_server = "beta";

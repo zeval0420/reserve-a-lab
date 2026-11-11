@@ -7,7 +7,7 @@ require_once __DIR__ . '/control_numbers.php';
 require_once __DIR__ . '/request_dates.php';
 
 try {
-    include('../../scilab/helperFiles/db_connection.php');
+    include('../../credentials/db_connection.php');
 } catch (Throwable $e) {
     while (ob_get_level()) { ob_end_clean(); }
     die("Database Connection Error: " . $e->getMessage());

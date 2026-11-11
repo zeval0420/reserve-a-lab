@@ -3,7 +3,7 @@
     error_reporting(E_ALL);
     ini_set('display_errors', 1);
 
-    include('../scilab/helperFiles/db_connection.php');
+    include('../credentials/db_connection.php');
     include('helperFiles/session_handler.php');
     require_once __DIR__ . '/helperFiles/input.php';
     require_once __DIR__ . '/helperFiles/request_dates.php';

@@ -1,6 +1,6 @@
 <?php
     // Admin-only: add / remove no-class days
-    include('../../scilab/helperFiles/db_connection.php');
+    include('../../credentials/db_connection.php');
     include('../helperFiles/session_handler.php');
     require_once __DIR__ . '/../helperFiles/request_dates.php';
     require_once __DIR__ . '/../helperFiles/holidays.php';

@@ -1,7 +1,7 @@
 <?php
 // Release Materials / Cancel Request (admin only). Logic lives in helperFiles/material_release.php.
 // Every response is JSON: {success: bool, message?: string, ...}.
-include_once(__DIR__ . '/../../scilab/helperFiles/db_connection.php');
+include_once(__DIR__ . '/../../credentials/db_connection.php');
 include_once(__DIR__ . '/../helperFiles/session_handler.php');
 include_once(__DIR__ . '/../helperFiles/variableDeclarations.php');
 require_once __DIR__ . '/../helperFiles/input.php';   // ral_display_name()

@@ -9,10 +9,10 @@ if (!file_exists('../vendor/autoload.php')) {
 }
 require_once '../vendor/autoload.php';
 
-if (!file_exists('../../scilab/helperFiles/db_connection.php')) {
+if (!file_exists('../../credentials/db_connection.php')) {
     die('Error: helperFiles/db_connection.php not found. Check directory case sensitivity (helperFiles vs helperfiles).');
 }
-include('../../scilab/helperFiles/db_connection.php');
+include('../../credentials/db_connection.php');
 
 use Dompdf\Dompdf;
 use Dompdf\Options;

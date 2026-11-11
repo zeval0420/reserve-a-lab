@@ -39,7 +39,7 @@ class Mailer
             return 'No SMTP user (email.smtp_user in settings.json).';
         }
         if ($smtp['pass'] === '') {
-            return 'No SMTP password: ' . dirname(ROOT_PATH) . '/helperFiles/secrets.php is missing or has no smtp_password.';
+            return 'No SMTP password: ' . dirname(ROOT_PATH, 2) . '/credentials/secrets.php is missing or has no smtp_password.';
         }
         return null;
     }
@@ -67,7 +67,7 @@ class Mailer
 
     /**
      * SMTP account. Inside reserve-a-lab, reuse its mail account
-     * (helperFiles/email_credentials.php + secrets.php) so the password lives
+     * (credentials/email_credentials.php + secrets.php) so the password lives
      * in one place. email_credentials.php is gitignored and may be missing on
      * a deployed server: then the account comes from settings.json and only
      * the password from secrets.php. A standalone copy uses settings.json alone.
@@ -78,7 +78,7 @@ class Mailer
         if ($smtp !== null) {
             return $smtp;
         }
-        $dir = dirname(ROOT_PATH) . '/helperFiles';
+        $dir = dirname(ROOT_PATH, 2) . '/credentials';
         $secrets = is_file($dir . '/secrets.php') ? (require $dir . '/secrets.php') : [];
         $secrets = is_array($secrets) ? $secrets : [];
         if (is_file($dir . '/email_credentials.php') && $secrets) {

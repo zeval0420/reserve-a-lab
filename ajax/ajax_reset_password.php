@@ -1,5 +1,5 @@
 <?php
-include('../../scilab/helperFiles/db_connection.php');
+include('../../credentials/db_connection.php');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = $_POST['email'] ?? '';

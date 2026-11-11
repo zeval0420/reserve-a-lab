@@ -7,7 +7,7 @@
     require '../PHPMailer/src/SMTP.php';
 
     // centralized db_connection and session_handler
-    include('../../scilab/helperFiles/db_connection.php');
+    include('../../credentials/db_connection.php');
     include('../helperFiles/session_handler.php');
     include('../helperFiles/variableDeclarations.php');
     include_once('../helperFiles/scilab_email.php');

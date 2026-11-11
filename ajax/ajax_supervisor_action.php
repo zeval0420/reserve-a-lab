@@ -45,7 +45,7 @@ require '../PHPMailer/src/PHPMailer.php';
 require '../PHPMailer/src/SMTP.php';
 
 try {
-    include('../../scilab/helperFiles/db_connection.php');
+    include('../../credentials/db_connection.php');
     include('../helperFiles/session_handler.php');
     include('../helperFiles/variableDeclarations.php');
     require_once __DIR__ . '/../helperFiles/input.php';

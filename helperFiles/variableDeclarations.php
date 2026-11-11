@@ -1,7 +1,7 @@
 <?php
 // variableDeclarations.php
 // Centralized configuration file
-// Edit ONLY this file (and db_connection.php) to adapt the system to new setups.
+// Edit ONLY this file (and ../credentials/db_connection.php) to adapt the system to new setups.
 
 $active_server = "scilab"; // Change this to "scilab", "reserve-a-lab", etc. when switching environments.
 
@@ -121,17 +121,19 @@ $system_name = "SciLab Reservation Management System";
 $organization = "Department of Science and Technology (DOST)";
 
 // PRIVATE CREDENTIALS (kept out of version control)
-$scilab_secrets = is_file(__DIR__ . '/secrets.php') ? (require __DIR__ . '/secrets.php') : [];
+// Lives outside the project, in a `credentials/` folder next to reserve-a-lab/ and scilab/.
+$credentials_dir = dirname(__DIR__, 2) . '/credentials';
+$scilab_secrets = is_file($credentials_dir . '/secrets.php') ? (require $credentials_dir . '/secrets.php') : [];
 if (empty($scilab_secrets['approval_secret']) || empty($scilab_secrets['smtp_password'])) {
-    error_log('helperFiles/secrets.php is missing or incomplete; see secrets.example.php');
+    error_log('credentials/secrets.php is missing or incomplete; see helperFiles/secrets.example.php');
 }
 
-// email_credentials.php is gitignored, so a deployed server only has it if someone uploaded it.
+// credentials/email_credentials.php is outside the repo, so a deployed server only has it if someone uploaded it.
 // Without it the page still has to load (dropdowns, forms...): only sending email is affected.
-if (is_file(__DIR__ . '/email_credentials.php')) {
-    include(__DIR__ . '/email_credentials.php');
+if (is_file($credentials_dir . '/email_credentials.php')) {
+    include($credentials_dir . '/email_credentials.php');
 } else {
-    error_log('helperFiles/email_credentials.php is missing: emails cannot be sent until it is uploaded');
+    error_log('credentials/email_credentials.php is missing: emails cannot be sent until it is uploaded');
 }
 $email_sender       = $email_sender       ?? '';
 $email_sender_name  = $email_sender_name  ?? 'PSHS-IRC SciLab';
@@ -168,7 +170,7 @@ if (!function_exists('scilab_approval_token')) {
         global $scilab_secrets;
         $secret = $scilab_secrets['approval_secret'] ?? '';
         if ($secret === '') {
-            throw new RuntimeException('approval_secret is not configured in helperFiles/secrets.php');
+            throw new RuntimeException('approval_secret is not configured in credentials/secrets.php');
         }
         return hash_hmac('sha256', intval($requestId) . '|' . $stage, $secret);
     }

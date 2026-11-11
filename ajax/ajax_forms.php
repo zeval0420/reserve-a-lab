@@ -32,7 +32,7 @@ require '../PHPMailer/src/SMTP.php';
  * Centralized initialization protocol: 
  * Integrates database connectivity and ensures secure session management handling.
  */
-include('../../scilab/helperFiles/db_connection.php');
+include('../../credentials/db_connection.php');
 include('../helperFiles/session_handler.php');
 include('../helperFiles/variableDeclarations.php');
 include_once('../helperFiles/scilab_email.php');
