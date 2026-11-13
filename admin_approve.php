@@ -1014,7 +1014,7 @@
                                 <th>Date of Use</th>
                                 <th>Requested Materials</th>
                                 <th>Teacher-in-Charge</th>
-                                <th>Flag</th>
+                                <?php if ($statusFilter === 'Pending'): ?><th>Flag</th><?php endif; ?>
                                 <?php if ($statusFilter === 'Approved'): ?><th>Remarks</th><?php endif; ?>
                                 <?php if ($statusFilter === 'Approved'): ?><th>Materials Released To</th><?php endif; ?>
                                 <?php if ($statusFilter === 'Approved'): ?><th>Printed</th><?php endif; ?>
@@ -1034,7 +1034,8 @@
                                         $materialText = isset($materials[$formID]) ? implode("", $materials[$formID]) : '—';
                                         $row['materialsDetailed'] = isset($materialsDetailed[$formID]) ? implode("", $materialsDetailed[$formID]) : '—';
                                         $teacherInCharge = !empty($row['teacherInCharge']) ? htmlspecialchars($row['teacherInCharge']) : '—';
-                                        $flagged = (!empty($row['dateRequested']) && !empty($row['inclusiveDate']) && (strtotime($row['inclusiveDate']) - strtotime($row['dateRequested'])) < 3 * 86400);
+                                        // Late requests are flagged (and the row shown in red) only while they still need a decision
+                                        $flagged = ($statusFilter === 'Pending' && !empty($row['dateRequested']) && !empty($row['inclusiveDate']) && (strtotime($row['inclusiveDate']) - strtotime($row['dateRequested'])) < 3 * 86400);
                                         $daysBeforeUse = $flagged ? max(0, (int)floor((strtotime($row['inclusiveDate']) - strtotime($row['dateRequested'])) / 86400)) : 0;
                                         $row['flagged'] = $flagged;
                                         $row['daysBeforeUse'] = $daysBeforeUse;
@@ -1048,33 +1049,38 @@
                                         </td>
                                         <?php if ($statusFilter !== 'Rejected' && $statusFilter !== 'Cancelled'): ?>
                                             <td>
+                                                <?php $reqJson = htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8'); $isPrinted = !empty($row['printedAt']); ?>
+                                                <div class="action-stack">
                                                 <?php if ($statusFilter === 'Pending'): ?>
-                                                    <a href="supervisor_approve.php?id=<?= $row['id'] ?>" class="btn-liquid" style="width: 90%; margin-bottom: 10px; display:block; text-align:center; padding-left:0; padding-right:0;">Review</a>
-                                                    <button class="btn-liquid-success approve-btn" style="width: 90%; margin-bottom: 10px; padding-left:0; padding-right:0;" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>Force Approve</button>
-                                                    <button class="btn-liquid-danger reject-btn" style="width: 90%; padding-left:0; padding-right:0;" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>Reject</button>
-                                                    <button type="button" class="btn-liquid-secondary cancel-req-btn" style="width: 90%; margin-top: 10px; padding-left:0; padding-right:0;" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>Cancel Request</button>
+                                                    <a href="supervisor_approve.php?id=<?= $row['id'] ?>" class="btn-liquid">Review</a>
+                                                    <div class="action-pair">
+                                                        <button type="button" class="btn-liquid-success approve-btn" title="Force Approve" data-request='<?= $reqJson ?>'>Approve</button>
+                                                        <button type="button" class="btn-liquid-danger reject-btn" data-request='<?= $reqJson ?>'>Reject</button>
+                                                    </div>
+                                                    <button type="button" class="action-more-toggle" aria-expanded="false">More &#9662;</button>
+                                                    <div class="action-more">
+                                                        <button type="button" class="btn-liquid-secondary cancel-req-btn" data-request='<?= $reqJson ?>'>Cancel Request</button>
+                                                    </div>
                                                 <?php elseif ($statusFilter === 'Approved'): ?>
-                                                    <a href="templates/print_template.php?id=<?= $row['id'] ?>" target="_blank" class="btn-liquid" style="width: 90%; margin-bottom: 10px; display:block; text-align:center; padding-left:0; padding-right:0;">
-                                                        <i class="glyphicon glyphicon-print"></i> Print
-                                                    </a>
-                                                    <a href="templates/print_template.php?id=<?= $row['id'] ?>&amp;download=1" class="btn-liquid" style="width: 90%; margin-bottom: 10px; display:block; text-align:center; padding-left:0; padding-right:0;">
-                                                        <i class="glyphicon glyphicon-download-alt"></i> Download PDF
-                                                    </a>
-                                                    <button type="button" class="<?= !empty($row['printedAt']) ? 'btn-liquid-secondary' : 'btn-liquid-success' ?> print-mark-btn" data-id="<?= (int)$row['id'] ?>" data-printed="<?= !empty($row['printedAt']) ? '1' : '0' ?>" style="width: 90%; margin-bottom: 10px; padding-left:0; padding-right:0;">
-                                                        <?= !empty($row['printedAt']) ? 'Unmark Printed' : 'Mark as Printed' ?>
+                                                    <div class="action-pair">
+                                                        <a href="templates/print_template.php?id=<?= $row['id'] ?>" target="_blank" class="btn-liquid" title="Open the form to print"><i class="glyphicon glyphicon-print"></i> Print</a>
+                                                        <a href="templates/print_template.php?id=<?= $row['id'] ?>&amp;download=1" class="btn-liquid" title="Download the form as PDF"><i class="glyphicon glyphicon-download-alt"></i> PDF</a>
+                                                    </div>
+                                                    <button type="button" class="btn-liquid-success release-btn" data-request='<?= $reqJson ?>'><?= $isReleased ? 'View Release' : 'Release Materials' ?></button>
+                                                    <button type="button" class="print-mark-btn print-switch<?= $isPrinted ? ' is-on' : '' ?>" role="switch" aria-checked="<?= $isPrinted ? 'true' : 'false' ?>" data-id="<?= (int)$row['id'] ?>" data-printed="<?= $isPrinted ? '1' : '0' ?>" title="Mark this request as printed">
+                                                        <span class="print-switch-track"><span class="print-switch-knob"></span></span> Printed
                                                     </button>
-                                                    <button class="btn-liquid edit-control-btn" style="width: 90%; padding-left:0; padding-right:0;" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>
-                                                        <i class="glyphicon glyphicon-edit"></i> Edit Control #'s
-                                                    </button>
-                                                    <button type="button" class="btn-liquid-success release-btn" style="width: 90%; margin-top: 10px; padding-left:0; padding-right:0;" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>
-                                                        <?= $isReleased ? 'View Release' : 'Release Materials' ?>
-                                                    </button>
-                                                    <?php if ($isReleased): ?>
-                                                        <button type="button" class="btn-liquid-secondary" style="width: 90%; margin-top: 10px; padding-left:0; padding-right:0;" disabled title="Materials were already released, so this request can no longer be cancelled.">Cancel Request</button>
-                                                    <?php else: ?>
-                                                        <button type="button" class="btn-liquid-secondary cancel-req-btn" style="width: 90%; margin-top: 10px; padding-left:0; padding-right:0;" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>Cancel Request</button>
-                                                    <?php endif; ?>
+                                                    <button type="button" class="action-more-toggle" aria-expanded="false">More &#9662;</button>
+                                                    <div class="action-more">
+                                                        <button type="button" class="btn-liquid edit-control-btn" data-request='<?= $reqJson ?>'><i class="glyphicon glyphicon-edit"></i> Edit Control #'s</button>
+                                                        <?php if ($isReleased): ?>
+                                                            <button type="button" class="btn-liquid-secondary" disabled title="Materials were already released, so this request can no longer be cancelled.">Cancel Request</button>
+                                                        <?php else: ?>
+                                                            <button type="button" class="btn-liquid-secondary cancel-req-btn" data-request='<?= $reqJson ?>'>Cancel Request</button>
+                                                        <?php endif; ?>
+                                                    </div>
                                                 <?php endif; ?>
+                                                </div>
                                             </td>
                                         <?php endif; ?>
                                         <td><?= htmlspecialchars($fullName) ?></td>
@@ -1088,7 +1094,7 @@
                                         <td><?= htmlspecialchars($row['dateLabel']).' ('.htmlspecialchars($row['inclusiveTime']).')' ?></td>
                                         <td><?= $materialText ?></td>
                                         <td><?= $teacherInCharge ?></td>
-                                        <td><?= $flagged ? '<span class="request-flag-badge" title="Requested less than 3 days before lab use">FLAGGED</span><div class="request-flag-sub">' . $daysBeforeUse . ' day(s) before use</div>' : '<span class="request-flag-none">—</span>' ?></td>
+                                        <?php if ($statusFilter === 'Pending'): ?><td><?= $flagged ? '<span class="request-flag-badge" title="Requested less than 3 days before lab use">FLAGGED</span><div class="request-flag-sub">' . $daysBeforeUse . ' day(s) before use</div>' : '<span class="request-flag-none">—</span>' ?></td><?php endif; ?>
 
                                         <?php if ($statusFilter === 'Approved'): ?>
                                             <td><?= htmlspecialchars($row['feedback'] ?? '—') ?></td>
@@ -1407,6 +1413,20 @@
                 .release-badge, .cancelled-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; white-space: nowrap; }
                 .release-badge { background: #16A34A; }
                 .cancelled-badge { background: #6c757d; }
+                .action-stack { display: flex; flex-direction: column; gap: 8px; min-width: 150px; }
+                .action-stack .btn-liquid, .action-stack .btn-liquid-success, .action-stack .btn-liquid-danger, .action-stack .btn-liquid-secondary { width: 100%; margin: 0; padding-left: 6px; padding-right: 6px; display: block; text-align: center; white-space: nowrap; }
+                .action-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+                .action-more-toggle { background: none; border: 0; padding: 2px 0; font-size: 12px; font-weight: 600; color: #1a56db; cursor: pointer; text-align: left; }
+                .action-more-toggle:hover { text-decoration: underline; }
+                .action-more { display: none; flex-direction: column; gap: 8px; }
+                .action-more.open { display: flex; }
+                .print-switch { display: inline-flex; align-items: center; gap: 8px; background: none; border: 0; padding: 2px 0; font-size: 13px; font-weight: 600; color: #444; cursor: pointer; }
+                .print-switch-track { position: relative; width: 34px; height: 18px; border-radius: 9px; background: #cbd5e1; transition: background .15s; flex: 0 0 auto; }
+                .print-switch-knob { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.3); transition: left .15s; }
+                .print-switch.is-on { color: #1a56db; }
+                .print-switch.is-on .print-switch-track { background: #1a56db; }
+                .print-switch.is-on .print-switch-knob { left: 18px; }
+                .print-switch:disabled { opacity: .6; cursor: wait; }
                 .printed-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; white-space: nowrap; background: #1a56db; }
                 .release-sub { font-size: 11px; color: #666; margin-top: 2px; }
 
@@ -1631,7 +1651,7 @@
                     detailField('Date of Use', d.dateLabel || d.inclusiveDate) +
                     detailField('Time', d.inclusiveTime) +
                     detailField('Teacher-in-Charge', d.teacherInCharge) +
-                    detailField('Flag', d.flagged ? 'Flagged: ' + d.daysBeforeUse + ' day(s) before use' : 'None') +
+                    (REQUEST_STATUS === 'Pending' ? detailField('Flag', d.flagged ? 'Flagged: ' + d.daysBeforeUse + ' day(s) before use' : 'None') : '') +
                     (REQUEST_STATUS === 'Approved' ? detailField('Control #', ctrl) : '') +
                     (REQUEST_STATUS === 'Approved' ? detailField('Remarks', d.feedback, true) : '') +
                     (REQUEST_STATUS === 'Rejected' ? detailField('Feedback', d.feedback || 'No reason provided', true) : '') +
@@ -2620,6 +2640,14 @@
             return d.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
         }
 
+        // "More" toggle in the Action column: shows the less-used actions of that row
+        $(document).on('click', '.action-more-toggle', function () {
+            const $t = $(this);
+            const open = !$t.next('.action-more').hasClass('open');
+            $t.next('.action-more').toggleClass('open', open);
+            $t.attr('aria-expanded', open ? 'true' : 'false').html(open ? 'Less &#9652;' : 'More &#9662;');
+        });
+
         $(document).on('click', '.print-mark-btn', function () {
             const $btn = $(this);
             if ($btn.prop('disabled')) return;
@@ -2633,7 +2661,10 @@
                     return;
                 }
                 const printed = !!res.printedAt;
-                $all.attr('data-printed', printed ? '1' : '0')
+                $all.attr('data-printed', printed ? '1' : '0');
+                // Table rows use a switch; the details window uses a labelled button
+                $all.filter('.print-switch').toggleClass('is-on', printed).attr('aria-checked', printed ? 'true' : 'false');
+                $all.not('.print-switch')
                     .toggleClass('btn-liquid-success', !printed)
                     .toggleClass('btn-liquid-secondary', printed)
                     .text(printed ? 'Unmark Printed' : 'Mark as Printed');
