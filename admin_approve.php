@@ -7,6 +7,7 @@
     include('helperFiles/session_handler.php');
     require_once __DIR__ . '/helperFiles/input.php';
     require_once __DIR__ . '/helperFiles/request_dates.php';
+    require_once __DIR__ . '/helperFiles/print_status.php';
 
     $email = $_SESSION['email'];
     $username = $_SESSION['username'];
@@ -56,6 +57,8 @@
     // ===== Build date filter (bound parameters) =====
     [$dateFilter, $dateTypes, $dateParams] = ral_request_date_filter($filterMode, $fromDate, $toDate, $days);
     // ===== END ADDED =====
+
+    scilab_ensure_print_columns($conn);   // printedAt / printedBy
 
     $sql = "
         SELECT *
@@ -1014,6 +1017,7 @@
                                 <th>Flag</th>
                                 <?php if ($statusFilter === 'Approved'): ?><th>Remarks</th><?php endif; ?>
                                 <?php if ($statusFilter === 'Approved'): ?><th>Materials Released To</th><?php endif; ?>
+                                <?php if ($statusFilter === 'Approved'): ?><th>Printed</th><?php endif; ?>
                                 <?php if ($statusFilter === 'Rejected'): ?><th>Feedback</th><?php endif; ?>
                                 <?php if ($statusFilter === 'Cancelled'): ?><th>Cancelled</th><?php endif; ?>
                             </tr>
@@ -1053,6 +1057,12 @@
                                                     <a href="templates/print_template.php?id=<?= $row['id'] ?>" target="_blank" class="btn-liquid" style="width: 90%; margin-bottom: 10px; display:block; text-align:center; padding-left:0; padding-right:0;">
                                                         <i class="glyphicon glyphicon-print"></i> Print
                                                     </a>
+                                                    <a href="templates/print_template.php?id=<?= $row['id'] ?>&amp;download=1" class="btn-liquid" style="width: 90%; margin-bottom: 10px; display:block; text-align:center; padding-left:0; padding-right:0;">
+                                                        <i class="glyphicon glyphicon-download-alt"></i> Download PDF
+                                                    </a>
+                                                    <button type="button" class="<?= !empty($row['printedAt']) ? 'btn-liquid-secondary' : 'btn-liquid-success' ?> print-mark-btn" data-id="<?= (int)$row['id'] ?>" data-printed="<?= !empty($row['printedAt']) ? '1' : '0' ?>" style="width: 90%; margin-bottom: 10px; padding-left:0; padding-right:0;">
+                                                        <?= !empty($row['printedAt']) ? 'Unmark Printed' : 'Mark as Printed' ?>
+                                                    </button>
                                                     <button class="btn-liquid edit-control-btn" style="width: 90%; padding-left:0; padding-right:0;" data-request='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>'>
                                                         <i class="glyphicon glyphicon-edit"></i> Edit Control #'s
                                                     </button>
@@ -1092,6 +1102,15 @@
                                                     <span class="release-badge">RELEASED</span>
                                                 <?php else: ?>
                                                     <span class="request-flag-none">Not yet released</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="print-status-cell" data-id="<?= (int)$row['id'] ?>" data-order="<?= htmlspecialchars($row['printedAt'] ?? '') ?>">
+                                                <?php if (!empty($row['printedAt'])): ?>
+                                                    <span class="printed-badge">PRINTED</span>
+                                                    <div class="release-sub"><?= htmlspecialchars(date('M j, Y g:i A', strtotime($row['printedAt']))) ?></div>
+                                                    <?php if (!empty($row['printedBy'])): ?><div class="release-sub">By <?= htmlspecialchars($row['printedBy']) ?></div><?php endif; ?>
+                                                <?php else: ?>
+                                                    <span class="request-flag-none">Not yet printed</span>
                                                 <?php endif; ?>
                                             </td>
                                         <?php endif; ?>
@@ -1388,6 +1407,7 @@
                 .release-badge, .cancelled-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; white-space: nowrap; }
                 .release-badge { background: #16A34A; }
                 .cancelled-badge { background: #6c757d; }
+                .printed-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; white-space: nowrap; background: #1a56db; }
                 .release-sub { font-size: 11px; color: #666; margin-top: 2px; }
 
                 #releaseModal .custom-modal { max-width: 900px; }
@@ -1629,6 +1649,12 @@
                     $footer.append($('<button type="button" class="btn-liquid-secondary cancel-req-btn">Cancel Request</button>').data('request', d));
                 } else if (REQUEST_STATUS === 'Approved') {
                     $footer.append($('<a class="btn-liquid" target="_blank">Print</a>').attr('href', 'templates/print_template.php?id=' + d.id));
+                    $footer.append($('<a class="btn-liquid">Download PDF</a>').attr('href', 'templates/print_template.php?id=' + d.id + '&download=1'));
+                    const isPrinted = !!d.printedAt;
+                    $footer.append($('<button type="button" class="print-mark-btn"></button>')
+                        .addClass(isPrinted ? 'btn-liquid-secondary' : 'btn-liquid-success')
+                        .attr({ 'data-id': d.id, 'data-printed': isPrinted ? '1' : '0' })
+                        .text(isPrinted ? 'Unmark Printed' : 'Mark as Printed'));
                     $footer.append($('<button type="button" class="btn-liquid edit-control-btn">Edit Control #s</button>').data('request', d));
                     $footer.append($('<button type="button" class="btn-liquid-success release-btn"></button>').text(d.releaseStatus === 'released' ? 'View Release' : 'Release Materials').data('request', d));
                     if (d.releaseStatus !== 'released') {
@@ -2584,6 +2610,55 @@
         function closeCancel() { closeOverlay($cancel); cancelRow = null; }
         $('#cancelRequestCloseTop, #keepRequestBtn').on('click', closeCancel);
         $cancel.on('click', function (e) { if (e.target === this && !cancelBusy) closeCancel(); });
+
+        // ============================================================
+        // MARK AS PRINTED (toggle, updated in place)
+        // ============================================================
+        function fmtPrinted(dt) {
+            const d = new Date(String(dt).replace(' ', 'T'));
+            if (isNaN(d)) return dt;
+            return d.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+        }
+
+        $(document).on('click', '.print-mark-btn', function () {
+            const $btn = $(this);
+            if ($btn.prop('disabled')) return;
+            const id = String($btn.attr('data-id'));
+            const markPrinted = $btn.attr('data-printed') !== '1';
+            const $all = $('.print-mark-btn[data-id="' + id + '"]').prop('disabled', true);
+
+            $.post(RELEASE_URL, { action: 'set_printed', id: id, printed: markPrinted ? '1' : '0' }, null, 'json').done(function (res) {
+                if (!res || !res.success) {
+                    showToast(esc(res && res.message ? res.message : 'Could not update the printed mark.'), 'error');
+                    return;
+                }
+                const printed = !!res.printedAt;
+                $all.attr('data-printed', printed ? '1' : '0')
+                    .toggleClass('btn-liquid-success', !printed)
+                    .toggleClass('btn-liquid-secondary', printed)
+                    .text(printed ? 'Unmark Printed' : 'Mark as Printed');
+
+                const $cell = $('.print-status-cell[data-id="' + id + '"]').empty();
+                if (printed) {
+                    $cell.append('<span class="printed-badge">PRINTED</span>')
+                         .append($('<div class="release-sub"></div>').text(fmtPrinted(res.printedAt)));
+                    if (res.printedBy) $cell.append($('<div class="release-sub"></div>').text('By ' + res.printedBy));
+                } else {
+                    $cell.append('<span class="request-flag-none">Not yet printed</span>');
+                }
+
+                // Keep the row's data in sync so the details modal shows the new state
+                $('#row-' + id).find('[data-request]').each(function () {
+                    const d = $(this).data('request');
+                    if (d) { d.printedAt = res.printedAt; d.printedBy = res.printedBy; }
+                });
+                showToast(esc(res.message), 'success');
+            }).fail(function (xhr) {
+                showToast(esc(xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Could not reach the server.'), 'error');
+            }).always(function () {
+                $all.prop('disabled', false);
+            });
+        });
 
         $('#confirmCancelRequest').on('click', function () {
             if (!cancelRow || cancelBusy) return;

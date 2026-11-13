@@ -1308,6 +1308,7 @@ $dompdf->setPaper('A4', 'portrait');
 $dompdf->render();
 
 $filename = "Lab_Request_Form_" . (($formData['control_equipment'] ?? '') !== '' ? $formData['control_equipment'] : ($formData['controlNumber'] ?? $formID)) . ".pdf";
-$dompdf->stream($filename, ["Attachment" => false]);
+// ?download=1 saves the file; otherwise it opens in the browser for printing
+$dompdf->stream($filename, ["Attachment" => !empty($_GET['download'])]);
 
 ?>

@@ -9,6 +9,7 @@ require_once __DIR__ . '/../PHPMailer/src/Exception.php';
 require_once __DIR__ . '/../PHPMailer/src/PHPMailer.php';
 require_once __DIR__ . '/../PHPMailer/src/SMTP.php';
 require_once __DIR__ . '/../helperFiles/scilab_email.php';   // cancellation notices
+require_once __DIR__ . '/../helperFiles/print_status.php';   // Mark as Printed
 
 // Admin-only endpoint: logged in with the admin role, and a valid CSRF token on POST
 ral_require_role(['admin']);
@@ -80,6 +81,13 @@ try {
             if (!$res['ok']) release_json(['success' => false, 'message' => $res['message']]);
             scilab_notify_cancellation($conn, $formID); // after the commit; a mail failure is only logged
             release_json(['success' => true, 'message' => $res['message'], 'restored' => $res['restored']]);
+            break;
+
+        case 'set_printed':
+            if ($formID <= 0) release_json(['success' => false, 'message' => 'Missing request.'], 400);
+            $res = scilab_set_printed($conn, $formID, ($_POST['printed'] ?? '1') === '1', $adminName);
+            if (!$res['ok']) release_json(['success' => false, 'message' => $res['message']]);
+            release_json(['success' => true, 'message' => $res['message'], 'printedAt' => $res['printedAt'], 'printedBy' => $res['printedBy']]);
             break;
 
         default:
