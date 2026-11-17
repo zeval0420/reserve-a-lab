@@ -14,7 +14,7 @@ foreach ($files as $file) {
     $games[] = [
         'file'  => $filename,
         'title' => $title,
-        'path'  => '../../beta/games/' . $filename,
+        'path'  => '../../scilab/games/' . $filename,
     ];
 }
  
