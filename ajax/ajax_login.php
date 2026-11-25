@@ -2,6 +2,7 @@
 include('../../credentials/db_connection.php');
 include('../helperFiles/session_handler.php');
 include('../helperFiles/variableDeclarations.php');
+require_once __DIR__ . '/../helperFiles/input.php';
 
 // Login, guest sign-up and password-reset requests are made from the login page, which carries the token
 ral_require_csrf();
@@ -14,7 +15,7 @@ require '../PHPMailer/src/PHPMailer.php';
 require '../PHPMailer/src/SMTP.php';
 
 if (isset($_POST["action"]) && $_POST["action"] === "loginUser") {
-    $input_identity = $_POST['email']; // This field handles both email and username
+    $input_identity = $_POST['email'] ?? ''; // This field handles both email and username
     $password = $_POST['password'];
 
     $wait = ral_throttle_wait('login');
@@ -23,21 +24,20 @@ if (isset($_POST["action"]) && $_POST["action"] === "loginUser") {
         exit();
     }
 
-    // Detect input type
-    $is_email = (strpos($input_identity, '@') !== false);
-    $email_query = $is_email ? $input_identity : $input_identity . '@irc.pshs.edu.ph';
+    if (!is_string($input_identity) || $input_identity === '') {
+        ral_throttle_hit('login');
+        echo "invalid_email";
+        exit();
+    }
 
-    /* 
-     * Initial login attempt: Check if the user exists in the employee/admin accounts table.
-     * We limit the search to users with an 'active' status.
-     */
-    $stmt = $conn->prepare("SELECT * FROM {$db_table_accounts} WHERE {$db_col_email} = ? AND {$db_col_status} = 'active'");
-    $stmt->bind_param("s", $email_query);
-    $stmt->execute();
-    $result = $stmt->get_result();
+    foreach (['username', $db_col_email] as $column) {
+        $result = ral_query($conn, "SELECT * FROM {$db_table_accounts} WHERE {$column} = ? AND {$db_col_status} = 'active' LIMIT 1", 's', [$input_identity]);
+        if ($user = $result->fetch_assoc()) {
+            break;
+        }
+    }
 
-    if ($result->num_rows > 0) {
-        $user = $result->fetch_assoc();
+    if ($user) {
         $hashedInput = md5($password);
 
         if ($hashedInput !== $user[$db_col_password]) {
@@ -84,39 +84,37 @@ if (isset($_POST["action"]) && $_POST["action"] === "loginUser") {
             }
         }
 
-        $stmt->close();
         $conn->close();
         exit();
     }
 
-    $stmt->close();
+    $result = ral_query($conn, "SELECT * FROM {$db_table_new_accounts} WHERE username = ? LIMIT 1", 's', [$input_identity]);
+    $new_user = $result->fetch_assoc();
+    if (!$new_user) {
+        // Registration adds the email column on older databases.
+        $emailColumn = $conn->query("SHOW COLUMNS FROM {$db_table_new_accounts} LIKE 'email'");
+        if ($emailColumn->num_rows > 0) {
+            $result = ral_query($conn, "SELECT * FROM {$db_table_new_accounts} WHERE email = ? LIMIT 1", 's', [$input_identity]);
+            $new_user = $result->fetch_assoc();
+        }
+    }
 
-    /*
-     * Secondary login attempt: Fallback to checking the student directory.
-     * Maps the entered email to the internal student records via LRN.
-     */
-    $stmt = $conn->prepare("
-        SELECT s.*, d.studentEmail 
-        FROM student_directory d 
-        INNER JOIN student s ON s.LRN = d.LRN 
-        WHERE d.studentEmail = ?
-    ");
-    $stmt->bind_param("s", $email_query);
-    $stmt->execute();
-    $studentResult = $stmt->get_result();
+    $student = null;
+    if (!$new_user) {
+        // Keep the directory email fallback for legacy student accounts and registration.
+        $result = ral_query($conn, "
+            SELECT s.*, d.studentEmail
+            FROM student_directory d
+            INNER JOIN student s ON s.LRN = d.LRN
+            WHERE d.studentEmail = ?
+            LIMIT 1
+        ", 's', [$input_identity]);
+        $student = $result->fetch_assoc();
 
-    if ($studentResult->num_rows > 0) {
-        $student = $studentResult->fetch_assoc();
+        $result = ral_query($conn, "SELECT * FROM {$db_table_new_accounts} WHERE userID = ? LIMIT 1", 's', [$student['LRN'] ?? $input_identity]);
+        $new_user = $result->fetch_assoc();
 
-        /*
-         * Check if the student has registered an account in scilab_new_accounts.
-         */
-        $stmt_new = $conn->prepare("SELECT * FROM {$db_table_new_accounts} WHERE username = ? OR username = ? OR userID = ?");
-        $stmt_new->bind_param("sss", $input_identity, $email_query, $student['LRN']);
-        $stmt_new->execute();
-        $newAccountsResult = $stmt_new->get_result();
-
-        if ($newAccountsResult->num_rows === 0) {
+        if ($student && !$new_user) {
             ral_throttle_hit('login');
             $username_suggested = str_replace('@irc.pshs.edu.ph', '', $student['studentEmail']);
             echo json_encode([
@@ -127,31 +125,40 @@ if (isset($_POST["action"]) && $_POST["action"] === "loginUser") {
                 "username" => $username_suggested,
                 "email" => $student['studentEmail']
             ]);
-            $stmt_new->close();
-            $stmt->close();
             $conn->close();
             exit();
         }
+    }
 
-        $new_user = $newAccountsResult->fetch_assoc();
-        $stmt_new->close();
+    if (!$new_user || md5($password) !== $new_user['password']) {
+        ral_throttle_hit('login');
+        echo $new_user ? "invalid_password" : "prompt_create_account";
+        $conn->close();
+        exit();
+    }
 
-        // Verify using MD5 to match login system
-        $hashedInput = md5($password);
-        if ($hashedInput !== $new_user['password']) {
-            ral_throttle_hit('login');
-            echo "invalid_password";
-            $stmt->close();
-            $conn->close();
-            exit();
+    $directoryEntry = null;
+    if (!$student) {
+        $result = ral_query($conn, "
+            SELECT s.*, d.studentEmail
+            FROM student_directory d
+            LEFT JOIN student s ON s.LRN = d.LRN
+            WHERE d.LRN = ?
+            LIMIT 1
+        ", 's', [$new_user['userID']]);
+        $directoryEntry = $result->fetch_assoc();
+        if (isset($directoryEntry['LRN'])) {
+            $student = $directoryEntry;
         }
-        ral_throttle_clear('login');
+    }
 
+    ral_throttle_clear('login');
+    session_regenerate_id(true);
+    if ($student) {
         /*
          * Student authentication successful.
          * Establish the session state utilizing the verified student information.
          */
-        session_regenerate_id(true);
         $_SESSION[$session_employeeID] = $student['LRN'];
         $_SESSION[$session_email] = $student['studentEmail'];
         $_SESSION[$session_firstname] = $student[$db_col_firstname];
@@ -163,75 +170,26 @@ if (isset($_POST["action"]) && $_POST["action"] === "loginUser") {
         $_SESSION['student_lrn'] = $student['LRN'];
 
         echo "requester";
-        $stmt->close();
-        $conn->close();
-        exit();
-    }
-    
-    $stmt->close();
-    
-    /*
-     * Tertiary login attempt: Fallback to checking the scilab_new_accounts table.
-     */
-    $stmt = $conn->prepare("SELECT * FROM {$db_table_new_accounts} WHERE username = ? OR userID = ?");
-    $stmt->bind_param("ss", $input_identity, $input_identity);
-    $stmt->execute();
-    $newAccountsResult = $stmt->get_result();
-
-    if ($newAccountsResult->num_rows > 0) {
-        $new_user = $newAccountsResult->fetch_assoc();
-        $hashedInput = md5($password);
-
-        if ($hashedInput !== $new_user['password']) {
-            ral_throttle_hit('login');
-            echo "invalid_password";
-        } else {
-            ral_throttle_clear('login');
-            session_regenerate_id(true);
-            $_SESSION[$session_role] = "guest";
-            
-            $resolvedEmail = trim($new_user['email'] ?? '');
-            if ($resolvedEmail !== '') {
-                // saved at registration
-            } elseif (filter_var($new_user['username'], FILTER_VALIDATE_EMAIL)) {
-                $resolvedEmail = $new_user['username'];
-            } elseif (!empty($new_user['userID'])) {
-                $sdStmt = $conn->prepare("SELECT studentEmail FROM student_directory WHERE LRN = ?");
-                if ($sdStmt) {
-                    $sdStmt->bind_param("s", $new_user['userID']);
-                    $sdStmt->execute();
-                    $sdRes = $sdStmt->get_result();
-                    if ($sdRow = $sdRes->fetch_assoc()) {
-                        $resolvedEmail = trim($sdRow['studentEmail'] ?? '');
-                    }
-                    $sdStmt->close();
-                }
-            }
-            if (empty($resolvedEmail) && !empty($new_user['username'])) {
-                $resolvedEmail = (strpos($new_user['username'], '@') !== false) ? $new_user['username'] : ($new_user['username'] . '@irc.pshs.edu.ph');
-            }
-
-            $_SESSION[$session_email] = $resolvedEmail;
-            $_SESSION[$session_firstname] = $new_user['firstname'];
-            $_SESSION[$session_middlename] = $new_user['middlename'];
-            $_SESSION[$session_lastname] = $new_user['lastname'];
-            
-            $_SESSION[$session_username] = $new_user['firstname'] . ' ' . $new_user['lastname'] . ' (' . ($new_user['institution'] ?? 'PSHS-IRC') . ')';
-            $_SESSION[$session_employeeID] = !empty($new_user['userID']) ? $new_user['userID'] : $new_user['username'];
-            
-            echo "guest";
+    } else {
+        $resolvedEmail = trim($new_user['email'] ?? '');
+        if ($resolvedEmail === '') {
+            $resolvedEmail = filter_var($new_user['username'], FILTER_VALIDATE_EMAIL)
+                ?: trim($directoryEntry['studentEmail'] ?? '');
         }
-        $stmt->close();
-        $conn->close();
-        exit();
+
+        $_SESSION[$session_role] = "guest";
+        $_SESSION[$session_email] = $resolvedEmail;
+        $_SESSION[$session_firstname] = $new_user['firstname'];
+        $_SESSION[$session_middlename] = $new_user['middlename'];
+        $_SESSION[$session_lastname] = $new_user['lastname'];
+        $_SESSION[$session_username] = $new_user['firstname'] . ' ' . $new_user['lastname'] . ' (' . ($new_user['institution'] ?? 'PSHS-IRC') . ')';
+        $_SESSION[$session_employeeID] = !empty($new_user['userID']) ? $new_user['userID'] : $new_user['username'];
+
+        echo "guest";
     }
 
-    $stmt->close();
     $conn->close();
-
-    // If none of the attempts succeed
-    ral_throttle_hit('login');
-    echo "prompt_create_account";
+    exit();
 }
 
 if (isset($_POST["action"]) && $_POST["action"] === "guestLogin") {

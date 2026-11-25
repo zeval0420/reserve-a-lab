@@ -68,7 +68,10 @@
 
         function ral_is_logged_in()
         {
-            return !empty($_SESSION['role']) && !empty($_SESSION['email']);
+            return !empty($_SESSION['role']) && (
+                !empty($_SESSION['email'])
+                || ($_SESSION['role'] === 'guest' && !empty($_SESSION['employeeID']))
+            );
         }
 
         /** 401 unless a user is logged in. */
